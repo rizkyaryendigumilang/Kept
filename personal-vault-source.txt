@@ -1,0 +1,5024 @@
+﻿===== PERSONAL VAULT SOURCE AUDIT =====
+Generated: 10/11/2026 15:07:44
+Project: Personal Vault
+
+==================================================
+FILE: C:\Users\rizky\Documents\Dev\personal-vault\index.html
+==================================================
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, viewport-fit=cover"
+    />
+
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="description"
+      content="A private personal vault for passwords, bank cards and secure notes."
+    />
+
+    <!-- App icons -->
+    <link rel="icon" type="image/png" sizes="192x192" href="/pwa-192.png" />
+    <link rel="apple-touch-icon" href="/pwa-192.png" />
+
+    <title>Personal Vault</title>
+  </head>
+
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
+</html>
+
+==================================================
+FILE: C:\Users\rizky\Documents\Dev\personal-vault\package.json
+==================================================
+{
+  "name": "personal-vault-pwa",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@noble/hashes": "^2.0.1",
+    "@supabase/supabase-js": "^2.76.1",
+    "lucide-react": "^0.468.0",
+    "motion": "^12.23.24",
+    "react": "^19.1.1",
+    "react-dom": "^19.1.1"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^5.0.4",
+    "vite": "^7.1.7",
+    "vite-plugin-pwa": "^1.0.3"
+  }
+}
+
+==================================================
+FILE: C:\Users\rizky\Documents\Dev\personal-vault\README.md
+==================================================
+# Personal Vault PWA
+
+A personal password + banking vault built around the agreed Apple Ã— Fintech Ã— Security visual direction.
+
+## 1. What you get
+
+- React + Vite PWA
+- Supabase Auth + PostgreSQL
+- Client-side Argon2id key derivation
+- AES-GCM encryption using Web Crypto
+- IndexedDB encrypted cache
+- Password Management
+  - Social Media
+  - Web Password
+  - Project Password
+- Bank / ATM Card swipe stack
+- Secure Notes
+- Light / Dark / System
+- Realistic / Abstract banking card switch
+- Compact dashboard
+- Password reveal with eye icon and auto-hide
+- Encrypted JSON export
+- Local CSV import
+
+## 2. Install
+
+Node.js 20+ is recommended.
+
+```powershell
+cd .\personal-vault
+npm install
+```
+
+Copy environment template:
+
+```powershell
+Copy-Item .env.example .env.local
+```
+
+Edit `.env.local`:
+
+```env
+VITE_SUPABASE_URL=https://YOUR_PROJECT.supabase.co
+VITE_SUPABASE_PUBLISHABLE_KEY=sb_publishable_...
+```
+
+Only the publishable key belongs in browser code. Do not put a Supabase secret key or service-role key in `.env.local` for Vite frontend use.
+
+## 3. Supabase setup
+
+Open your Supabase project â†’ SQL Editor â†’ New query.
+
+Run this first:
+
+```sql
+-- paste everything from supabase/001_schema.sql
+```
+
+Then run:
+
+```sql
+-- paste everything from supabase/002_verify.sql
+```
+
+The app needs these tables:
+
+- `public.profiles`
+- `public.vault_items`
+
+RLS is enabled and all policies are scoped to `auth.uid()`.
+
+## 4. Auth settings
+
+For the easiest first test, email/password auth must be enabled in Supabase Auth.
+
+If email confirmation is enabled, create the account and confirm the email before signing in. For a local-only first test, you may disable email confirmation in the Auth provider settings, then turn it back on for a real deployment.
+
+## 5. Start
+
+```powershell
+npm run dev
+```
+
+Open the localhost URL shown by Vite.
+
+## 6. First vault setup
+
+1. Create a Supabase account in the app.
+2. Create your master password when prompted.
+3. Unlock the vault.
+4. Add passwords or bank cards.
+
+The master password is never stored. The database receives encrypted `payload` objects only.
+
+## 7. Important security note
+
+This is a serious-secret-management project. Treat V1 as a personal prototype, not as a substitute for an audited password manager. The browser crypto path is designed around standard primitives, but the application itself has not undergone a security audit.
+
+Do not store actual PINs, CVVs, OTP secrets, seed phrases, recovery codes, or other high-risk secrets in normal fields until a threat model and audited workflow are added.
+
+## 8. Skills / references
+
+The supplied repositories are references for the build. This project deliberately does not copy their repositories into the app.
+
+Install the portable agent skills locally with `npx skills` in your coding-agent environment where supported. Examples from the supplied repositories:
+
+```powershell
+npx skills add https://github.com/Leonxlnx/taste-skill --skill "design-taste-frontend"
+npx skills add https://github.com/petergyang/no-ai-slop
+```
+
+For the other references, use their README/skill setup instructions directly:
+
+- React Bits: https://github.com/DavidHDev/react-bits
+- Awesome Technical Writing: https://github.com/BolajiAyodeji/awesome-technical-writing
+- Avoid AI Writing: https://github.com/conorbronsdon/avoid-ai-writing
+- Emil Kowalski skills: https://github.com/emilkowalski/skills
+
+## 9. Suggested next increment
+
+Add encrypted custom fields to the password form, browser-import column mapping, password generator, biometric convenience unlock with WebAuthn, and encrypted cross-device backup conflict handling.
+
+==================================================
+FILE: C:\Users\rizky\Documents\Dev\personal-vault\src\App.jsx
+==================================================
+import { useEffect, useMemo, useRef, useState } from 'react'
+import AuthScreen from './components/AuthScreen'
+import ResetPasswordScreen from './components/ResetPasswordScreen'
+import UnlockScreen from './components/UnlockScreen'
+import TopBar from './components/TopBar'
+import BottomNav from './components/BottomNav'
+import AddSheet from './components/AddSheet'
+import AlertsPanel from './pages/AlertsPanel'
+import HomePage from './pages/HomePage'
+import VaultPage from './pages/VaultPage'
+import BankingPage from './pages/BankingPage'
+import SettingsPage from './pages/SettingsPage'
+import ItemModal from './pages/ItemModal'
+import AddItemModal from './pages/AddItemModal'
+import { supabase } from './lib/supabase'
+import { deriveVaultKey, encryptJson, generateSalt, keyFingerprint } from './lib/crypto'
+import { createVerifier, deleteEncryptedItem, ensureProfile, fetchEncryptedItems, setProfilePreference, upsertEncryptedItem, loadCachedItems, uploadAvatar } from './lib/vault'
+import { idbClearUser } from './lib/idb'
+
+const CATEGORY_LABELS = { social: 'Social Media', web: 'Web Password', project: 'Project Password', secure_note: 'Secure Note', bank_card: 'Bank / ATM' }
+
+function applyTheme(theme) {
+  if (theme === 'dark') document.documentElement.dataset.theme = 'dark'
+  else if (theme === 'light') document.documentElement.dataset.theme = 'light'
+  else document.documentElement.dataset.theme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
+}
+
+export default function App() {
+  const [session, setSession] = useState(null)
+  const [profile, setProfile] = useState(null)
+  const [authLoading, setAuthLoading] = useState(true)
+  const [vaultKey, setVaultKey] = useState(null)
+  const [items, setItems] = useState([])
+  const [route, setRoute] = useState('home')
+  const [showAdd, setShowAdd] = useState(false)
+  const [addMode, setAddMode] = useState(null)
+  const [selectedItem, setSelectedItem] = useState(null)
+  const [alertsOpen, setAlertsOpen] = useState(false)
+  const [recovery, setRecovery] = useState(false)
+  const [toast, setToast] = useState('')
+  const [error, setError] = useState('')
+  const bootstrappedUserRef = useRef(null)
+
+  useEffect(() => {
+    let mounted = true
+    supabase.auth.getSession().then(async ({ data }) => {
+      if (!mounted) return
+      setSession(data.session)
+      if (data.session?.user) await bootstrapUser(data.session.user)
+      setAuthLoading(false)
+    }).catch(() => setAuthLoading(false))
+    const { data: listener } = supabase.auth.onAuthStateChange(async (_event, currentSession) => {
+      if (_event === 'PASSWORD_RECOVERY') setRecovery(true)
+      setSession(currentSession)
+      if (currentSession?.user) await bootstrapUser(currentSession.user)
+      else { setProfile(null); setVaultKey(null); setItems([]) }
+    })
+    return () => { mounted = false; listener.subscription.unsubscribe() }
+  }, [])
+
+  async function bootstrapUser(user) {
+    try {
+      const p = await ensureProfile(user, user.user_metadata?.display_name)
+
+      // Keep the vault scoped to one account. If a different user signs in on
+      // this device, drop the previous account's in-memory vault entirely so
+      // nothing can leak across accounts.
+      const previousUserId = bootstrappedUserRef.current
+      const accountChanged = Boolean(previousUserId) && previousUserId !== p.id
+      bootstrappedUserRef.current = p.id
+
+      if (accountChanged) {
+        setVaultKey(null)
+        setItems([])
+        setSelectedItem(null)
+        setAddMode(null)
+        setShowAdd(false)
+        setAlertsOpen(false)
+        setRoute('home')
+        setProfile(p)
+      } else {
+        setProfile((current) => (current?.id === p.id && current?.vault_salt) ? current : p)
+      }
+
+      applyTheme(p.theme || 'system')
+      const cached = await loadCachedItems(user.id)
+      if (cached.length) {
+        // Encrypted cache can render as soon as the vault is unlocked.
+      }
+    } catch (err) { setError(err.message || 'Unable to load your profile.') }
+  }
+
+  useEffect(() => {
+    const onStorage = () => profile && applyTheme(profile.theme || 'system')
+    window.addEventListener('storage', onStorage)
+    return () => window.removeEventListener('storage', onStorage)
+  }, [profile])
+
+  const hydratedItems = useMemo(() => items.map((item) => ({ ...item, categoryLabel: CATEGORY_LABELS[item.category] || CATEGORY_LABELS[item.item_type] || item.category })), [items])
+  const stats = useMemo(() => ({ passwords: hydratedItems.filter((i) => i.item_type === 'password').length, banks: hydratedItems.filter((i) => i.item_type === 'bank_card').length }), [hydratedItems])
+  const favorites = useMemo(() => hydratedItems.filter((i) => i.favorite).slice(0, 4), [hydratedItems])
+  const recent = useMemo(() => [...hydratedItems].sort((a,b) => new Date(b.last_used_at || b.updated_at || 0) - new Date(a.last_used_at || a.updated_at || 0)).slice(0,4), [hydratedItems])
+  const alerts = useMemo(() => buildAlerts(hydratedItems), [hydratedItems])
+  const banks = useMemo(() => hydratedItems.filter((i)=>i.item_type==='bank_card').map((b,i)=>({...b,_renderIndex:i})), [hydratedItems])
+
+  async function unlock(rawKey) {
+    setVaultKey(rawKey)
+    try {
+      let rows
+      try {
+        rows = await fetchEncryptedItems(session.user.id)
+      } catch (networkError) {
+        rows = await loadCachedItems(session.user.id)
+        if (!rows.length) throw networkError
+      }
+      const decrypted = []
+      for (const row of rows) {
+        try { decrypted.push({ ...row, ...(await decryptItemRow(row, rawKey)) }) } catch { /* corrupted items are ignored */ }
+      }
+      setItems(decrypted)
+      setToast(`Vault unlocked Â· ${keyFingerprint(rawKey)}`)
+      setTimeout(() => setToast(''), 1600)
+    } catch (err) { setError(err.message || 'Unable to load vault.') }
+  }
+
+  async function decryptItemRow(row, key) {
+    const { decryptJson } = await import('./lib/crypto')
+    return decryptJson(row.payload, key)
+  }
+
+  async function saveItem(form) {
+    if (!vaultKey) {
+      setError('Vault is locked. Unlock your vault with your master password before adding data.')
+      return
+    }
+    try {
+      const payload = await encryptJson(form, vaultKey)
+      const row = await upsertEncryptedItem(session.user.id, form.item_type, form.item_type === 'bank_card' ? 'bank_card' : form.category, payload, form.id || null)
+      const updated = { ...row, ...form, category: form.item_type === 'secure_note' ? 'secure_note' : (form.item_type === 'bank_card' ? 'bank_card' : form.category), payload }
+      setItems((current) => form.id ? current.map((i) => i.id === form.id ? updated : i) : [updated, ...current])
+      setShowAdd(false); setAddMode(null); setSelectedItem(null)
+      setToast('Saved securely')
+      setTimeout(() => setToast(''), 1400)
+    } catch (err) { setError(err.message || 'Unable to save item.') }
+  }
+
+  function openAdd(mode) { setShowAdd(false); setAddMode(mode) }
+  function openItem(item) {
+    const touched = { ...item, last_used_at: new Date().toISOString() }
+    setItems((current) => current.map((i) => i.id === item.id ? { ...i, last_used_at: touched.last_used_at } : i))
+    setSelectedItem(touched)
+  }
+
+  async function updateItem(updated) {
+    await saveItem({ ...updated, id: selectedItem.id })
+  }
+
+  async function toggleFavorite(id) {
+    const item = items.find((i) => i.id === id)
+    if (!item || !vaultKey) return
+    try {
+      const updated = { ...item, favorite: !item.favorite, last_used_at: new Date().toISOString() }
+      const payload = await encryptJson(updated, vaultKey)
+      const row = await upsertEncryptedItem(session.user.id, updated.item_type, updated.item_type === 'bank_card' ? 'bank_card' : updated.category, payload, id)
+      setItems((current) => current.map((i) => i.id === id ? { ...row, ...updated, payload } : i))
+      setSelectedItem((current) => current?.id === id ? { ...current, ...updated, payload } : current)
+    } catch (err) { setError(err.message || 'Unable to update favorite.') }
+  }
+
+  async function removeItem(id) {
+    try {
+      await deleteEncryptedItem(session.user.id, id)
+      setItems((current) => current.filter((i) => i.id !== id))
+      setSelectedItem(null)
+      setToast('Removed')
+      setTimeout(() => setToast(''), 1200)
+    } catch (err) { setError(err.message || 'Unable to delete item.') }
+  }
+
+  async function initializeVault(masterPassword) {
+    const salt = generateSalt()
+    const key = deriveVaultKey(masterPassword, salt)
+    const verifier = await createVerifier(key)
+    const p = await setProfilePreference(session.user.id, { vault_salt: salt, vault_verifier: verifier, theme: 'system', card_style: 'realistic' })
+    setProfile(p)
+    setVaultKey(key)
+    await fetchEncryptedItems(session.user.id)
+  }
+
+  async function saveProfile(patch) { try { const p=await setProfilePreference(session.user.id, patch); setProfile(p); setToast('Profile updated'); setTimeout(()=>setToast(''),1200) } catch (err) { setError(err.message) } }
+
+  async function uploadProfileAvatar(file) {
+    try {
+      const avatarUrl = await uploadAvatar(session.user.id, file)
+      setProfile((current) => current ? { ...current, avatar_url: avatarUrl } : current)
+      setToast('Avatar updated')
+      setTimeout(() => setToast(''), 1200)
+      return avatarUrl
+    } catch (err) {
+      setError(err.message || 'Unable to upload avatar.')
+      throw err
+    }
+  }
+  async function updateTheme(theme) { try { const p=await setProfilePreference(session.user.id,{theme}); setProfile(p); applyTheme(theme) } catch(err){setError(err.message)} }
+  async function updateCardStyle(card_style) { try { const p=await setProfilePreference(session.user.id,{card_style}); setProfile(p) } catch(err){setError(err.message)} }
+  async function signOut() {
+    const userId = session?.user?.id
+    try { await supabase.auth.signOut() } catch (err) { setError(err.message) }
+    if (userId) { try { await idbClearUser(userId) } catch { /* cache cleanup is best effort */ } }
+    setProfile(null); setVaultKey(null); setItems([]); setSelectedItem(null); setAddMode(null); setShowAdd(false); setRoute('home')
+  }
+
+  async function importCsv(event) {
+    const file = event.target.files?.[0]
+    if (!file) return
+    try {
+      const text = await file.text()
+      const rows = parseCsv(text)
+      const imported = rows.map((r) => ({ item_type:'password', category:guessCategory(r), name:r.name||r.title||r.url||'Imported password', username:r.username||r.email||'', password:r.password||'', url:r.url||'', notes:r.notes||'', favorite:false, last_used_at:new Date().toISOString() }))
+      for (const row of imported) await saveItem(row)
+      setToast(`Imported ${imported.length} items`); setTimeout(()=>setToast(''),1600)
+    } catch(err){setError(`Import failed: ${err.message}`)} finally { event.target.value='' }
+  }
+  async function exportEncrypted() {
+    const blob = new Blob([JSON.stringify({ version:1, exported_at:new Date().toISOString(), items: items.map((i)=>({ id:i.id,user_id:i.user_id,item_type:i.item_type,category:i.category,payload:i.payload,created_at:i.created_at,updated_at:i.updated_at })) }, null, 2)], {type:'application/json'})
+    const url = URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download=`vault-backup-${new Date().toISOString().slice(0,10)}.json`; a.click(); URL.revokeObjectURL(url)
+  }
+
+  if (authLoading) return <Splash />
+  if (recovery) return <ResetPasswordScreen onDone={() => setRecovery(false)} />
+  if (!session) return <AuthScreen />
+  if (!profile) return <Splash />
+  if (!profile.vault_salt || !profile.vault_verifier) return <FirstVaultSetup onCreate={initializeVault} />
+  if (!vaultKey) return <UnlockScreen profile={profile} user={session.user} onUnlocked={unlock} />
+
+  return <div className="app-shell">
+    <TopBar user={session.user} profile={profile} unread={alerts.length} onAlerts={()=>setAlertsOpen(true)} onSettings={()=>setRoute('settings')} />
+    <main className="main-content">
+      {route === 'home' && <HomePage displayName={profile.display_name} stats={stats} favorites={favorites} recent={recent} onNavigate={setRoute} onOpenItem={openItem} onAdd={()=>setShowAdd(true)} />}
+      {route === 'vault' && <VaultPage items={hydratedItems} onAdd={()=>setShowAdd(true)} onOpen={openItem} />}
+      {route === 'banking' && <BankingPage banks={banks} styleMode={profile.card_style || 'realistic'} onAdd={()=>setShowAdd(true)} onOpen={openItem} />}
+      {route === 'settings' && <SettingsPage profile={profile} user={session.user} vaultKey={vaultKey} onTheme={updateTheme} onCardStyle={updateCardStyle} onSaveProfile={saveProfile} onUploadAvatar={uploadProfileAvatar} onSignOut={signOut} onImport={()=>document.getElementById('csv-import').click()} onExport={exportEncrypted} />}
+    </main>
+    <input id="csv-import" type="file" accept=".csv,text/csv" hidden onChange={importCsv} />
+    <BottomNav active={route === 'settings' ? '' : route} onChange={setRoute} />
+    <button className="fab" aria-label="Add item" onClick={()=>setShowAdd(true)}>+</button>
+    {showAdd && <AddSheet onClose={()=>setShowAdd(false)} onChoose={openAdd} />}
+    {addMode && vaultKey && <AddItemModal mode={addMode} onClose={()=>setAddMode(null)} onSubmit={saveItem} />}
+    {selectedItem && <ItemModal item={selectedItem} onClose={()=>setSelectedItem(null)} onDelete={removeItem} onSave={updateItem} onToggleFavorite={toggleFavorite} />}
+    {alertsOpen && <AlertsPanel alerts={alerts} onClose={()=>setAlertsOpen(false)} />}
+    {toast && <div className="toast">{toast}</div>}
+    {error && <div className="error-banner" onClick={()=>setError('')}>{error}</div>}
+  </div>
+}
+
+function Splash(){return <div className="splash"><div className="brand-mark large">V</div><span>Vault</span></div>}
+function FirstVaultSetup({ onCreate }){const [p,setP]=useState(''); const [c,setC]=useState(''); const [err,setErr]=useState(''); return <main className="unlock-screen"><div className="unlock-orb"><ShieldCheckIcon /></div><div className="unlock-copy"><div className="eyebrow">First setup</div><h1>Create your master password.</h1><p>Choose something unique and memorable. There is no server-side recovery for plaintext vault content.</p></div><form onSubmit={(e)=>{e.preventDefault();if(p.length<10)return setErr('Use at least 10 characters.');if(p!==c)return setErr('Passwords do not match.');onCreate(p)}} className="unlock-form"><label className="field"><span>Master Password</span><input type="password" value={p} onChange={(e)=>setP(e.target.value)} required /></label><label className="field"><span>Confirm Master Password</span><input type="password" value={c} onChange={(e)=>setC(e.target.value)} required /></label><button className="primary-button">Create secure vault</button></form>{err&&<div className="feedback error">{err}</div>}<div className="unlock-note">Your master password becomes the root of your vault encryption key.</div></main>}
+function ShieldCheckIcon(){return <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7"><path d="M20 13c0 5-3.5 8-8 9-4.5-1-8-4-8-9V5l8-3 8 3v8Z"/><path d="m9 12 2 2 4-4"/></svg>}
+function buildAlerts(items){return items.filter((i)=>i.item_type==='password' && i.password && i.password.length<10).slice(0,4).map((i)=>({id:i.id,level:'warning',title:`Weak password: ${i.name}`,body:'Consider replacing it with a longer unique password.'}))}
+function guessCategory(row){const u=(row.url||'').toLowerCase(); if(/instagram|tiktok|facebook|linkedin|twitter|x\.com|discord|youtube/.test(u)) return 'social'; return 'web'}
+function parseCsv(text){
+  const rows=[]; let row=[], cell='', quoted=false
+  for(let i=0;i<text.length;i+=1){
+    const ch=text[i], next=text[i+1]
+    if(ch==='"' && quoted && next==='"'){ cell+='"'; i+=1; continue }
+    if(ch==='"'){ quoted=!quoted; continue }
+    if(ch===',' && !quoted){ row.push(cell.trim()); cell=''; continue }
+    if((ch==='\n' || ch==='\r') && !quoted){ if(ch==='\r' && next==='\n') i+=1; row.push(cell.trim()); cell=''; if(row.some(Boolean)) rows.push(row); row=[]; continue }
+    cell+=ch
+  }
+  if(cell.length || row.length){ row.push(cell.trim()); if(row.some(Boolean)) rows.push(row) }
+  if(!rows.length)return []
+  const headers=rows.shift().map((h)=>h.toLowerCase().replace(/^\ufeff/,''));
+  return rows.map((values)=>Object.fromEntries(headers.map((h,i)=>[h,values[i]||''])))
+}
+
+==================================================
+FILE: C:\Users\rizky\Documents\Dev\personal-vault\src\components\AddSheet.jsx
+==================================================
+import { CreditCard, FolderLock, Globe, Instagram, KeyRound, Plus, StickyNote, X } from './Icons'
+
+const choices = [
+  { id: 'password-social', label: 'Social Media', icon: Instagram, helper: 'Instagram, TikTok, LinkedIn' },
+  { id: 'password-web', label: 'Web Password', icon: Globe, helper: 'Websites and apps' },
+  { id: 'password-project', label: 'Project Password', icon: FolderLock, helper: 'Dev, cloud, project access' },
+  { id: 'bank-card', label: 'Bank / ATM Card', icon: CreditCard, helper: 'Bank accounts and cards' },
+  { id: 'secure-note', label: 'Secure Note', icon: StickyNote, helper: 'Private text and references' }
+]
+
+export default function AddSheet({ onClose, onChoose }) {
+  return (
+    <div className="sheet-backdrop" onMouseDown={onClose}>
+      <section className="bottom-sheet" onMouseDown={(e) => e.stopPropagation()}>
+        <div className="sheet-handle"></div>
+        <div className="sheet-header">
+          <div><div className="eyebrow">Create</div><h3>Add to your vault</h3></div>
+          <button className="icon-button" onClick={onClose}><X size={19} /></button>
+        </div>
+        <div className="choice-grid">
+          {choices.map(({ id, label, icon: Icon, helper }) => (
+            <button key={id} className="choice-card" onClick={() => onChoose(id)}>
+              <div className="choice-icon"><Icon size={19} /></div>
+              <div><strong>{label}</strong><span>{helper}</span></div>
+              <Plus size={16} />
+            </button>
+          ))}
+        </div>
+      </section>
+    </div>
+  )
+}
+
+==================================================
+FILE: C:\Users\rizky\Documents\Dev\personal-vault\src\components\AuthScreen.jsx
+==================================================
+import { useState } from 'react'
+import { Fingerprint, KeyRound, ShieldCheck } from './Icons'
+import { supabase } from '../lib/supabase'
+
+function GoogleMark() {
+  return (
+    <svg width="17" height="17" viewBox="0 0 24 24" aria-hidden="true">
+      <path
+        fill="#4285F4"
+        d="M23.5 12.3c0-.8-.1-1.6-.2-2.3H12v4.5h6.5a5.6 5.6 0 0 1-2.4 3.6v3h3.9c2.3-2.1 3.5-5.2 3.5-8.8Z"
+      />
+      <path
+        fill="#34A853"
+        d="M12 24c3.2 0 5.9-1.1 7.9-2.9l-3.9-3c-1.1.7-2.5 1.1-4 1.1-3.1 0-5.7-2.1-6.6-4.9H1.4v3.1A12 12 0 0 0 12 24Z"
+      />
+      <path
+        fill="#FBBC05"
+        d="M5.4 14.3a7.2 7.2 0 0 1 0-4.6V6.6H1.4a12 12 0 0 0 0 10.8l4-3.1Z"
+      />
+      <path
+        fill="#EA4335"
+        d="M12 4.8c1.8 0 3.3.6 4.6 1.8l3.4-3.4A12 12 0 0 0 1.4 6.6l4 3.1C6.3 6.9 8.9 4.8 12 4.8Z"
+      />
+    </svg>
+  )
+}
+
+export default function AuthScreen() {
+  const [mode, setMode] = useState('sign-in')
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [displayName, setDisplayName] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [message, setMessage] = useState('')
+  const [error, setError] = useState('')
+
+  function switchMode(next) {
+    setMode(next)
+    setError('')
+    setMessage('')
+  }
+
+  async function submit(event) {
+    event.preventDefault()
+
+    setBusy(true)
+    setError('')
+    setMessage('')
+
+    try {
+      if (mode === 'sign-in') {
+        const { error: authError } =
+          await supabase.auth.signInWithPassword({
+            email,
+            password
+          })
+
+        if (authError) throw authError
+      } else if (mode === 'sign-up') {
+        const { data, error: authError } =
+          await supabase.auth.signUp({
+            email,
+            password,
+            options: {
+              data: { display_name: displayName }
+            }
+          })
+
+        if (authError) throw authError
+
+        if (!data.session) {
+          setMessage(
+            'Account created. Check your email to confirm your address, then sign in.'
+          )
+        }
+      } else {
+        const { error: resetError } =
+          await supabase.auth.resetPasswordForEmail(email, {
+            redirectTo: window.location.origin
+          })
+
+        if (resetError) throw resetError
+
+        setMessage(
+          'If that email has an account, a reset link is on its way. Check your inbox and spam folder.'
+        )
+      }
+    } catch (err) {
+      setError(err.message || 'Authentication failed.')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  async function signInWithGoogle() {
+    setBusy(true)
+    setError('')
+    setMessage('')
+
+    try {
+      const { error: oauthError } =
+        await supabase.auth.signInWithOAuth({
+          provider: 'google',
+          options: { redirectTo: window.location.origin }
+        })
+
+      if (oauthError) throw oauthError
+    } catch (err) {
+      setError(err.message || 'Google sign-in failed.')
+      setBusy(false)
+    }
+  }
+
+  const heading =
+    mode === 'sign-in'
+      ? 'Welcome back.'
+      : mode === 'sign-up'
+        ? 'Build your private vault.'
+        : 'Reset your password.'
+
+  const blurb =
+    mode === 'reset'
+      ? 'Enter your account email and we will send you a secure reset link.'
+      : 'Passwords, bank cards and secure notes stay encrypted before they leave your device.'
+
+  return (
+    <main className="auth-screen">
+      <div className="auth-card">
+        <div className="auth-brand">
+          <div className="brand-mark large">V</div>
+          <div>
+            <strong>Vault</strong>
+            <span>Private by design</span>
+          </div>
+        </div>
+
+        <div className="auth-copy">
+          <div className="eyebrow">Personal vault</div>
+          <h1>{heading}</h1>
+          <p>{blurb}</p>
+        </div>
+
+        {mode !== 'reset' && (
+          <>
+            <button
+              type="button"
+              className="oauth-button"
+              onClick={signInWithGoogle}
+              disabled={busy}
+            >
+              <GoogleMark />
+              Continue with Google
+            </button>
+
+            <div className="auth-divider">
+              <span>or</span>
+            </div>
+          </>
+        )}
+
+        <form onSubmit={submit} className="form-stack">
+          {mode === 'sign-up' && (
+            <label className="field">
+              <span>Name</span>
+              <input
+                value={displayName}
+                onChange={(e) =>
+                  setDisplayName(e.target.value)
+                }
+                placeholder="Your name"
+                autoComplete="name"
+              />
+            </label>
+          )}
+
+          <label className="field">
+            <span>Email</span>
+            <input
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="you@example.com"
+              type="email"
+              autoComplete="email"
+              required
+            />
+          </label>
+
+          {mode !== 'reset' && (
+            <label className="field">
+              <span>Password</span>
+              <input
+                value={password}
+                onChange={(e) =>
+                  setPassword(e.target.value)
+                }
+                placeholder="At least 8 characters"
+                type="password"
+                autoComplete={
+                  mode === 'sign-in'
+                    ? 'current-password'
+                    : 'new-password'
+                }
+                minLength={8}
+                required
+              />
+            </label>
+          )}
+
+          <button
+            className="primary-button"
+            disabled={busy}
+          >
+            {busy
+              ? 'Workingâ€¦'
+              : mode === 'sign-in'
+                ? 'Continue'
+                : mode === 'sign-up'
+                  ? 'Create account'
+                  : 'Send reset link'}
+          </button>
+        </form>
+
+        {mode === 'sign-in' && (
+          <div className="auth-switch">
+            <button onClick={() => switchMode('reset')}>
+              Forgot password?
+            </button>
+          </div>
+        )}
+
+        {message && (
+          <div className="feedback success">{message}</div>
+        )}
+
+        {error && (
+          <div className="feedback error">{error}</div>
+        )}
+
+        <div className="auth-switch">
+          {mode === 'sign-in' ? (
+            <>
+              New here?{' '}
+              <button onClick={() => switchMode('sign-up')}>
+                Create an account
+              </button>
+            </>
+          ) : (
+            <>
+              Already have an account?{' '}
+              <button onClick={() => switchMode('sign-in')}>
+                Sign in
+              </button>
+            </>
+          )}
+        </div>
+
+        <div className="auth-trust">
+          <span>
+            <ShieldCheck size={16} /> Encrypted vault
+          </span>
+          <span>
+            <KeyRound size={16} /> Master password
+          </span>
+          <span>
+            <Fingerprint size={16} /> Biometric unlock
+          </span>
+        </div>
+      </div>
+    </main>
+  )
+}
+
+==================================================
+FILE: C:\Users\rizky\Documents\Dev\personal-vault\src\components\BankCard.jsx
+==================================================
+import { CreditCard, Copy, Check, Eye, EyeOff } from './Icons'
+import { motion, useMotionValue, useTransform } from 'motion/react'
+import { useEffect, useState } from 'react'
+
+function formatNumber(value, mode) {
+  const digits = (value || '').replace(/\D/g, '')
+  if (mode === 'hidden') return `â€¢â€¢â€¢â€¢ â€¢â€¢â€¢â€¢ â€¢â€¢${digits.slice(-2).padStart(2, 'â€¢')}`
+  if (mode === 'partial') return `${digits.slice(0, 4).padEnd(4, 'â€¢')} â€¢â€¢â€¢â€¢ â€¢â€¢${digits.slice(-2).padStart(2, 'â€¢')}`
+  const parts = []
+  for (let i = 0; i < digits.length; i += 4) parts.push(digits.slice(i, i + 4))
+  return parts.join(' ')
+}
+
+export default function BankCard({ bank, styleMode, index, total, onSwipe }) {
+  const x = useMotionValue(0)
+  const rotate = useTransform(x, [-220, 220], [-10, 10])
+  const scale = 1 - index * 0.035
+  const [numberMode, setNumberMode] = useState('partial')
+  const [copied, setCopied] = useState(false)
+  const [showNumber, setShowNumber] = useState(false)
+  const numberDisplay = showNumber ? 'full' : numberMode
+
+  useEffect(() => {
+    setNumberMode('partial')
+    setShowNumber(false)
+  }, [bank.id])
+
+  async function copy(event) {
+    event.stopPropagation()
+    await navigator.clipboard.writeText(bank.card_number || '')
+    setCopied(true)
+    setTimeout(() => setCopied(false), 1300)
+  }
+
+  return (
+    <motion.article
+      className={`bank-card ${styleMode === 'abstract' ? 'abstract-bank-card' : 'realistic-bank-card'}`}
+      style={{ x, rotate, scale, zIndex: total - index, background: bank.color }}
+      drag={index === 0 ? 'x' : false}
+      dragConstraints={{ left: 0, right: 0 }}
+      dragElastic={0.28}
+      onDragEnd={(_, info) => {
+        if (Math.abs(info.offset.x) > 110 || Math.abs(info.velocity.x) > 700) onSwipe(info.offset.x > 0 ? 'right' : 'left')
+      }}
+      whileTap={{ cursor: 'grabbing' }}
+    >
+      <div className="bank-card-top">
+        <div className="bank-name">{bank.bank_name}</div>
+        <div className="card-mark">{bank.card_brand || 'DEBIT'}</div>
+      </div>
+      <div className="bank-chip-row">
+        <div className="bank-chip"></div>
+        <div className="contactless">))</div>
+      </div>
+      <div className="bank-card-number">{formatNumber(bank.card_number, numberDisplay)}</div>
+      <div className="bank-card-meta">
+        <div>
+          <span className="micro-label">CARD HOLDER</span>
+          <strong>{bank.account_owner || 'YOUR NAME'}</strong>
+        </div>
+        <div>
+          <span className="micro-label">VALID THRU</span>
+          <strong>{bank.expiry || 'â€¢â€¢/â€¢â€¢'}</strong>
+        </div>
+      </div>
+      <div className="bank-card-actions">
+        <button className="mini-icon light" title="Show full number" onClick={(event) => { event.stopPropagation(); setShowNumber((v) => !v) }}>
+          {showNumber ? <EyeOff size={15} /> : <Eye size={15} />}
+        </button>
+        <button className="mini-icon light" title="Copy number" onClick={copy}>{copied ? <Check size={15} /> : <Copy size={15} />}</button>
+        <div className="card-count">{index + 1} / {total}</div>
+      </div>
+    </motion.article>
+  )
+}
+
+==================================================
+FILE: C:\Users\rizky\Documents\Dev\personal-vault\src\components\BottomNav.jsx
+==================================================
+import { Home, KeyRound, WalletCards } from './Icons'
+
+const items = [
+  { id: 'home', label: 'Home', icon: Home },
+  { id: 'vault', label: 'Vault', icon: KeyRound },
+  { id: 'banking', label: 'Banking', icon: WalletCards }
+]
+
+export default function BottomNav({ active, onChange }) {
+  return (
+    <nav className="bottom-nav" aria-label="Primary navigation">
+      {items.map(({ id, label, icon: Icon }) => (
+        <button key={id} className={active === id ? 'nav-item active' : 'nav-item'} onClick={() => onChange(id)}>
+          <Icon size={18} strokeWidth={active === id ? 2.2 : 1.8} />
+          <span>{label}</span>
+        </button>
+      ))}
+    </nav>
+  )
+}
+
+==================================================
+FILE: C:\Users\rizky\Documents\Dev\personal-vault\src\components\Icons.jsx
+==================================================
+export {
+  Bell,
+  ChevronLeft,
+  ChevronRight,
+  Eye,
+  EyeOff,
+  Fingerprint,
+  Home,
+  KeyRound,
+  Lock,
+  LogOut,
+  Menu,
+  MoreHorizontal,
+  Plus,
+  Search,
+  Settings,
+  ShieldCheck,
+  WalletCards,
+  CreditCard,
+  StickyNote,
+  Globe,
+  Instagram,
+  FolderLock,
+  Copy,
+  Check,
+  X,
+  Sun,
+  Moon,
+  Laptop,
+  Sparkles,
+  Pencil,
+  Trash2,
+  Upload,
+  Download,
+  ArrowLeft,
+  ArrowRight,
+  RefreshCw,
+  AlertTriangle,
+  Star
+} from 'lucide-react'
+
+==================================================
+FILE: C:\Users\rizky\Documents\Dev\personal-vault\src\components\Modal.jsx
+==================================================
+import { useEffect } from 'react'
+import { X } from './Icons'
+
+export default function Modal({
+  title,
+  eyebrow,
+  children,
+  onClose,
+  wide = false
+}) {
+  useEffect(() => {
+    const handleKeyDown = (event) => {
+      if (event.key === 'Escape') {
+        onClose?.()
+      }
+    }
+
+    document.addEventListener('keydown', handleKeyDown)
+
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [onClose])
+
+  return (
+    <div
+      className="sheet-backdrop"
+      onMouseDown={onClose}
+      role="presentation"
+    >
+      <section
+        className={wide ? 'modal wide' : 'modal'}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="modal-title"
+        onMouseDown={(event) => event.stopPropagation()}
+      >
+        <div className="sheet-header">
+          <div>
+            {eyebrow && (
+              <div className="eyebrow">{eyebrow}</div>
+            )}
+
+            <h3 id="modal-title">{title}</h3>
+          </div>
+
+          <button
+            type="button"
+            className="icon-button"
+            onClick={onClose}
+            aria-label="Close"
+            title="Close"
+          >
+            <X size={19} />
+          </button>
+        </div>
+
+        {children}
+      </section>
+    </div>
+  )
+}
+
+==================================================
+FILE: C:\Users\rizky\Documents\Dev\personal-vault\src\components\PasswordCard.jsx
+==================================================
+import { Eye, EyeOff, KeyRound, Copy, Check } from './Icons'
+import SiteLogo from './SiteLogo'
+import { useEffect, useState } from 'react'
+
+export default function PasswordCard({ item, password, onOpen }) {
+  const [revealed, setRevealed] = useState(false)
+  const [copied, setCopied] = useState(false)
+  useEffect(() => {
+    if (!revealed) return undefined
+    const timer = setTimeout(() => setRevealed(false), 7000)
+    return () => clearTimeout(timer)
+  }, [revealed])
+
+  async function copyPassword(event) {
+    event.stopPropagation()
+    await navigator.clipboard.writeText(password)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 1400)
+  }
+
+  return (
+    <article className="vault-list-card" onClick={onOpen}>
+      <div className="item-icon tone-neutral">{item.url ? <SiteLogo url={item.url} name={item.name} size={20} radius={6} /> : <KeyRound size={18} />}</div>
+      <div className="item-copy">
+        <div className="item-title-row">
+          <strong>{item.name}</strong>
+          <span className="category-chip">{item.categoryLabel}</span>
+        </div>
+        <span className="item-secondary">{item.username || 'No username'}</span>
+        <div className="secret-row">
+          <span className={revealed ? 'secret-value revealed' : 'secret-value'}>{revealed ? password : 'â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢'}</span>
+          <div className="secret-actions">
+            <button className="mini-icon" title="Copy password" onClick={copyPassword}>{copied ? <Check size={15} /> : <Copy size={15} />}</button>
+            <button className="mini-icon" title={revealed ? 'Hide password' : 'Reveal password'} onClick={(event) => { event.stopPropagation(); setRevealed((v) => !v) }}>
+              {revealed ? <EyeOff size={15} /> : <Eye size={15} />}
+            </button>
+          </div>
+        </div>
+      </div>
+    </article>
+  )
+}
+
+==================================================
+FILE: C:\Users\rizky\Documents\Dev\personal-vault\src\components\ResetPasswordScreen.jsx
+==================================================
+import { useState } from 'react'
+import { KeyRound, Lock, ShieldCheck } from './Icons'
+import { supabase } from '../lib/supabase'
+
+/**
+ * Shown after the user follows the password-recovery email link.
+ *
+ * This resets the Supabase account password only. The vault master password
+ * is separate and cannot be recovered here.
+ */
+export default function ResetPasswordScreen({ onDone }) {
+  const [password, setPassword] = useState('')
+  const [confirm, setConfirm] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState('')
+  const [done, setDone] = useState(false)
+
+  async function submit(event) {
+    event.preventDefault()
+
+    setError('')
+
+    if (password.length < 8) {
+      setError('Use at least 8 characters.')
+      return
+    }
+
+    if (password !== confirm) {
+      setError('Passwords do not match.')
+      return
+    }
+
+    setBusy(true)
+
+    try {
+      const { error: updateError } =
+        await supabase.auth.updateUser({ password })
+
+      if (updateError) throw updateError
+
+      setDone(true)
+    } catch (err) {
+      setError(
+        err.message || 'Unable to update the password.'
+      )
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  if (done) {
+    return (
+      <main className="unlock-screen">
+        <div className="unlock-orb">
+          <ShieldCheck size={28} />
+        </div>
+
+        <div className="unlock-copy">
+          <div className="eyebrow">Password updated</div>
+          <h1>Your account password is set.</h1>
+          <p>
+            Next, unlock your vault with your master password.
+            Changing the account password does not change the
+            vault master password.
+          </p>
+        </div>
+
+        <button
+          className="primary-button"
+          onClick={onDone}
+        >
+          Continue to my vault
+        </button>
+      </main>
+    )
+  }
+
+  return (
+    <main className="unlock-screen">
+      <div className="unlock-orb">
+        <KeyRound size={28} />
+      </div>
+
+      <div className="unlock-copy">
+        <div className="eyebrow">Reset password</div>
+        <h1>Choose a new account password.</h1>
+        <p>
+          This changes the password you use to sign in. Your vault
+          master password stays the same.
+        </p>
+      </div>
+
+      <form onSubmit={submit} className="unlock-form">
+        <label className="field">
+          <span>New password</span>
+          <input
+            autoFocus
+            type="password"
+            value={password}
+            onChange={(event) =>
+              setPassword(event.target.value)
+            }
+            placeholder="At least 8 characters"
+            autoComplete="new-password"
+            minLength={8}
+            required
+          />
+        </label>
+
+        <label className="field">
+          <span>Confirm new password</span>
+          <input
+            type="password"
+            value={confirm}
+            onChange={(event) =>
+              setConfirm(event.target.value)
+            }
+            placeholder="Repeat password"
+            autoComplete="new-password"
+            minLength={8}
+            required
+          />
+        </label>
+
+        <button
+          className="primary-button"
+          disabled={busy}
+        >
+          {busy ? 'Updatingâ€¦' : 'Update password'}
+        </button>
+      </form>
+
+      {error && (
+        <div className="feedback error">{error}</div>
+      )}
+
+      <div className="unlock-note">
+        <Lock size={14} /> Your vault master password is never
+        reset by email.
+      </div>
+    </main>
+  )
+}
+
+==================================================
+FILE: C:\Users\rizky\Documents\Dev\personal-vault\src\components\SiteLogo.jsx
+==================================================
+import { useEffect, useState } from 'react'
+import {
+  faviconCandidates,
+  siteInitial,
+  siteTint
+} from '../lib/favicon'
+
+/**
+ * Shows the logo for a saved URL.
+ *
+ * Tries the site's own icon files in order. If none load, falls back to a
+ * coloured initial derived from the domain. No third-party favicon service
+ * is contacted, so the list of saved sites never leaves the device.
+ */
+export default function SiteLogo({
+  url,
+  name,
+  size = 18,
+  radius = 6,
+  className = 'site-logo'
+}) {
+  const candidates = faviconCandidates(url)
+  const [index, setIndex] = useState(0)
+  const [failed, setFailed] = useState(false)
+
+  useEffect(() => {
+    setIndex(0)
+    setFailed(false)
+  }, [url])
+
+  const hasCandidate =
+    !failed && index < candidates.length
+
+  const box = {
+    width: `${size}px`,
+    height: `${size}px`,
+    borderRadius: `${radius}px`
+  }
+
+  if (!hasCandidate) {
+    return (
+      <span
+        className={`${className} site-logo-fallback`}
+        style={{
+          ...box,
+          background: siteTint(url || name),
+          fontSize: `${Math.max(8, Math.round(size * 0.46))}px`
+        }}
+        aria-hidden="true"
+      >
+        {siteInitial(name, url)}
+      </span>
+    )
+  }
+
+  return (
+    <img
+      className={className}
+      style={box}
+      src={candidates[index]}
+      alt=""
+      loading="lazy"
+      decoding="async"
+      referrerPolicy="no-referrer"
+      onError={() => {
+        if (index + 1 < candidates.length) {
+          setIndex(index + 1)
+        } else {
+          setFailed(true)
+        }
+      }}
+    />
+  )
+}
+
+==================================================
+FILE: C:\Users\rizky\Documents\Dev\personal-vault\src\components\StatCard.jsx
+==================================================
+export default function StatCard({ label, value, hint, onClick }) {
+  return (
+    <button className="stat-card" onClick={onClick}>
+      <div className="eyebrow">{label}</div>
+      <div className="stat-value">{value}</div>
+      <div className="stat-hint">{hint}</div>
+    </button>
+  )
+}
+
+==================================================
+FILE: C:\Users\rizky\Documents\Dev\personal-vault\src\components\TopBar.jsx
+==================================================
+import { Bell, ChevronRight } from './Icons'
+
+export default function TopBar({ user, profile, unread, onAlerts, onSettings }) {
+  const initials = (profile?.display_name || user?.email || 'V').slice(0, 1).toUpperCase()
+  return (
+    <header className="topbar">
+      <div className="brand-lockup">
+        <div className="brand-mark">V</div>
+        <div>
+          <div className="brand-name">Vault</div>
+          <div className="brand-caption">Personal space</div>
+        </div>
+      </div>
+      <div className="top-actions">
+        <button className="icon-button notification-button" onClick={onAlerts} aria-label="Notifications">
+          <Bell size={19} strokeWidth={1.8} />
+          {unread > 0 && <span className="notification-badge">{unread}</span>}
+        </button>
+        <button className="avatar-button" onClick={onSettings} aria-label="Open settings">
+          {profile?.avatar_url ? <img src={profile.avatar_url} alt="Profile" /> : <span>{initials}</span>}
+          <ChevronRight size={14} />
+        </button>
+      </div>
+    </header>
+  )
+}
+
+==================================================
+FILE: C:\Users\rizky\Documents\Dev\personal-vault\src\components\UnlockScreen.jsx
+==================================================
+import { useEffect, useState } from 'react'
+import { Fingerprint, Lock, ShieldCheck } from './Icons'
+import { deriveVaultKey } from '../lib/crypto'
+import { verifyMasterKey } from '../lib/vault'
+import {
+  hasBiometricEnrollment,
+  isBiometricSupported,
+  unlockWithBiometric
+} from '../lib/biometric'
+
+export default function UnlockScreen({
+  profile,
+  user,
+  onUnlocked
+}) {
+  const [masterPassword, setMasterPassword] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState('')
+  const [biometricBusy, setBiometricBusy] = useState(false)
+
+  const userId = user?.id
+  const biometricReady =
+    isBiometricSupported() &&
+    hasBiometricEnrollment(userId)
+
+  useEffect(() => {
+    setMasterPassword('')
+    setError('')
+  }, [profile?.id])
+
+  async function unlock(event) {
+    event.preventDefault()
+
+    setBusy(true)
+    setError('')
+
+    try {
+      const key = deriveVaultKey(
+        masterPassword,
+        profile.vault_salt
+      )
+
+      const valid = await verifyMasterKey(profile, key)
+
+      if (!valid) {
+        throw new Error('Master password is incorrect.')
+      }
+
+      onUnlocked(key)
+    } catch (err) {
+      setError(err.message || 'Unable to unlock vault.')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  async function unlockWithDevice() {
+    setBiometricBusy(true)
+    setError('')
+
+    try {
+      const key = await unlockWithBiometric(userId)
+      onUnlocked(key)
+    } catch (err) {
+      setError(err.message || 'Biometric unlock failed.')
+    } finally {
+      setBiometricBusy(false)
+    }
+  }
+
+  return (
+    <main className="unlock-screen">
+      <div className="unlock-orb">
+        <ShieldCheck size={28} />
+      </div>
+
+      <div className="unlock-copy">
+        <div className="eyebrow">Secure vault</div>
+        <h1>Welcome back, {profile.display_name || 'there'}.</h1>
+        <p>
+          Unlock your private space. Your master password never
+          leaves this device.
+        </p>
+      </div>
+
+      <form onSubmit={unlock} className="unlock-form">
+        <label className="field focused-field">
+          <span>Master Password</span>
+          <input
+            autoFocus
+            value={masterPassword}
+            onChange={(e) =>
+              setMasterPassword(e.target.value)
+            }
+            type="password"
+            placeholder="Enter master password"
+            autoComplete="current-password"
+            required
+          />
+        </label>
+
+        <button className="primary-button" disabled={busy}>
+          {busy ? 'Unlockingâ€¦' : 'Unlock Vault'}
+        </button>
+      </form>
+
+      {biometricReady && (
+        <button
+          className="biometric-button"
+          type="button"
+          onClick={unlockWithDevice}
+          disabled={biometricBusy}
+        >
+          <Fingerprint size={17} />
+          {biometricBusy
+            ? 'Waiting for biometricsâ€¦'
+            : 'Unlock with device biometrics'}
+        </button>
+      )}
+
+      {error && (
+        <div className="feedback error">{error}</div>
+      )}
+
+      <div className="unlock-note">
+        <Lock size={14} /> Zero plaintext vault secrets in the
+        database.
+      </div>
+    </main>
+  )
+}
+
+==================================================
+FILE: C:\Users\rizky\Documents\Dev\personal-vault\src\lib\biometric.js
+==================================================
+// Device biometric unlock using WebAuthn + the PRF extension.
+//
+// How it works:
+//  1. The user enables biometrics while the vault is unlocked, so the raw
+//     vault key is in memory.
+//  2. We create a platform credential (Touch ID / Windows Hello / Android
+//     biometrics) that supports the PRF extension.
+//  3. The authenticator derives a stable 32-byte secret (the PRF output) from
+//     a random per-enrollment salt. That secret never leaves the device.
+//  4. We encrypt the raw vault key with that PRF secret and store only the
+//     ciphertext locally. The stored record is useless without the
+//     authenticator, so the vault key is never written to disk in the clear.
+//
+// Consequence: biometric unlock is per device. A new device needs the master
+// password once, then it can enroll its own biometrics.
+
+const STORE_PREFIX = 'vault.biometric.'
+
+function bufferToBase64Url(buffer) {
+  const bytes = new Uint8Array(buffer)
+  let binary = ''
+
+  for (let i = 0; i < bytes.length; i += 1) {
+    binary += String.fromCharCode(bytes[i])
+  }
+
+  return btoa(binary)
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_')
+    .replace(/=+$/, '')
+}
+
+function base64UrlToBytes(value) {
+  const normalized = String(value)
+    .replace(/-/g, '+')
+    .replace(/_/g, '/')
+
+  const padding =
+    normalized.length % 4 === 0
+      ? ''
+      : '='.repeat(4 - (normalized.length % 4))
+
+  const binary = atob(normalized + padding)
+  const bytes = new Uint8Array(binary.length)
+
+  for (let i = 0; i < binary.length; i += 1) {
+    bytes[i] = binary.charCodeAt(i)
+  }
+
+  return bytes
+}
+
+function importAesKey(raw) {
+  return crypto.subtle.importKey(
+    'raw',
+    raw,
+    { name: 'AES-GCM' },
+    false,
+    ['encrypt', 'decrypt']
+  )
+}
+
+export function isBiometricSupported() {
+  return (
+    typeof window !== 'undefined' &&
+    typeof window.PublicKeyCredential !== 'undefined' &&
+    typeof navigator?.credentials?.create === 'function' &&
+    typeof navigator?.credentials?.get === 'function'
+  )
+}
+
+export async function isPlatformAuthenticatorAvailable() {
+  if (!isBiometricSupported()) return false
+
+  try {
+    return await window.PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable()
+  } catch {
+    return false
+  }
+}
+
+export function getBiometricRecord(userId) {
+  if (!userId) return null
+
+  try {
+    const raw = localStorage.getItem(
+      STORE_PREFIX + userId
+    )
+
+    return raw ? JSON.parse(raw) : null
+  } catch {
+    return null
+  }
+}
+
+export function hasBiometricEnrollment(userId) {
+  return Boolean(getBiometricRecord(userId))
+}
+
+export function removeBiometricRecord(userId) {
+  if (!userId) return
+
+  try {
+    localStorage.removeItem(STORE_PREFIX + userId)
+  } catch {
+    /* storage unavailable */
+  }
+}
+
+async function evaluatePrf(credentialId, prfSalt) {
+  let assertion
+
+  try {
+    assertion = await navigator.credentials.get({
+      publicKey: {
+        challenge: crypto.getRandomValues(
+          new Uint8Array(32)
+        ),
+        rpId: window.location.hostname,
+        allowCredentials: [
+          {
+            type: 'public-key',
+            id: base64UrlToBytes(credentialId)
+          }
+        ],
+        userVerification: 'required',
+        timeout: 60000,
+        extensions: {
+          prf: { eval: { first: prfSalt } }
+        }
+      }
+    })
+  } catch (error) {
+    if (error?.name === 'NotAllowedError') {
+      throw new Error('Biometric verification was cancelled.')
+    }
+
+    throw error
+  }
+
+  if (!assertion) {
+    throw new Error('Biometric verification was cancelled.')
+  }
+
+  const results = assertion.getClientExtensionResults?.()
+  const first = results?.prf?.results?.first
+
+  if (!first) {
+    throw new Error(
+      'This device cannot derive a biometric key. Use your master password instead.'
+    )
+  }
+
+  return new Uint8Array(first)
+}
+
+export async function enrollBiometric(
+  userId,
+  { email, displayName } = {},
+  vaultKey
+) {
+  if (!isBiometricSupported()) {
+    throw new Error(
+      'This browser does not support biometric unlock.'
+    )
+  }
+
+  if (!vaultKey) {
+    throw new Error('Unlock your vault before enabling biometrics.')
+  }
+
+  let credential
+
+  try {
+    credential = await navigator.credentials.create({
+      publicKey: {
+        challenge: crypto.getRandomValues(
+          new Uint8Array(32)
+        ),
+        rp: {
+          name: 'Personal Vault',
+          id: window.location.hostname
+        },
+        user: {
+          id: new TextEncoder().encode(userId),
+          name: email || userId,
+          displayName: displayName || email || 'Vault user'
+        },
+        pubKeyCredParams: [
+          { type: 'public-key', alg: -7 },
+          { type: 'public-key', alg: -257 }
+        ],
+        authenticatorSelection: {
+          authenticatorAttachment: 'platform',
+          userVerification: 'required',
+          residentKey: 'preferred'
+        },
+        timeout: 60000,
+        attestation: 'none',
+        extensions: { prf: {} }
+      }
+    })
+  } catch (error) {
+    if (error?.name === 'NotAllowedError') {
+      throw new Error('Biometric setup was cancelled.')
+    }
+
+    throw error
+  }
+
+  if (!credential) {
+    throw new Error('Biometric setup was cancelled.')
+  }
+
+  const credentialId = bufferToBase64Url(
+    credential.rawId
+  )
+
+  // The PRF output is only produced during an assertion, so we immediately
+  // evaluate it once to wrap the vault key.
+  const prfSalt = crypto.getRandomValues(
+    new Uint8Array(32)
+  )
+
+  const prfOutput = await evaluatePrf(
+    credentialId,
+    prfSalt
+  )
+
+  const wrappingKey = await importAesKey(prfOutput)
+  const iv = crypto.getRandomValues(
+    new Uint8Array(12)
+  )
+
+  const cipher = await crypto.subtle.encrypt(
+    { name: 'AES-GCM', iv },
+    wrappingKey,
+    vaultKey
+  )
+
+  const record = {
+    version: 1,
+    credentialId,
+    prfSalt: bufferToBase64Url(prfSalt),
+    iv: bufferToBase64Url(iv),
+    wrapped: bufferToBase64Url(cipher),
+    createdAt: new Date().toISOString()
+  }
+
+  try {
+    localStorage.setItem(
+      STORE_PREFIX + userId,
+      JSON.stringify(record)
+    )
+  } catch {
+    throw new Error('Unable to store biometric data on this device.')
+  }
+
+  return record
+}
+
+export async function unlockWithBiometric(userId) {
+  const record = getBiometricRecord(userId)
+
+  if (!record) {
+    throw new Error(
+      'No biometric unlock is set up on this device.'
+    )
+  }
+
+  const prfOutput = await evaluatePrf(
+    record.credentialId,
+    base64UrlToBytes(record.prfSalt)
+  )
+
+  const wrappingKey = await importAesKey(prfOutput)
+
+  try {
+    const plain = await crypto.subtle.decrypt(
+      { name: 'AES-GCM', iv: base64UrlToBytes(record.iv) },
+      wrappingKey,
+      base64UrlToBytes(record.wrapped)
+    )
+
+    return new Uint8Array(plain)
+  } catch {
+    throw new Error(
+      'Biometric unlock failed on this device. Sign in with your master password and enable it again.'
+    )
+  }
+}
+
+==================================================
+FILE: C:\Users\rizky\Documents\Dev\personal-vault\src\lib\crypto.js
+==================================================
+import { argon2id } from '@noble/hashes/argon2.js'
+import { utf8ToBytes, randomBytes, bytesToHex } from '@noble/hashes/utils.js'
+
+const textEncoder = new TextEncoder()
+const textDecoder = new TextDecoder()
+
+// Browser-friendly starting point. Tune after profiling target mobile devices.
+const ARGON_OPTIONS = {
+  t: 3,
+  m: 64 * 1024,
+  p: 1,
+  dkLen: 32,
+  maxmem: 128 * 1024 * 1024
+}
+
+function bytesToBase64(bytes) {
+  let binary = ''
+  const chunk = 0x8000
+  for (let i = 0; i < bytes.length; i += chunk) {
+    binary += String.fromCharCode(...bytes.subarray(i, i + chunk))
+  }
+  return btoa(binary)
+}
+
+function base64ToBytes(value) {
+  const binary = atob(value)
+  const bytes = new Uint8Array(binary.length)
+  for (let i = 0; i < binary.length; i += 1) bytes[i] = binary.charCodeAt(i)
+  return bytes
+}
+
+export function generateSalt() {
+  return bytesToBase64(randomBytes(16))
+}
+
+export function generateId() {
+  return crypto.randomUUID()
+}
+
+export function deriveVaultKey(masterPassword, saltBase64) {
+  const salt = base64ToBytes(saltBase64)
+  return argon2id(utf8ToBytes(masterPassword), salt, ARGON_OPTIONS)
+}
+
+async function importAesKey(rawKey) {
+  return crypto.subtle.importKey('raw', rawKey, { name: 'AES-GCM' }, false, ['encrypt', 'decrypt'])
+}
+
+export async function encryptJson(value, rawKey) {
+  const iv = crypto.getRandomValues(new Uint8Array(12))
+  const key = await importAesKey(rawKey)
+  const plaintext = textEncoder.encode(JSON.stringify(value))
+  const cipher = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, plaintext)
+  return {
+    v: 1,
+    iv: bytesToBase64(iv),
+    ct: bytesToBase64(new Uint8Array(cipher))
+  }
+}
+
+export async function decryptJson(envelope, rawKey) {
+  const key = await importAesKey(rawKey)
+  const plaintext = await crypto.subtle.decrypt(
+    { name: 'AES-GCM', iv: base64ToBytes(envelope.iv) },
+    key,
+    base64ToBytes(envelope.ct)
+  )
+  return JSON.parse(textDecoder.decode(plaintext))
+}
+
+export function stableJson(value) {
+  return JSON.stringify(value, Object.keys(value).sort())
+}
+
+export function keyFingerprint(rawKey) {
+  return bytesToHex(rawKey.slice(0, 6))
+}
+
+==================================================
+FILE: C:\Users\rizky\Documents\Dev\personal-vault\src\lib\favicon.js
+==================================================
+// Privacy-respecting site logos.
+//
+// We never send the list of saved sites to a third-party favicon service.
+// Instead we try the site's own icon files first and fall back to a
+// deterministic coloured initial when nothing loads.
+
+export function siteDomain(input) {
+  if (!input) return ''
+
+  let value = String(input).trim()
+
+  if (!value) return ''
+
+  if (!/^[a-z][a-z0-9+.-]*:\/\//i.test(value)) {
+    value = `https://${value}`
+  }
+
+  try {
+    const host = new URL(value).hostname.toLowerCase()
+    return host.replace(/^www\./, '')
+  } catch {
+    return ''
+  }
+}
+
+export function faviconCandidates(input) {
+  const domain = siteDomain(input)
+
+  if (!domain || !domain.includes('.')) return []
+
+  return [
+    `https://${domain}/favicon.ico`,
+    `https://${domain}/favicon.png`,
+    `https://${domain}/apple-touch-icon.png`
+  ]
+}
+
+export function siteInitial(name, input) {
+  const source =
+    String(name || '').trim() || siteDomain(input)
+
+  const match = source.match(/[a-z0-9]/i)
+
+  return match ? match[0].toUpperCase() : '?'
+}
+
+export function siteTint(input) {
+  const domain = siteDomain(input) || String(input || '')
+
+  let hash = 0
+
+  for (let i = 0; i < domain.length; i += 1) {
+    hash = (hash * 31 + domain.charCodeAt(i)) % 360
+  }
+
+  return `hsl(${hash} 58% 45%)`
+}
+
+==================================================
+FILE: C:\Users\rizky\Documents\Dev\personal-vault\src\lib\idb.js
+==================================================
+const DB_NAME = 'personal-vault'
+const DB_VERSION = 1
+const STORE = 'vault_items'
+
+function openDb() {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open(DB_NAME, DB_VERSION)
+    request.onupgradeneeded = () => {
+      const db = request.result
+      if (!db.objectStoreNames.contains(STORE)) {
+        const store = db.createObjectStore(STORE, { keyPath: 'id' })
+        store.createIndex('user_id', 'user_id', { unique: false })
+        store.createIndex('updated_at', 'updated_at', { unique: false })
+      }
+    }
+    request.onsuccess = () => resolve(request.result)
+    request.onerror = () => reject(request.error)
+  })
+}
+
+export async function idbPut(item) {
+  const db = await openDb()
+  await new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE, 'readwrite')
+    tx.objectStore(STORE).put(item)
+    tx.oncomplete = resolve
+    tx.onerror = () => reject(tx.error)
+  })
+  db.close()
+}
+
+export async function idbBulkPut(items) {
+  const db = await openDb()
+  await new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE, 'readwrite')
+    const store = tx.objectStore(STORE)
+    items.forEach((item) => store.put(item))
+    tx.oncomplete = resolve
+    tx.onerror = () => reject(tx.error)
+  })
+  db.close()
+}
+
+export async function idbGetUserItems(userId) {
+  const db = await openDb()
+  const result = await new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE, 'readonly')
+    const index = tx.objectStore(STORE).index('user_id')
+    const req = index.getAll(IDBKeyRange.only(userId))
+    req.onsuccess = () => resolve(req.result || [])
+    req.onerror = () => reject(req.error)
+  })
+  db.close()
+  return result
+}
+
+export async function idbClearUser(userId) {
+  const items = await idbGetUserItems(userId)
+  if (!items.length) return
+  const db = await openDb()
+  await new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE, 'readwrite')
+    const store = tx.objectStore(STORE)
+    items.forEach((item) => store.delete(item.id))
+    tx.oncomplete = resolve
+    tx.onerror = () => reject(tx.error)
+  })
+  db.close()
+}
+
+==================================================
+FILE: C:\Users\rizky\Documents\Dev\personal-vault\src\lib\supabase.js
+==================================================
+import { createClient } from '@supabase/supabase-js'
+
+const url = import.meta.env.VITE_SUPABASE_URL
+const publishableKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY
+
+if (!url || !publishableKey) {
+  throw new Error('Missing VITE_SUPABASE_URL or VITE_SUPABASE_PUBLISHABLE_KEY. Copy .env.example to .env.local and fill them in.')
+}
+
+export const supabase = createClient(url, publishableKey, {
+  auth: {
+    autoRefreshToken: true,
+    persistSession: true,
+    detectSessionInUrl: true
+  }
+})
+
+==================================================
+FILE: C:\Users\rizky\Documents\Dev\personal-vault\src\lib\vault.js
+==================================================
+import { supabase } from './supabase'
+import { decryptJson, encryptJson, generateId } from './crypto'
+import { idbBulkPut, idbPut, idbGetUserItems } from './idb'
+
+export async function ensureProfile(user, displayName) {
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('id, display_name, avatar_url, vault_salt, vault_verifier, theme, card_style')
+    .eq('id', user.id)
+    .maybeSingle()
+  if (error) throw error
+  if (data) return data
+
+  const { data: inserted, error: insertError } = await supabase
+    .from('profiles')
+    .insert({ id: user.id, display_name: displayName || user.email?.split('@')[0] || 'You' })
+    .select('id, display_name, avatar_url, vault_salt, vault_verifier, theme, card_style')
+    .single()
+  if (insertError) throw insertError
+  return inserted
+}
+
+export async function fetchEncryptedItems(userId) {
+  const { data, error } = await supabase
+    .from('vault_items')
+    .select('id, user_id, item_type, category, payload, created_at, updated_at')
+    .eq('user_id', userId)
+    .order('updated_at', { ascending: false })
+  if (error) throw error
+  const rows = data || []
+  await idbBulkPut(rows)
+  return rows
+}
+
+export async function loadCachedItems(userId) {
+  return idbGetUserItems(userId)
+}
+
+export async function upsertEncryptedItem(userId, itemType, category, payload, existingId = null) {
+  const id = existingId || generateId()
+  const row = {
+    id,
+    user_id: userId,
+    item_type: itemType,
+    category,
+    payload,
+    updated_at: new Date().toISOString()
+  }
+  const { data, error } = await supabase
+    .from('vault_items')
+    .upsert(row)
+    .select('id, user_id, item_type, category, payload, created_at, updated_at')
+    .single()
+  if (error) throw error
+  await idbPut(data)
+  return data
+}
+
+export async function deleteEncryptedItem(userId, id) {
+  const { error } = await supabase.from('vault_items').delete().eq('user_id', userId).eq('id', id)
+  if (error) throw error
+  return true
+}
+
+export async function setProfilePreference(userId, patch) {
+  const { data, error } = await supabase
+    .from('profiles')
+    .update(patch)
+    .eq('id', userId)
+    .select('id, display_name, avatar_url, vault_salt, vault_verifier, theme, card_style')
+    .single()
+  if (error) throw error
+  return data
+}
+
+export async function createVerifier(masterKey) {
+  return encryptJson({ check: 'PERSONAL_VAULT_OK' }, masterKey)
+}
+
+export async function verifyMasterKey(profile, masterKey) {
+  if (!profile.vault_verifier) return false
+  try {
+    const value = await decryptJson(profile.vault_verifier, masterKey)
+    return value?.check === 'PERSONAL_VAULT_OK'
+  } catch {
+    return false
+  }
+}
+export async function uploadAvatar(userId, file) {
+  if (!userId) {
+    throw new Error('User ID is required')
+  }
+
+  if (!file) {
+    throw new Error('Avatar file is required')
+  }
+
+  const allowedTypes = [
+    'image/jpeg',
+    'image/png',
+    'image/webp'
+  ]
+
+  if (!allowedTypes.includes(file.type)) {
+    throw new Error('Avatar must be JPG, PNG, or WebP')
+  }
+
+  if (file.size > 5 * 1024 * 1024) {
+    throw new Error('Avatar must be smaller than 5 MB')
+  }
+
+  const filePath = `${userId}/avatar.webp`
+
+  const { error: uploadError } = await supabase.storage
+    .from('avatars')
+    .upload(filePath, file, {
+      cacheControl: '3600',
+      upsert: true,
+      contentType: 'image/webp'
+    })
+
+  if (uploadError) {
+    throw uploadError
+  }
+
+  const { data: publicUrlData } = supabase.storage
+    .from('avatars')
+    .getPublicUrl(filePath)
+
+  const avatarUrl =
+    publicUrlData?.publicUrl || filePath
+
+  const { error: profileError } = await supabase
+    .from('profiles')
+    .update({
+      avatar_url: avatarUrl,
+      updated_at: new Date().toISOString()
+    })
+    .eq('id', userId)
+
+  if (profileError) {
+    throw profileError
+  }
+
+  return avatarUrl
+}
+
+==================================================
+FILE: C:\Users\rizky\Documents\Dev\personal-vault\src\main.jsx
+==================================================
+import React from 'react'
+import ReactDOM from 'react-dom/client'
+import App from './App'
+import './styles.css'
+
+ReactDOM.createRoot(document.getElementById('root')).render(
+  <React.StrictMode>
+    <App />
+  </React.StrictMode>
+)
+
+==================================================
+FILE: C:\Users\rizky\Documents\Dev\personal-vault\src\pages\AddItemModal.jsx
+==================================================
+import { useMemo, useState } from 'react'
+import Modal from '../components/Modal'
+import SiteLogo from '../components/SiteLogo'
+import { Eye, EyeOff } from '../components/Icons'
+
+const bankDefaults = [
+  { name: 'BCA', color: '#0056b3' },
+  { name: 'Mandiri', color: '#1f51a5' },
+  { name: 'BRI', color: '#0b3f88' },
+  { name: 'BNI', color: '#e87500' },
+  { name: 'Bank Jago', color: '#e95c35' }
+]
+
+const environmentOptions = [
+  'Production',
+  'Staging',
+  'Development',
+  'Local',
+  'Other'
+]
+
+export default function AddItemModal({
+  mode,
+  onClose,
+  onSubmit
+}) {
+  const type = mode.startsWith('password')
+    ? 'password'
+    : mode === 'bank-card'
+      ? 'bank_card'
+      : 'secure_note'
+
+  const category = useMemo(
+    () =>
+      ({
+        'password-social': 'social',
+        'password-web': 'web',
+        'password-project': 'project'
+      }[mode] || null),
+    [mode]
+  )
+
+  const [form, setForm] = useState(
+    type === 'bank_card'
+      ? {
+          name: 'Bank card',
+          bank_name: 'BCA',
+          color: '#0056b3',
+          account_owner: '',
+          card_number: '',
+          account_number: '',
+          registered_phone: '',
+          card_brand: 'DEBIT',
+          expiry: '',
+          notes: '',
+          custom_fields: []
+        }
+      : type === 'secure_note'
+        ? {
+            name: '',
+            note: '',
+            custom_fields: []
+          }
+        : {
+            name: '',
+            username: '',
+            password: '',
+            url: '',
+            notes: '',
+            environment: '',
+            service: '',
+            custom_fields: []
+          }
+  )
+
+  const [formError, setFormError] = useState('')
+
+  const set = (key, value) => {
+    setForm((current) => ({
+      ...current,
+      [key]: value
+    }))
+  }
+
+  const addCustomField = () => {
+    setForm((current) => ({
+      ...current,
+      custom_fields: [
+        ...(current.custom_fields || []),
+        {
+          id: crypto.randomUUID(),
+          label: '',
+          value: '',
+          secret: false
+        }
+      ]
+    }))
+  }
+
+  const updateCustomField = (id, key, value) => {
+    setForm((current) => ({
+      ...current,
+      custom_fields: (current.custom_fields || []).map(
+        (field) =>
+          field.id === id
+            ? {
+                ...field,
+                [key]: value
+              }
+            : field
+      )
+    }))
+  }
+
+  const removeCustomField = (id) => {
+    setForm((current) => ({
+      ...current,
+      custom_fields: (current.custom_fields || []).filter(
+        (field) => field.id !== id
+      )
+    }))
+  }
+
+  function submit(event) {
+    event.preventDefault()
+
+    // Name / Title bersifat opsional. Bila kosong, gunakan fallback yang
+    // deskriptif supaya item tetap mudah dikenali di daftar vault.
+    const fallbackName =
+      type === 'bank_card'
+        ? form.bank_name
+          ? `${form.bank_name} card`
+          : 'Bank card'
+        : type === 'secure_note'
+          ? 'Secure note'
+          : form.username?.trim() ||
+            form.url?.trim() ||
+            'Untitled password'
+
+    const finalName = form.name?.trim() || fallbackName
+
+    setFormError('')
+
+    const cleanedCustomFields = (
+      form.custom_fields || []
+    )
+      .filter(
+        (field) =>
+          field.label?.trim() ||
+          field.value?.trim()
+      )
+      .map(({ id, ...field }) => ({
+        label:
+          field.label?.trim() ||
+          'Custom field',
+        value: field.value || '',
+        secret: Boolean(field.secret)
+      }))
+
+    onSubmit({
+      item_type: type,
+      category,
+      ...form,
+      name: finalName,
+      custom_fields: cleanedCustomFields,
+      favorite: false,
+      last_used_at: new Date().toISOString()
+    })
+  }
+
+  const title =
+    type === 'bank_card'
+      ? 'Add bank / ATM card'
+      : type === 'secure_note'
+        ? 'Add secure note'
+        : 'Add password'
+
+  const eyebrow =
+    type === 'password'
+      ? 'Secure record'
+      : type === 'bank_card'
+        ? 'Banking'
+        : 'Secure note'
+
+  return (
+    <Modal
+      title={title}
+      eyebrow={eyebrow}
+      wide
+      onClose={onClose}
+    >
+      <form
+        onSubmit={submit}
+        className="detail-grid"
+      >
+        {/* Password / Secure Record */}
+        {type !== 'bank_card' && (
+          <Field
+            label={
+              category === 'project'
+                ? 'Project name'
+                : category === 'social'
+                  ? 'Platform'
+                  : 'Website'
+            }
+            value={form.name}
+            onChange={(value) =>
+              set('name', value)
+            }
+          />
+        )}
+
+        {/* Secure Note */}
+        {type === 'secure_note' && (
+          <label className="field span-2">
+            <span>Private note</span>
+
+            <textarea
+              value={form.note}
+              onChange={(e) =>
+                set('note', e.target.value)
+              }
+              rows={9}
+              placeholder="Write anything you want to keep secure..."
+            />
+          </label>
+        )}
+
+        {/* Password */}
+        {type === 'password' && (
+          <>
+            <Field
+              label="Username / Email"
+              value={form.username}
+              onChange={(value) =>
+                set('username', value)
+              }
+            />
+
+            <Field
+              label="Password"
+              value={form.password}
+              onChange={(value) =>
+                set('password', value)
+              }
+              secret
+            />
+
+            <label className="field">
+              <span>URL</span>
+
+              <div
+                className={
+                  form.url?.trim()
+                    ? 'input-wrap prefixed'
+                    : undefined
+                }
+              >
+                {form.url?.trim() && (
+                  <span className="input-prefix">
+                    <SiteLogo
+                      url={form.url}
+                      name={form.name}
+                      size={18}
+                      radius={5}
+                    />
+                  </span>
+                )}
+
+                <input
+                  value={form.url || ''}
+                  onChange={(e) =>
+                    set('url', e.target.value)
+                  }
+                  placeholder="example.com"
+                  autoComplete="url"
+                  inputMode="url"
+                />
+              </div>
+            </label>
+
+            {category === 'project' && (
+              <>
+                <label className="field">
+                  <span>Environment</span>
+
+                  <select
+                    value={form.environment}
+                    onChange={(e) =>
+                      set(
+                        'environment',
+                        e.target.value
+                      )
+                    }
+                  >
+                    <option value="">
+                      Not specified
+                    </option>
+
+                    {environmentOptions.map(
+                      (environment) => (
+                        <option
+                          key={environment}
+                          value={environment}
+                        >
+                          {environment}
+                        </option>
+                      )
+                    )}
+                  </select>
+                </label>
+
+                <Field
+                  label="Service"
+                  value={form.service}
+                  onChange={(value) =>
+                    set('service', value)
+                  }
+                />
+              </>
+            )}
+
+            <label className="field span-2">
+              <span>Notes</span>
+
+              <textarea
+                value={form.notes}
+                onChange={(e) =>
+                  set(
+                    'notes',
+                    e.target.value
+                  )
+                }
+                rows={5}
+                placeholder="Additional information..."
+              />
+            </label>
+          </>
+        )}
+
+        {/* Bank / ATM Card */}
+        {type === 'bank_card' && (
+          <>
+            <Field
+              label="Record name"
+              value={form.name}
+              onChange={(value) =>
+                set('name', value)
+              }
+            />
+
+            <label className="field">
+              <span>Bank</span>
+
+              <select
+                value={form.bank_name}
+                onChange={(e) => {
+                  const value = e.target.value
+
+                  const hit =
+                    bankDefaults.find(
+                      (bank) =>
+                        bank.name === value
+                    )
+
+                  set(
+                    'bank_name',
+                    value
+                  )
+
+                  if (hit) {
+                    set(
+                      'color',
+                      hit.color
+                    )
+                  }
+                }}
+              >
+                {bankDefaults.map((bank) => (
+                  <option
+                    key={bank.name}
+                    value={bank.name}
+                  >
+                    {bank.name}
+                  </option>
+                ))}
+
+                <option value="Other">
+                  Other
+                </option>
+              </select>
+            </label>
+
+            <Field
+              label="Account owner"
+              value={form.account_owner}
+              onChange={(value) =>
+                set(
+                  'account_owner',
+                  value
+                )
+              }
+            />
+
+            <Field
+              label="Card number"
+              value={form.card_number}
+              onChange={(value) =>
+                set(
+                  'card_number',
+                  value
+                )
+              }
+            />
+
+            <Field
+              label="Account number"
+              value={form.account_number}
+              onChange={(value) =>
+                set(
+                  'account_number',
+                  value
+                )
+              }
+            />
+
+            <Field
+              label="Registered phone"
+              value={
+                form.registered_phone
+              }
+              onChange={(value) =>
+                set(
+                  'registered_phone',
+                  value
+                )
+              }
+            />
+
+            <Field
+              label="Card brand"
+              value={form.card_brand}
+              onChange={(value) =>
+                set(
+                  'card_brand',
+                  value
+                )
+              }
+            />
+
+            <Field
+              label="Expiry"
+              value={form.expiry}
+              onChange={(value) =>
+                set(
+                  'expiry',
+                  value
+                )
+              }
+            />
+
+            <Field
+              label="Card color"
+              value={form.color}
+              onChange={(value) =>
+                set('color', value)
+              }
+            />
+
+            <label className="field span-2">
+              <span>Notes</span>
+
+              <textarea
+                value={form.notes}
+                onChange={(e) =>
+                  set(
+                    'notes',
+                    e.target.value
+                  )
+                }
+                rows={4}
+                placeholder="Additional information..."
+              />
+            </label>
+
+            <div className="note-box span-2">
+              <strong>
+                Security rule
+              </strong>
+
+              <span>
+                PIN, CVV, OTP and recovery
+                codes should not be entered
+                as normal stored fields.
+              </span>
+            </div>
+          </>
+        )}
+
+        {/* Custom Fields */}
+        <div className="custom-fields-section span-2">
+          <div className="custom-fields-header">
+            <div>
+              <strong>
+                Custom fields
+              </strong>
+
+              <span>
+                Add any additional information
+                you want to keep secure.
+              </span>
+            </div>
+
+            <button
+              type="button"
+              className="secondary-button"
+              onClick={addCustomField}
+            >
+              + Add field
+            </button>
+          </div>
+
+          {(form.custom_fields || []).map(
+            (field) => (
+              <div
+                className="custom-field-row"
+                key={field.id}
+              >
+                <label className="field">
+                  <span>
+                    Field name
+                  </span>
+
+                  <input
+                    value={field.label}
+                    onChange={(e) =>
+                      updateCustomField(
+                        field.id,
+                        'label',
+                        e.target.value
+                      )
+                    }
+                    placeholder="e.g. API Key"
+                  />
+                </label>
+
+                <label className="field">
+                  <span>Value</span>
+
+                  <input
+                    value={field.value}
+                    onChange={(e) =>
+                      updateCustomField(
+                        field.id,
+                        'value',
+                        e.target.value
+                      )
+                    }
+                    type={
+                      field.secret
+                        ? 'password'
+                        : 'text'
+                    }
+                    placeholder="Enter value"
+                  />
+                </label>
+
+                <div className="custom-field-actions">
+                  <label className="custom-field-secret">
+                    <input
+                      type="checkbox"
+                      checked={field.secret}
+                      onChange={(e) =>
+                        updateCustomField(
+                          field.id,
+                          'secret',
+                          e.target.checked
+                        )
+                      }
+                    />
+
+                    Secret
+                  </label>
+
+                  <button
+                    type="button"
+                    className="text-button danger-text"
+                    onClick={() =>
+                      removeCustomField(
+                        field.id
+                      )
+                    }
+                  >
+                    Remove
+                  </button>
+                </div>
+              </div>
+            )
+          )}
+
+          {!form.custom_fields
+            ?.length && (
+            <div className="custom-fields-empty">
+              No custom fields. Add one if
+              you need to store something
+              specific.
+            </div>
+          )}
+        </div>
+
+        {/* Actions */}
+        {formError && (
+          <div className="feedback error span-2">
+            {formError}
+          </div>
+        )}
+
+        <div className="modal-actions span-2">
+          <button
+            type="button"
+            className="secondary-button"
+            onClick={onClose}
+          >
+            Cancel
+          </button>
+
+          <button
+            className="primary-button"
+            type="submit"
+          >
+            Save securely
+          </button>
+        </div>
+      </form>
+    </Modal>
+  )
+}
+
+function Field({
+  label,
+  value,
+  onChange,
+  secret = false,
+  required = false
+}) {
+  const [visible, setVisible] = useState(false)
+
+  return (
+    <label className="field">
+      <span>
+        {label}
+        {required && <small> *</small>}
+      </span>
+
+      <div className={secret ? 'input-wrap' : undefined}>
+        <input
+          value={value || ''}
+          onChange={(e) =>
+            onChange?.(e.target.value)
+          }
+          type={
+            secret && !visible
+              ? 'password'
+              : 'text'
+          }
+          required={required}
+        />
+
+        {secret && (
+          <div className="input-actions">
+            <button
+              type="button"
+              className="mini-icon"
+              onClick={() => setVisible((v) => !v)}
+              title={visible ? 'Hide' : 'Show'}
+              aria-label={visible ? 'Hide' : 'Show'}
+            >
+              {visible ? (
+                <EyeOff size={15} />
+              ) : (
+                <Eye size={15} />
+              )}
+            </button>
+          </div>
+        )}
+      </div>
+    </label>
+  )
+}
+
+==================================================
+FILE: C:\Users\rizky\Documents\Dev\personal-vault\src\pages\AlertsPanel.jsx
+==================================================
+import { AlertTriangle, Bell, ShieldCheck, X } from '../components/Icons'
+
+export default function AlertsPanel({ alerts, onClose }) {
+  return <div className="popover-backdrop" onMouseDown={onClose}><aside className="alerts-panel" onMouseDown={(e) => e.stopPropagation()}><div className="panel-header"><div><div className="eyebrow">Notifications</div><h3>Stay ahead of security.</h3></div><button className="icon-button" onClick={onClose}><X size={18} /></button></div>{alerts.length === 0 ? <div className="empty-state"><ShieldCheck size={18} /><span>All quiet. No urgent alerts.</span></div> : <div className="alerts-list">{alerts.map((alert) => <div className="alert-row" key={alert.id}><div className={`alert-icon ${alert.level}`}><AlertTriangle size={16} /></div><div><strong>{alert.title}</strong><span>{alert.body}</span></div></div>)}</div>}<div className="panel-footer"><Bell size={14} /> Alert preferences are managed in Settings.</div></aside></div>
+}
+
+==================================================
+FILE: C:\Users\rizky\Documents\Dev\personal-vault\src\pages\BankingPage.jsx
+==================================================
+import { useMemo, useState } from 'react'
+import BankCard from '../components/BankCard'
+import { Plus, Settings, ShieldCheck, ChevronLeft, ChevronRight } from '../components/Icons'
+
+export default function BankingPage({ banks, styleMode, onAdd, onOpen }) {
+  const [index, setIndex] = useState(0)
+  const active = banks[index]
+  const go = (direction) => setIndex((current) => (current + direction + banks.length) % banks.length)
+  const stacked = useMemo(() => [...banks].sort((a, b) => a._renderIndex - b._renderIndex), [banks])
+  return (
+    <div className="page-shell banking-page">
+      <section className="hero-row banking-heading">
+        <div><div className="eyebrow">Banking</div><h1>Your cards, one swipe away.</h1><p>Drag the top card left or right to switch.</p></div>
+        <button className="quick-add" onClick={onAdd}><Plus size={17} /> Add</button>
+      </section>
+      {banks.length === 0 ? (
+        <div className="empty-state large"><ShieldCheck size={20} /><strong>No cards yet.</strong><span>Add a bank / ATM card to start the wallet stack.</span><button className="primary-button" onClick={onAdd}>Add first card</button></div>
+      ) : (
+        <>
+          <div className="bank-stack" onDoubleClick={() => onOpen(active)}>
+            {[...banks].map((bank, i) => {
+              const position = (i - index + banks.length) % banks.length
+              return <BankCard key={bank.id} bank={bank} styleMode={styleMode} index={position} total={banks.length} onSwipe={(dir) => go(dir === 'left' ? 1 : -1)} />
+            })}
+          </div>
+          <div className="swipe-controls"><button className="circle-control" onClick={() => go(-1)}><ChevronLeft size={17} /></button><span>Swipe or use arrows</span><button className="circle-control" onClick={() => go(1)}><ChevronRight size={17} /></button></div>
+          <button className="bank-detail-link" onClick={() => onOpen(active)}>Open card details <ChevronRight size={15} /></button>
+          <div className="bank-security-strip"><ShieldCheck size={16} /><span>PIN, CVV and OTP are intentionally not displayed or stored as normal fields.</span></div>
+        </>
+      )}
+    </div>
+  )
+}
+
+==================================================
+FILE: C:\Users\rizky\Documents\Dev\personal-vault\src\pages\HomePage.jsx
+==================================================
+import { ChevronRight, CreditCard, KeyRound, Sparkles, ShieldCheck } from '../components/Icons'
+import SiteLogo from '../components/SiteLogo'
+import StatCard from '../components/StatCard'
+
+export default function HomePage({ displayName, stats, favorites, recent, onNavigate, onOpenItem, onAdd }) {
+  return (
+    <div className="page-shell">
+      <section className="hero-row">
+        <div>
+          <div className="eyebrow">Overview</div>
+          <h1>Good evening, {displayName || 'there'}.</h1>
+          <p>Your private space is ready.</p>
+        </div>
+        <button className="quick-add" onClick={onAdd}><span>+</span> Add</button>
+      </section>
+
+      <section className="stats-grid">
+        <StatCard label="Passwords" value={stats.passwords} hint="Social, web & project" onClick={() => onNavigate('vault')} />
+        <StatCard label="Banking" value={stats.banks} hint="Cards & account details" onClick={() => onNavigate('banking')} />
+      </section>
+
+      <section className="section-block">
+        <div className="section-heading"><div><div className="eyebrow">Your vault</div><h2>Keep the important things close.</h2></div><button className="text-button" onClick={() => onNavigate('vault')}>View vault <ChevronRight size={16} /></button></div>
+        <div className="feature-row">
+          <div className="feature-card dark-feature"><div className="feature-icon"><ShieldCheck size={18} /></div><div><strong>Encrypted by default</strong><span>Only ciphertext is synced to Supabase.</span></div></div>
+          <div className="feature-card"><div className="feature-icon"><Sparkles size={18} /></div><div><strong>Clean and fast</strong><span>Compact views built for everyday use.</span></div></div>
+        </div>
+      </section>
+
+      <section className="section-block">
+        <div className="section-heading"><div><div className="eyebrow">Favorites</div><h2>Fast access</h2></div></div>
+        {favorites.length === 0 ? <EmptyState text="Star your most used items to see them here." /> : <ItemRail items={favorites} onOpenItem={onOpenItem} />}
+      </section>
+
+      <section className="section-block compact-section">
+        <div className="section-heading"><div><div className="eyebrow">Recently used</div><h2>Back where you left off.</h2></div></div>
+        {recent.length === 0 ? <EmptyState text="Recently opened items will appear here." /> : <ItemRail items={recent} onOpenItem={onOpenItem} />}
+      </section>
+    </div>
+  )
+}
+
+function ItemRail({ items, onOpenItem }) {
+  return <div className="item-rail">{items.slice(0, 4).map((item) => <button className="rail-card" key={item.id} onClick={() => onOpenItem(item)}><div className="item-icon tone-neutral">{item.item_type === 'bank_card' ? <CreditCard size={17} /> : item.url ? <SiteLogo url={item.url} name={item.name} size={20} radius={6} /> : <KeyRound size={17} />}</div><div><strong>{item.name}</strong><span>{item.categoryLabel}</span></div><ChevronRight size={15} /></button>)}</div>
+}
+
+function EmptyState({ text }) { return <div className="empty-state"><span>{text}</span></div> }
+
+==================================================
+FILE: C:\Users\rizky\Documents\Dev\personal-vault\src\pages\ItemModal.jsx
+==================================================
+import { useEffect, useState } from 'react'
+import Modal from '../components/Modal'
+import SiteLogo from '../components/SiteLogo'
+import {
+  Copy,
+  Eye,
+  EyeOff,
+  Pencil,
+  Trash2,
+  Star,
+  Plus,
+  X
+} from '../components/Icons'
+
+export default function ItemModal({
+  item,
+  onClose,
+  onDelete,
+  onSave,
+  onToggleFavorite
+}) {
+  const [editing, setEditing] = useState(false)
+  const [form, setForm] = useState(normalizeItem(item))
+  const [visibleSecrets, setVisibleSecrets] = useState({})
+
+  useEffect(() => {
+    setForm(normalizeItem(item))
+    setEditing(false)
+    setVisibleSecrets({})
+  }, [item])
+
+  const update = (key, value) => {
+    setForm((current) => ({
+      ...current,
+      [key]: value
+    }))
+  }
+
+  const toggleSecret = (key) => {
+    setVisibleSecrets((current) => ({
+      ...current,
+      [key]: !current[key]
+    }))
+  }
+
+  const save = () => {
+    if (!String(form.name || '').trim()) {
+      return
+    }
+
+    const cleanedCustomFields = (form.custom_fields || [])
+      .filter(
+        (field) =>
+          String(field.label || '').trim() ||
+          String(field.value || '').trim()
+      )
+      .map(({ label, value, secret }) => ({
+        label: String(label || '').trim(),
+        value: value || '',
+        secret: Boolean(secret)
+      }))
+
+    onSave({
+      ...form,
+      name: String(form.name).trim(),
+      custom_fields: cleanedCustomFields
+    })
+
+    setForm((current) => ({
+      ...current,
+      custom_fields: cleanedCustomFields
+    }))
+
+    setEditing(false)
+    setVisibleSecrets({})
+  }
+
+  const cancelEdit = () => {
+    setForm(normalizeItem(item))
+    setEditing(false)
+    setVisibleSecrets({})
+  }
+
+  const addCustomField = () => {
+    setForm((current) => ({
+      ...current,
+      custom_fields: [
+        ...(current.custom_fields || []),
+        {
+          id: crypto.randomUUID(),
+          label: '',
+          value: '',
+          secret: false
+        }
+      ]
+    }))
+  }
+
+  const updateCustomField = (id, key, value) => {
+    setForm((current) => ({
+      ...current,
+      custom_fields: (current.custom_fields || []).map((field) =>
+        field.id === id
+          ? {
+              ...field,
+              [key]: value
+            }
+          : field
+      )
+    }))
+  }
+
+  const removeCustomField = (id) => {
+    setForm((current) => ({
+      ...current,
+      custom_fields: (current.custom_fields || []).filter(
+        (field) => field.id !== id
+      )
+    }))
+  }
+
+  const isFavorite = Boolean(item.favorite)
+
+  return (
+    <Modal
+      title={
+        item.item_type === 'bank_card'
+          ? 'Card details'
+          : item.item_type === 'secure_note'
+            ? 'Secure note'
+            : item.name
+      }
+      eyebrow={formatType(item.item_type)}
+      wide
+      onClose={onClose}
+    >
+      <div className="detail-header">
+        <div className="detail-identity">
+          {form.url && (
+            <SiteLogo
+              url={form.url}
+              name={form.name}
+              size={34}
+              radius={10}
+            />
+          )}
+
+          <div>
+            <span className="detail-name">
+              {form.name || 'Untitled'}
+            </span>
+
+            <span className="detail-category">
+              {form.categoryLabel || formatType(item.item_type)}
+            </span>
+          </div>
+        </div>
+
+        <div className="button-row">
+          <button
+            type="button"
+            className={
+              isFavorite
+                ? 'favorite-button selected'
+                : 'favorite-button'
+            }
+            onClick={() => onToggleFavorite(item.id)}
+          >
+            <Star
+              size={15}
+              fill={isFavorite ? 'currentColor' : 'none'}
+            />
+            Favorite
+          </button>
+
+          {!editing ? (
+            <button
+              type="button"
+              className="secondary-button compact"
+              onClick={() => setEditing(true)}
+            >
+              <Pencil size={15} />
+              Edit
+            </button>
+          ) : (
+            <button
+              type="button"
+              className="secondary-button compact"
+              onClick={cancelEdit}
+            >
+              Cancel
+            </button>
+          )}
+
+          <button
+            type="button"
+            className="danger-ghost compact"
+            onClick={() => onDelete(item.id)}
+            title="Delete"
+            aria-label="Delete"
+          >
+            <Trash2 size={15} />
+          </button>
+        </div>
+      </div>
+
+      {!editing ? (
+        <ReadOnly
+          item={form}
+          visibleSecrets={visibleSecrets}
+          toggleSecret={toggleSecret}
+        />
+      ) : (
+        <EditForm
+          item={form}
+          update={update}
+          visibleSecrets={visibleSecrets}
+          toggleSecret={toggleSecret}
+          addCustomField={addCustomField}
+          updateCustomField={updateCustomField}
+          removeCustomField={removeCustomField}
+        />
+      )}
+
+      {editing && (
+        <div className="modal-actions">
+          <button
+            type="button"
+            className="secondary-button"
+            onClick={cancelEdit}
+          >
+            Cancel
+          </button>
+
+          <button
+            type="button"
+            className="primary-button"
+            onClick={save}
+            disabled={!String(form.name || '').trim()}
+          >
+            Save changes
+          </button>
+        </div>
+      )}
+    </Modal>
+  )
+}
+
+function normalizeItem(item) {
+  return {
+    ...item,
+
+    name: item.name || '',
+    username: item.username || '',
+    password: item.password || '',
+    url: item.url || '',
+    notes: item.notes || '',
+    environment: item.environment || '',
+    service: item.service || '',
+
+    bank_name: item.bank_name || '',
+    account_owner: item.account_owner || '',
+    card_number: item.card_number || '',
+    account_number: item.account_number || '',
+    registered_phone: item.registered_phone || '',
+    card_brand: item.card_brand || '',
+    expiry: item.expiry || '',
+    color: item.color || '',
+
+    note: item.note || '',
+
+    custom_fields: (item.custom_fields || []).map((field) => ({
+      id: field.id || crypto.randomUUID(),
+      label: field.label || '',
+      value: field.value || '',
+      secret: Boolean(field.secret)
+    }))
+  }
+}
+
+function formatType(type) {
+  if (type === 'bank_card') {
+    return 'Bank / ATM Card'
+  }
+
+  if (type === 'secure_note') {
+    return 'Secure Note'
+  }
+
+  if (type === 'password') {
+    return 'Password'
+  }
+
+  return String(type || '').replaceAll('_', ' ')
+}
+
+function Field({
+  label,
+  value,
+  secret = false,
+  visible = false,
+  onToggle,
+  onChange,
+  disabled = false
+}) {
+  const displayValue = value || ''
+
+  return (
+    <label className="field">
+      <span>{label}</span>
+
+      <div className="input-wrap">
+        <input
+          value={displayValue}
+          onChange={(event) =>
+            onChange?.(event.target.value)
+          }
+          disabled={disabled}
+          type={
+            secret && !visible
+              ? 'password'
+              : 'text'
+          }
+        />
+
+        <div className="input-actions">
+          {secret && (
+            <button
+              type="button"
+              className="mini-icon"
+              onClick={onToggle}
+              title={visible ? 'Hide' : 'Show'}
+              aria-label={visible ? 'Hide' : 'Show'}
+            >
+              {visible ? (
+                <EyeOff size={15} />
+              ) : (
+                <Eye size={15} />
+              )}
+            </button>
+          )}
+
+          {secret && displayValue && (
+            <button
+              type="button"
+              className="mini-icon"
+              onClick={() =>
+                navigator.clipboard?.writeText(displayValue)
+              }
+              title="Copy"
+              aria-label="Copy"
+            >
+              <Copy size={15} />
+            </button>
+          )}
+        </div>
+      </div>
+    </label>
+  )
+}
+
+function ReadOnly({
+  item,
+  visibleSecrets,
+  toggleSecret
+}) {
+  if (item.item_type === 'bank_card') {
+    return (
+      <div className="detail-grid">
+        <Field
+          label="Bank"
+          value={item.bank_name}
+          disabled
+        />
+
+        <Field
+          label="Account owner"
+          value={item.account_owner}
+          disabled
+        />
+
+        <Field
+          label="Card number"
+          value={item.card_number}
+          secret
+          visible={visibleSecrets.card_number}
+          onToggle={() =>
+            toggleSecret('card_number')
+          }
+          disabled
+        />
+
+        <Field
+          label="Account number"
+          value={item.account_number}
+          secret
+          visible={visibleSecrets.account_number}
+          onToggle={() =>
+            toggleSecret('account_number')
+          }
+          disabled
+        />
+
+        <Field
+          label="Registered phone"
+          value={item.registered_phone}
+          disabled
+        />
+
+        <Field
+          label="Card type"
+          value={item.card_brand}
+          disabled
+        />
+
+        <Field
+          label="Expiry"
+          value={item.expiry}
+          disabled
+        />
+
+        <Field
+          label="Bank color"
+          value={item.color}
+          disabled
+        />
+
+        {item.notes && (
+          <div className="note-box span-2">
+            <strong>Notes</strong>
+            <span>{item.notes}</span>
+          </div>
+        )}
+
+        <CustomFieldsReadOnly
+          fields={item.custom_fields}
+          visibleSecrets={visibleSecrets}
+          toggleSecret={toggleSecret}
+        />
+
+        <div className="note-box span-2">
+          <strong>Security note</strong>
+
+          <span>
+            Do not put PIN, OTP, CVV or recovery
+            codes into regular fields.
+          </span>
+        </div>
+      </div>
+    )
+  }
+
+  if (item.item_type === 'secure_note') {
+    return (
+      <div className="detail-grid one">
+        <Field
+          label="Title"
+          value={item.name}
+          disabled
+        />
+
+        <label className="field">
+          <span>Note</span>
+
+          <textarea
+            value={item.note || ''}
+            disabled
+            rows={8}
+          />
+        </label>
+
+        <CustomFieldsReadOnly
+          fields={item.custom_fields}
+          visibleSecrets={visibleSecrets}
+          toggleSecret={toggleSecret}
+        />
+      </div>
+    )
+  }
+
+  return (
+    <div className="detail-grid">
+      <Field
+        label="Name"
+        value={item.name}
+        disabled
+      />
+
+      <Field
+        label="Username / Email"
+        value={item.username}
+        disabled
+      />
+
+      <Field
+        label="Password"
+        value={item.password}
+        secret
+        visible={visibleSecrets.password}
+        onToggle={() =>
+          toggleSecret('password')
+        }
+        disabled
+      />
+
+      <Field
+        label="URL"
+        value={item.url}
+        disabled
+      />
+
+      <Field
+        label="Environment"
+        value={item.environment}
+        disabled
+      />
+
+      <Field
+        label="Service"
+        value={item.service}
+        disabled
+      />
+
+      <label className="field span-2">
+        <span>Notes</span>
+
+        <textarea
+          value={item.notes || ''}
+          disabled
+          rows={5}
+        />
+      </label>
+
+      <CustomFieldsReadOnly
+        fields={item.custom_fields}
+        visibleSecrets={visibleSecrets}
+        toggleSecret={toggleSecret}
+      />
+    </div>
+  )
+}
+
+function EditForm({
+  item,
+  update,
+  visibleSecrets,
+  toggleSecret,
+  addCustomField,
+  updateCustomField,
+  removeCustomField
+}) {
+  if (item.item_type === 'bank_card') {
+    return (
+      <div className="detail-grid">
+        <Field
+          label="Name"
+          value={item.name}
+          onChange={(value) =>
+            update('name', value)
+          }
+        />
+
+        <Field
+          label="Bank"
+          value={item.bank_name}
+          onChange={(value) =>
+            update('bank_name', value)
+          }
+        />
+
+        <Field
+          label="Account owner"
+          value={item.account_owner}
+          onChange={(value) =>
+            update('account_owner', value)
+          }
+        />
+
+        <Field
+          label="Card number"
+          value={item.card_number}
+          secret
+          visible={
+            visibleSecrets.edit_card_number
+          }
+          onToggle={() =>
+            toggleSecret('edit_card_number')
+          }
+          onChange={(value) =>
+            update('card_number', value)
+          }
+        />
+
+        <Field
+          label="Account number"
+          value={item.account_number}
+          secret
+          visible={
+            visibleSecrets.edit_account_number
+          }
+          onToggle={() =>
+            toggleSecret('edit_account_number')
+          }
+          onChange={(value) =>
+            update('account_number', value)
+          }
+        />
+
+        <Field
+          label="Registered phone"
+          value={item.registered_phone}
+          onChange={(value) =>
+            update('registered_phone', value)
+          }
+        />
+
+        <Field
+          label="Card brand"
+          value={item.card_brand}
+          onChange={(value) =>
+            update('card_brand', value)
+          }
+        />
+
+        <Field
+          label="Expiry"
+          value={item.expiry}
+          onChange={(value) =>
+            update('expiry', value)
+          }
+        />
+
+        <Field
+          label="Bank color"
+          value={item.color}
+          onChange={(value) =>
+            update('color', value)
+          }
+        />
+
+        <label className="field span-2">
+          <span>Notes</span>
+
+          <textarea
+            value={item.notes || ''}
+            onChange={(event) =>
+              update(
+                'notes',
+                event.target.value
+              )
+            }
+            rows={5}
+          />
+        </label>
+
+        <CustomFieldsEditor
+          fields={item.custom_fields}
+          visibleSecrets={visibleSecrets}
+          toggleSecret={toggleSecret}
+          addCustomField={addCustomField}
+          updateCustomField={
+            updateCustomField
+          }
+          removeCustomField={
+            removeCustomField
+          }
+        />
+      </div>
+    )
+  }
+
+  if (item.item_type === 'secure_note') {
+    return (
+      <div className="detail-grid one">
+        <Field
+          label="Title"
+          value={item.name}
+          onChange={(value) =>
+            update('name', value)
+          }
+        />
+
+        <label className="field">
+          <span>Note</span>
+
+          <textarea
+            value={item.note || ''}
+            onChange={(event) =>
+              update(
+                'note',
+                event.target.value
+              )
+            }
+            rows={8}
+          />
+        </label>
+
+        <CustomFieldsEditor
+          fields={item.custom_fields}
+          visibleSecrets={visibleSecrets}
+          toggleSecret={toggleSecret}
+          addCustomField={addCustomField}
+          updateCustomField={
+            updateCustomField
+          }
+          removeCustomField={
+            removeCustomField
+          }
+        />
+      </div>
+    )
+  }
+
+  return (
+    <div className="detail-grid">
+      <Field
+        label="Name"
+        value={item.name}
+        onChange={(value) =>
+          update('name', value)
+        }
+      />
+
+      <Field
+        label="Username / Email"
+        value={item.username}
+        onChange={(value) =>
+          update('username', value)
+        }
+      />
+
+      <Field
+        label="Password"
+        value={item.password}
+        secret
+        visible={
+          visibleSecrets.edit_password
+        }
+        onToggle={() =>
+          toggleSecret('edit_password')
+        }
+        onChange={(value) =>
+          update('password', value)
+        }
+      />
+
+      <Field
+        label="URL"
+        value={item.url}
+        onChange={(value) =>
+          update('url', value)
+        }
+      />
+
+      <Field
+        label="Environment"
+        value={item.environment}
+        onChange={(value) =>
+          update('environment', value)
+        }
+      />
+
+      <Field
+        label="Service"
+        value={item.service}
+        onChange={(value) =>
+          update('service', value)
+        }
+      />
+
+      <label className="field span-2">
+        <span>Notes</span>
+
+        <textarea
+          value={item.notes || ''}
+          onChange={(event) =>
+            update(
+              'notes',
+              event.target.value
+            )
+          }
+          rows={5}
+        />
+      </label>
+
+      <CustomFieldsEditor
+        fields={item.custom_fields}
+        visibleSecrets={visibleSecrets}
+        toggleSecret={toggleSecret}
+        addCustomField={addCustomField}
+        updateCustomField={
+          updateCustomField
+        }
+        removeCustomField={
+          removeCustomField
+        }
+      />
+    </div>
+  )
+}
+
+function CustomFieldsReadOnly({
+  fields = [],
+  visibleSecrets,
+  toggleSecret
+}) {
+  if (!fields.length) {
+    return null
+  }
+
+  return (
+    <div className="custom-fields-readonly span-2">
+      <div className="custom-fields-title">
+        <strong>Custom fields</strong>
+      </div>
+
+      <div className="detail-grid">
+        {fields.map((field, index) => {
+          const key = `custom_${index}`
+
+          return (
+            <Field
+              key={key}
+              label={
+                field.label ||
+                `Field ${index + 1}`
+              }
+              value={field.value}
+              secret={field.secret}
+              visible={visibleSecrets[key]}
+              onToggle={() =>
+                toggleSecret(key)
+              }
+              disabled
+            />
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
+function CustomFieldsEditor({
+  fields = [],
+  visibleSecrets,
+  toggleSecret,
+  addCustomField,
+  updateCustomField,
+  removeCustomField
+}) {
+  return (
+    <div className="custom-fields-section span-2">
+      <div className="custom-fields-header">
+        <div>
+          <strong>Custom fields</strong>
+
+          <span>
+            Add API keys, IDs, servers,
+            accounts or other information.
+          </span>
+        </div>
+
+        <button
+          type="button"
+          className="secondary-button compact"
+          onClick={addCustomField}
+        >
+          <Plus size={15} />
+          Add field
+        </button>
+      </div>
+
+      {!fields.length ? (
+        <div className="custom-fields-empty">
+          No custom fields added.
+        </div>
+      ) : (
+        <div className="custom-fields-list">
+          {fields.map((field) => {
+            const secretKey = `edit_${field.id}`
+
+            return (
+              <div
+                className="custom-field-row"
+                key={field.id}
+              >
+                <label className="field">
+                  <span>Label</span>
+
+                  <input
+                    value={field.label || ''}
+                    onChange={(event) =>
+                      updateCustomField(
+                        field.id,
+                        'label',
+                        event.target.value
+                      )
+                    }
+                    placeholder="e.g. API Key"
+                  />
+                </label>
+
+                <label className="field">
+                  <span>Value</span>
+
+                  <div className="input-wrap">
+                    <input
+                      value={field.value || ''}
+                      onChange={(event) =>
+                        updateCustomField(
+                          field.id,
+                          'value',
+                          event.target.value
+                        )
+                      }
+                      type={
+                        field.secret &&
+                        !visibleSecrets[secretKey]
+                          ? 'password'
+                          : 'text'
+                      }
+                      placeholder="Value"
+                    />
+
+                    {field.secret && (
+                      <div className="input-actions">
+                        <button
+                          type="button"
+                          className="mini-icon"
+                          onClick={() =>
+                            toggleSecret(secretKey)
+                          }
+                          title={
+                            visibleSecrets[secretKey]
+                              ? 'Hide'
+                              : 'Show'
+                          }
+                        >
+                          {visibleSecrets[
+                            secretKey
+                          ] ? (
+                            <EyeOff size={15} />
+                          ) : (
+                            <Eye size={15} />
+                          )}
+                        </button>
+
+                        {field.value && (
+                          <button
+                            type="button"
+                            className="mini-icon"
+                            onClick={() =>
+                              navigator.clipboard?.writeText(
+                                field.value
+                              )
+                            }
+                            title="Copy"
+                          >
+                            <Copy size={15} />
+                          </button>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </label>
+
+                <label className="custom-field-secret">
+                  <input
+                    type="checkbox"
+                    checked={Boolean(field.secret)}
+                    onChange={(event) =>
+                      updateCustomField(
+                        field.id,
+                        'secret',
+                        event.target.checked
+                      )
+                    }
+                  />
+
+                  <span>Secret</span>
+                </label>
+
+                <button
+                  type="button"
+                  className="mini-icon custom-field-remove"
+                  onClick={() =>
+                    removeCustomField(field.id)
+                  }
+                  title="Remove field"
+                  aria-label="Remove field"
+                >
+                  <X size={15} />
+                </button>
+              </div>
+            )
+          })}
+        </div>
+      )}
+    </div>
+  )
+}
+
+==================================================
+FILE: C:\Users\rizky\Documents\Dev\personal-vault\src\pages\SettingsPage.jsx
+==================================================
+import { useEffect, useState } from 'react'
+
+import {
+  Laptop,
+  Moon,
+  Sun,
+  Settings,
+  LogOut,
+  ShieldCheck,
+  Upload,
+  Download,
+  Fingerprint
+} from '../components/Icons'
+
+import {
+  enrollBiometric,
+  hasBiometricEnrollment,
+  isBiometricSupported,
+  isPlatformAuthenticatorAvailable,
+  removeBiometricRecord
+} from '../lib/biometric'
+
+export default function SettingsPage({
+  profile,
+  user,
+  vaultKey,
+  onTheme,
+  onCardStyle,
+  onSaveProfile,
+  onUploadAvatar,
+  onSignOut,
+  onImport,
+  onExport
+}) {
+  const [name, setName] = useState(profile.display_name || '')
+  const [avatarPreview, setAvatarPreview] = useState('')
+  const [uploadingAvatar, setUploadingAvatar] = useState(false)
+  const [biometricSupported, setBiometricSupported] = useState(false)
+  const [biometricEnrolled, setBiometricEnrolled] = useState(false)
+  const [biometricBusy, setBiometricBusy] = useState(false)
+  const [biometricError, setBiometricError] = useState('')
+
+  useEffect(() => {
+    setName(profile.display_name || '')
+  }, [profile.display_name])
+
+  useEffect(() => {
+    setAvatarPreview(profile.avatar_url || '')
+  }, [profile.avatar_url])
+
+  useEffect(() => {
+    let mounted = true
+
+    if (!isBiometricSupported()) {
+      setBiometricSupported(false)
+      return undefined
+    }
+
+    isPlatformAuthenticatorAvailable().then((available) => {
+      if (mounted) setBiometricSupported(available)
+    })
+
+    return () => {
+      mounted = false
+    }
+  }, [])
+
+  useEffect(() => {
+    setBiometricEnrolled(hasBiometricEnrollment(user?.id))
+  }, [user?.id])
+
+  async function enableBiometric() {
+    setBiometricBusy(true)
+    setBiometricError('')
+
+    try {
+      await enrollBiometric(
+        user.id,
+        { email: user.email, displayName: profile.display_name },
+        vaultKey
+      )
+
+      setBiometricEnrolled(true)
+    } catch (error) {
+      setBiometricError(
+        error.message || 'Unable to enable biometric unlock.'
+      )
+    } finally {
+      setBiometricBusy(false)
+    }
+  }
+
+  function disableBiometric() {
+    removeBiometricRecord(user.id)
+    setBiometricEnrolled(false)
+    setBiometricError('')
+  }
+
+  const handleAvatarChange = async (event) => {
+    const file = event.target.files?.[0]
+
+    if (!file) return
+
+    if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
+      alert('Please select a JPG, PNG, or WebP image.')
+      event.target.value = ''
+      return
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      alert('Avatar image must be smaller than 5 MB.')
+      event.target.value = ''
+      return
+    }
+
+    const previewUrl = URL.createObjectURL(file)
+    setAvatarPreview(previewUrl)
+
+    let uploadedUrl = ''
+
+    try {
+      setUploadingAvatar(true)
+
+      if (onUploadAvatar) {
+        uploadedUrl = await onUploadAvatar(file)
+      }
+    } catch (error) {
+      console.error('Avatar upload failed:', error)
+      alert(error.message || 'Failed to upload avatar.')
+      setAvatarPreview(profile.avatar_url || '')
+    } finally {
+      setUploadingAvatar(false)
+      URL.revokeObjectURL(previewUrl)
+
+      if (uploadedUrl) {
+        setAvatarPreview(uploadedUrl)
+      }
+
+      event.target.value = ''
+    }
+  }
+
+  const initials = (
+    profile.display_name ||
+    user.email ||
+    'V'
+  )
+    .slice(0, 1)
+    .toUpperCase()
+
+  return (
+    <div className="page-shell narrow-page">
+      <section className="hero-row">
+        <div>
+          <div className="eyebrow">Settings</div>
+          <h1>Make Vault feel like yours.</h1>
+          <p>Preferences stay minimal. Security stays strict.</p>
+        </div>
+      </section>
+
+      <section className="settings-card">
+        {/* Profile */}
+        <div className="settings-section">
+          <div className="settings-heading">
+            <div>
+              <strong>Profile</strong>
+              <span>{user.email}</span>
+            </div>
+          </div>
+
+          <div className="profile-avatar-upload">
+            <div className="profile-avatar-preview">
+              {avatarPreview && avatarPreview.startsWith('blob:') ? (
+                <img src={avatarPreview} alt="Profile preview" />
+              ) : avatarPreview ? (
+                <img src={avatarPreview} alt="Profile" />
+              ) : (
+                <span>{initials}</span>
+              )}
+            </div>
+
+            <div className="profile-avatar-actions">
+              <label className="secondary-button upload-avatar-button">
+                <Upload size={16} />
+                {uploadingAvatar ? 'Uploading...' : 'Upload photo'}
+
+                <input
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  onChange={handleAvatarChange}
+                  disabled={uploadingAvatar}
+                  hidden
+                />
+              </label>
+
+              <span className="field-hint">
+                JPG, PNG, or WebP Â· Max 5 MB
+              </span>
+            </div>
+          </div>
+
+          <div className="form-grid">
+            <label className="field">
+              <span>Display name</span>
+              <input
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="Your name"
+              />
+            </label>
+          </div>
+
+          <button
+            className="secondary-button"
+            onClick={() =>
+              onSaveProfile({
+                display_name: name
+              })
+            }
+          >
+            Save profile
+          </button>
+        </div>
+
+        {/* Appearance */}
+        <div className="settings-section">
+          <div className="settings-heading">
+            <div>
+              <strong>Appearance</strong>
+              <span>Light, dark, or follow your device.</span>
+            </div>
+          </div>
+
+          <div className="segmented">
+            <button
+              className={profile.theme === 'light' ? 'selected' : ''}
+              onClick={() => onTheme('light')}
+            >
+              <Sun size={16} />
+              Light
+            </button>
+
+            <button
+              className={profile.theme === 'dark' ? 'selected' : ''}
+              onClick={() => onTheme('dark')}
+            >
+              <Moon size={16} />
+              Dark
+            </button>
+
+            <button
+              className={profile.theme === 'system' ? 'selected' : ''}
+              onClick={() => onTheme('system')}
+            >
+              <Laptop size={16} />
+              System
+            </button>
+          </div>
+        </div>
+
+        {/* Bank card style */}
+        <div className="settings-section">
+          <div className="settings-heading">
+            <div>
+              <strong>Bank card style</strong>
+              <span>
+                Switch between a realistic card and an abstract digital card.
+              </span>
+            </div>
+          </div>
+
+          <div className="segmented">
+            <button
+              className={profile.card_style === 'realistic' ? 'selected' : ''}
+              onClick={() => onCardStyle('realistic')}
+            >
+              Realistic
+            </button>
+
+            <button
+              className={profile.card_style === 'abstract' ? 'selected' : ''}
+              onClick={() => onCardStyle('abstract')}
+            >
+              Abstract
+            </button>
+          </div>
+        </div>
+
+        {/* Backup */}
+        <div className="settings-section">
+          <div className="settings-heading">
+            <div>
+              <strong>Backup</strong>
+              <span>
+                Export an encrypted JSON backup. CSV import for browser
+                migrations is provided client-side.
+              </span>
+            </div>
+          </div>
+
+          <div className="button-row">
+            <button className="secondary-button" onClick={onImport}>
+              <Upload size={16} />
+              Import
+            </button>
+
+            <button className="secondary-button" onClick={onExport}>
+              <Download size={16} />
+              Export encrypted backup
+            </button>
+          </div>
+        </div>
+
+        {/* Security */}
+        <div className="settings-section">
+          <div className="settings-heading">
+            <div>
+              <strong>Security</strong>
+              <span>
+                <ShieldCheck size={15} />
+                The database stores encrypted payloads only.
+              </span>
+            </div>
+          </div>
+
+          <div className="security-list">
+            <div>
+              <Fingerprint size={16} />
+              <span>
+                Master password is never stored in the app or database.
+              </span>
+            </div>
+
+            <div>
+              <Settings size={16} />
+              <span>
+                Every account gets its own vault key and its own rows.
+                Nothing is shared between users.
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* Biometric unlock */}
+        <div className="settings-section">
+          <div className="settings-heading">
+            <div>
+              <strong>Biometric unlock</strong>
+              <span>
+                Unlock this vault on this device with Touch ID, Windows
+                Hello, or Android biometrics instead of typing your
+                master password.
+              </span>
+            </div>
+          </div>
+
+          {!biometricSupported ? (
+            <div className="field-hint">
+              This browser or device does not offer a built-in
+              biometric authenticator. Use your master password
+              instead.
+            </div>
+          ) : (
+            <div className="biometric-panel">
+              <div className="biometric-status">
+                <span
+                  className={
+                    biometricEnrolled
+                      ? 'status-dot on'
+                      : 'status-dot'
+                  }
+                />
+                <span>
+                  {biometricEnrolled
+                    ? 'Enabled on this device'
+                    : 'Not set up on this device'}
+                </span>
+              </div>
+
+              {biometricEnrolled ? (
+                <button
+                  className="secondary-button"
+                  onClick={disableBiometric}
+                  disabled={biometricBusy}
+                >
+                  Remove biometric unlock
+                </button>
+              ) : (
+                <button
+                  className="secondary-button"
+                  onClick={enableBiometric}
+                  disabled={biometricBusy || !vaultKey}
+                >
+                  <Fingerprint size={16} />
+                  {biometricBusy
+                    ? 'Waiting for biometricsâ€¦'
+                    : 'Enable biometric unlock'}
+                </button>
+              )}
+
+              <p className="field-hint">
+                The vault key is encrypted with a secret that only
+                this device's authenticator can produce. Enroll again
+                on each new device.
+              </p>
+
+              {biometricError && (
+                <div className="feedback error">
+                  {biometricError}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
+        <button className="danger-button" onClick={onSignOut}>
+          <LogOut size={16} />
+          Sign out
+        </button>
+      </section>
+    </div>
+  )
+}
+
+==================================================
+FILE: C:\Users\rizky\Documents\Dev\personal-vault\src\pages\VaultPage.jsx
+==================================================
+import React from 'react'
+
+import {
+  Search,
+  Plus,
+  FolderLock,
+  Globe,
+  Instagram,
+  KeyRound,
+  StickyNote
+} from '../components/Icons'
+
+import PasswordCard from '../components/PasswordCard'
+
+const filters = [
+  { id: 'all', label: 'All', icon: KeyRound },
+  { id: 'social', label: 'Social Media', icon: Instagram },
+  { id: 'web', label: 'Web Password', icon: Globe },
+  { id: 'project', label: 'Project Password', icon: FolderLock },
+  { id: 'secure_note', label: 'Secure Note', icon: StickyNote }
+]
+
+export default function VaultPage({ items, onAdd, onOpen }) {
+  const [filter, setFilter] = React.useState('all')
+  const [query, setQuery] = React.useState('')
+
+  const filtered = items.filter((item) => {
+    const matchesFilter =
+      filter === 'all'
+        ? item.item_type !== 'bank_card'
+        : item.category === filter
+
+    const haystack = `
+      ${item.name || ''}
+      ${item.username || ''}
+      ${item.url || ''}
+      ${item.website || ''}
+      ${item.environment || ''}
+      ${item.service || ''}
+    `.toLowerCase()
+
+    return matchesFilter && haystack.includes(query.toLowerCase())
+  })
+
+  const counts = {
+    all: items.filter((item) => item.item_type !== 'bank_card').length,
+    social: items.filter((item) => item.category === 'social').length,
+    web: items.filter((item) => item.category === 'web').length,
+    project: items.filter((item) => item.category === 'project').length,
+    secure_note: items.filter((item) => item.item_type === 'secure_note').length
+  }
+
+  return (
+    <div className="page-shell">
+      <section className="hero-row">
+        <div>
+          <div className="eyebrow">Vault</div>
+
+          <h1>Passwords, organized.</h1>
+
+          <p>
+            Choose a category or search the whole vault.
+          </p>
+        </div>
+
+        <button className="quick-add" onClick={onAdd}>
+          <Plus size={17} />
+          Add
+        </button>
+      </section>
+
+      {/* Search */}
+      <div className="search-box">
+        <Search size={18} />
+
+        <input
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Search your vault"
+        />
+
+        <span>{filtered.length}</span>
+      </div>
+
+      {/* Filters */}
+      <div className="filter-row">
+        {filters.map(({ id, label, icon: Icon }) => (
+          <button
+            className={filter === id ? 'filter active' : 'filter'}
+            key={id}
+            onClick={() => setFilter(id)}
+          >
+            <Icon size={15} />
+
+            <span>{label}</span>
+
+            <small>{counts[id]}</small>
+          </button>
+        ))}
+      </div>
+
+      {/* Vault list */}
+      <section className="list-section">
+        {filtered.length ? (
+          filtered.map((item) => {
+            if (item.item_type === 'secure_note') {
+              return (
+                <button
+                  key={item.id}
+                  className="vault-list-card"
+                  onClick={() => onOpen(item)}
+                >
+                  <div className="item-icon tone-neutral">
+                    <StickyNote size={18} />
+                  </div>
+
+                  <div className="item-copy">
+                    <div className="item-title-row">
+                      <strong>{item.name}</strong>
+
+                      <span className="category-chip">
+                        Secure Note
+                      </span>
+                    </div>
+
+                    <span className="item-secondary">
+                      Private note
+                    </span>
+                  </div>
+                </button>
+              )
+            }
+
+            return (
+              <PasswordCard
+                key={item.id}
+                item={item}
+                password={item.password || ''}
+                onOpen={() => onOpen(item)}
+              />
+            )
+          })
+        ) : (
+          <div className="empty-state large">
+            <KeyRound size={20} />
+
+            <strong>
+              {query
+                ? 'No matching vault items.'
+                : 'No vault items yet.'}
+            </strong>
+
+            <span>
+              {query
+                ? 'Try another search or category.'
+                : 'Use Add to create your first password or note.'}
+            </span>
+          </div>
+        )}
+      </section>
+    </div>
+  )
+}
+
+==================================================
+FILE: C:\Users\rizky\Documents\Dev\personal-vault\src\styles.css
+==================================================
+:root {
+  color-scheme: light;
+  --bg: #ffffff;
+  --surface: #ffffff;
+  --surface-2: #f5f5f7;
+  --surface-3: #eeeeef;
+  --text: #0b0b0b;
+  --muted: #6b6b70;
+  --line: rgba(0,0,0,.08);
+  --line-strong: rgba(0,0,0,.12);
+  --accent: #0b0b0b;
+  --accent-contrast: #fff;
+  --danger: #b42318;
+  --shadow: 0 10px 30px rgba(0,0,0,.06), 0 2px 8px rgba(0,0,0,.05);
+  --shadow-lg: 0 18px 48px rgba(0,0,0,.10), 0 4px 12px rgba(0,0,0,.06);
+  --radius-card: 20px;
+  --radius-bank: 24px;
+  --radius-button: 12px;
+  --radius-nav: 18px;
+  --transition: 220ms cubic-bezier(.2,.7,.2,1);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+}
+:root[data-theme="dark"] { color-scheme: dark; --bg:#0a0a0a; --surface:#111111; --surface-2:#171717; --surface-3:#202020; --text:#fff; --muted:#a1a1aa; --line:rgba(255,255,255,.09); --line-strong:rgba(255,255,255,.13); --accent:#fff; --accent-contrast:#0a0a0a; --danger:#ff8d86; --shadow:0 10px 30px rgba(0,0,0,.25); --shadow-lg:0 18px 48px rgba(0,0,0,.36); }
+* { box-sizing:border-box; }
+html, body, #root { margin:0; min-height:100%; background:var(--bg); color:var(--text); }
+body { min-height:100dvh; -webkit-font-smoothing:antialiased; }
+button, input, textarea, select { font:inherit; }
+button { color:inherit; border:0; cursor:pointer; }
+button:disabled { cursor:not-allowed; opacity:.56; }
+input, textarea, select { color:var(--text); }
+.topbar { max-width:1180px; margin:0 auto; padding:18px 24px 8px; display:flex; align-items:center; justify-content:space-between; gap:16px; }
+.brand-lockup, .auth-brand, .top-actions, .avatar-button, .item-title-row, .secret-row, .secret-actions, .feature-card, .feature-icon, .section-heading, .text-button, .quick-add, .filter, .search-box, .bank-card-top, .bank-chip-row, .bank-card-meta, .bank-card-actions, .swipe-controls, .bank-detail-link, .bank-security-strip, .settings-heading, .button-row, .segmented, .security-list > div { display:flex; align-items:center; }
+.brand-lockup { gap:10px; }
+.brand-mark { width:28px; height:28px; border-radius:9px; background:var(--accent); color:var(--accent-contrast); display:grid; place-items:center; font-weight:800; font-size:12px; letter-spacing:.03em; }
+.brand-mark.large { width:42px; height:42px; border-radius:13px; font-size:16px; }
+.brand-name { font-size:14px; font-weight:700; letter-spacing:-.01em; }
+.brand-caption { font-size:11px; color:var(--muted); margin-top:2px; }
+.top-actions { gap:8px; }
+.icon-button, .avatar-button, .mini-icon, .circle-control { display:inline-grid; place-items:center; background:transparent; }
+.icon-button { width:38px; height:38px; border-radius:12px; transition:background var(--transition), transform var(--transition); }
+.icon-button:hover, .avatar-button:hover, .mini-icon:hover { background:var(--surface-2); transform:translateY(-1px); }
+.notification-button { position:relative; }
+.notification-badge { position:absolute; top:5px; right:5px; min-width:15px; height:15px; padding:0 4px; border-radius:999px; background:var(--text); color:var(--bg); font-size:9px; display:grid; place-items:center; }
+.avatar-button { gap:6px; padding:3px 6px 3px 3px; border-radius:999px; background:var(--surface-2); }
+.avatar-button img, .avatar-button span { width:29px; height:29px; border-radius:50%; display:grid; place-items:center; object-fit:cover; background:var(--surface); font-size:11px; font-weight:700; }
+.main-content { min-height:calc(100dvh - 76px); padding-bottom:110px; }
+.page-shell { width:min(1180px, 100%); margin:0 auto; padding:18px 24px 48px; }
+.narrow-page { max-width:920px; }
+.hero-row { display:flex; justify-content:space-between; align-items:flex-end; gap:24px; padding:16px 0 22px; }
+.hero-row h1 { margin:7px 0 6px; font-size:clamp(28px, 4.6vw, 48px); letter-spacing:-.045em; line-height:1.03; }
+.hero-row p { margin:0; color:var(--muted); font-size:14px; }
+.eyebrow { font-size:10px; text-transform:uppercase; letter-spacing:.11em; font-weight:700; color:var(--muted); }
+.quick-add { gap:7px; height:40px; padding:0 14px; background:var(--accent); color:var(--accent-contrast); border-radius:var(--radius-button); font-weight:650; box-shadow:0 8px 18px rgba(0,0,0,.10); transition:transform var(--transition); }
+.quick-add:hover, .primary-button:hover, .fab:hover { transform:translateY(-2px); }
+.quick-add span { font-size:19px; line-height:0; }
+.stats-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; }
+.stat-card { text-align:left; padding:20px; border-radius:var(--radius-card); background:var(--surface); border:1px solid var(--line); box-shadow:var(--shadow); transition:transform var(--transition), box-shadow var(--transition); }
+.stat-card:hover { transform:translateY(-2px); box-shadow:var(--shadow-lg); }
+.stat-value { margin-top:10px; font-size:38px; line-height:1; letter-spacing:-.045em; font-weight:700; }
+.stat-hint { margin-top:8px; font-size:12px; color:var(--muted); }
+.section-block { margin-top:28px; }
+.compact-section { margin-top:24px; }
+.section-heading { justify-content:space-between; gap:20px; margin-bottom:12px; }
+.section-heading h2 { margin:4px 0 0; font-size:18px; letter-spacing:-.025em; }
+.text-button { gap:6px; background:transparent; color:var(--muted); font-size:12px; font-weight:650; }
+.feature-row { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; }
+.feature-card { gap:12px; min-height:88px; padding:16px; border-radius:var(--radius-card); border:1px solid var(--line); background:var(--surface-2); }
+.feature-card.dark-feature { background:var(--accent); color:var(--accent-contrast); border-color:transparent; }
+.feature-card > div:last-child { display:grid; gap:4px; }
+.feature-card strong { font-size:13px; }
+.feature-card span { font-size:11px; color:var(--muted); }
+.dark-feature span { color:color-mix(in srgb, var(--accent-contrast) 60%, transparent); }
+.feature-icon, .choice-icon, .item-icon, .alert-icon { width:36px; height:36px; border-radius:12px; flex:0 0 auto; justify-content:center; background:var(--surface); border:1px solid var(--line); }
+.item-rail { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:10px; }
+.rail-card { min-height:74px; text-align:left; padding:12px; display:flex; align-items:center; gap:10px; border:1px solid var(--line); border-radius:16px; background:var(--surface); box-shadow:var(--shadow); }
+.rail-card > div:nth-child(2) { display:grid; gap:4px; min-width:0; flex:1; }
+.rail-card strong { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:12px; }
+.rail-card span { font-size:10px; color:var(--muted); }
+.empty-state { display:flex; align-items:center; justify-content:center; gap:8px; min-height:100px; padding:20px; border:1px dashed var(--line-strong); border-radius:var(--radius-card); color:var(--muted); font-size:12px; text-align:center; flex-wrap:wrap; }
+.empty-state.large { min-height:280px; display:grid; align-content:center; justify-items:center; }
+.empty-state.large strong { font-size:16px; color:var(--text); }
+.empty-state.large span { max-width:360px; }
+.search-box { gap:10px; padding:0 14px; height:48px; border-radius:14px; background:var(--surface-2); color:var(--muted); }
+.search-box input { flex:1; min-width:0; border:0; outline:0; background:transparent; }
+.search-box span { font-size:11px; color:var(--muted); }
+.filter-row { display:flex; gap:8px; overflow:auto; padding:12px 0 5px; scrollbar-width:none; }
+.filter { flex:0 0 auto; gap:6px; padding:9px 12px; border-radius:12px; background:transparent; color:var(--muted); border:1px solid var(--line); font-size:11px; font-weight:650; }
+.filter.active { background:var(--text); color:var(--bg); border-color:var(--text); }
+.list-section { display:grid; gap:9px; margin-top:13px; }
+.vault-list-card { display:flex; gap:12px; padding:14px; border:1px solid var(--line); border-radius:18px; background:var(--surface); box-shadow:var(--shadow); transition:transform var(--transition), box-shadow var(--transition); cursor:pointer; }
+.vault-list-card:hover { transform:translateY(-1px); box-shadow:var(--shadow-lg); }
+.item-copy { min-width:0; flex:1; }
+.item-title-row { gap:8px; justify-content:flex-start; }
+.item-title-row strong { font-size:13px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.category-chip { font-size:9px; padding:5px 7px; border-radius:999px; background:var(--surface-2); color:var(--muted); white-space:nowrap; }
+.item-secondary { display:block; font-size:11px; color:var(--muted); margin-top:3px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.secret-row { justify-content:space-between; gap:12px; margin-top:8px; }
+.secret-value { font-size:12px; letter-spacing:.10em; font-variant-numeric:tabular-nums; filter:blur(.2px); }
+.secret-value.revealed { filter:none; letter-spacing:0; }
+.secret-actions { gap:3px; }
+.mini-icon { width:28px; height:28px; border-radius:9px; color:var(--muted); }
+.filter.active .mini-icon, .light.mini-icon { color:inherit; }
+.bank-stack { position:relative; width:min(520px,100%); height:315px; margin:32px auto 10px; display:grid; place-items:center; }
+.bank-card { position:absolute; inset:0; width:100%; height:100%; border-radius:var(--radius-bank); padding:24px; overflow:hidden; color:white; box-shadow:0 26px 60px rgba(0,0,0,.22); user-select:none; transform-origin:center bottom; touch-action:pan-y; }
+.realistic-bank-card::after { content:""; position:absolute; inset:0; background:linear-gradient(125deg,rgba(255,255,255,.14),transparent 38%,rgba(0,0,0,.18)); pointer-events:none; }
+.abstract-bank-card::after { content:""; position:absolute; width:240px; height:240px; right:-70px; bottom:-100px; border-radius:50%; background:rgba(255,255,255,.16); box-shadow:-90px -20px 0 rgba(255,255,255,.08); }
+.bank-card-top, .bank-chip-row, .bank-card-meta, .bank-card-actions { position:relative; z-index:2; justify-content:space-between; }
+.bank-name { font-size:14px; font-weight:720; letter-spacing:-.01em; }
+.card-mark { font-size:10px; font-weight:750; letter-spacing:.12em; }
+.bank-chip-row { gap:14px; justify-content:flex-start; margin-top:26px; }
+.bank-chip { width:42px; height:30px; border-radius:7px; background:linear-gradient(135deg,#f0d18d,#bd8d3f); opacity:.95; }
+.contactless { font-size:18px; transform:rotate(90deg); opacity:.78; }
+.bank-card-number { position:relative; z-index:2; margin-top:27px; font-size:20px; letter-spacing:.13em; font-variant-numeric:tabular-nums; font-weight:500; text-shadow:0 1px 2px rgba(0,0,0,.12); }
+.bank-card-meta { margin-top:17px; align-items:flex-end; }
+.bank-card-meta > div { display:grid; gap:4px; }
+.micro-label { font-size:7px; letter-spacing:.11em; opacity:.68; }
+.bank-card-meta strong { font-size:11px; letter-spacing:.05em; }
+.bank-card-actions { margin-top:18px; justify-content:flex-end; gap:6px; }
+.mini-icon.light { color:white; background:rgba(255,255,255,.10); border:1px solid rgba(255,255,255,.16); }
+.card-count { margin-left:auto; font-size:9px; opacity:.68; }
+.swipe-controls { justify-content:center; gap:14px; color:var(--muted); font-size:11px; }
+.circle-control { width:34px; height:34px; border-radius:50%; background:var(--surface); border:1px solid var(--line); }
+.bank-detail-link { gap:6px; margin:12px auto 0; background:transparent; font-size:12px; font-weight:650; }
+.bank-security-strip { justify-content:center; gap:8px; margin:18px auto 0; padding:12px 14px; max-width:620px; color:var(--muted); background:var(--surface-2); border-radius:14px; font-size:10px; text-align:center; }
+.bottom-nav { position:fixed; z-index:40; left:50%; bottom:max(14px,env(safe-area-inset-bottom)); transform:translateX(-50%); display:grid; grid-template-columns:repeat(3,1fr); width:min(370px, calc(100vw - 30px)); padding:5px; gap:4px; border:1px solid var(--line); border-radius:var(--radius-nav); background:color-mix(in srgb,var(--surface) 92%, transparent); box-shadow:var(--shadow-lg); backdrop-filter:blur(18px); }
+.nav-item { display:grid; gap:3px; justify-items:center; padding:8px 6px; border-radius:13px; background:transparent; color:var(--muted); font-size:9px; font-weight:650; transition:background var(--transition), color var(--transition), transform var(--transition); }
+.nav-item.active { background:var(--text); color:var(--bg); }
+.fab { position:fixed; z-index:38; right:24px; bottom:86px; width:50px; height:50px; border-radius:16px; background:var(--text); color:var(--bg); font-size:26px; box-shadow:var(--shadow-lg); transition:transform var(--transition); }
+.sheet-backdrop, .popover-backdrop { position:fixed; inset:0; z-index:100; background:rgba(0,0,0,.30); display:grid; align-items:end; }
+.bottom-sheet, .modal, .alerts-panel { width:min(720px,100%); background:var(--surface); border:1px solid var(--line); box-shadow:var(--shadow-lg); }
+.bottom-sheet { border-radius:26px 26px 0 0; padding:10px 18px 22px; }
+.sheet-handle { width:42px; height:4px; border-radius:999px; background:var(--surface-3); margin:4px auto 12px; }
+.sheet-header, .panel-header { justify-content:space-between; gap:20px; display:flex; align-items:flex-start; }
+.sheet-header h3, .panel-header h3 { margin:3px 0 0; font-size:20px; letter-spacing:-.035em; }
+.choice-grid { display:grid; gap:8px; margin-top:14px; }
+.choice-card { display:grid; grid-template-columns:auto 1fr auto; gap:12px; align-items:center; text-align:left; padding:13px; border:1px solid var(--line); border-radius:16px; background:var(--surface); }
+.choice-card:hover { background:var(--surface-2); }
+.choice-card > div:nth-child(2) { display:grid; gap:3px; }
+.choice-card strong { font-size:12px; }
+.choice-card span { font-size:10px; color:var(--muted); }
+.modal { align-self:center; margin:auto; border-radius:24px; padding:18px; max-height:min(820px,92dvh); overflow:auto; }
+.modal.wide { width:min(760px,calc(100vw - 24px)); }
+.form-stack { display:grid; gap:12px; }
+.field { display:grid; gap:7px; }
+.field > span { font-size:10px; font-weight:700; color:var(--muted); }
+.field input, .field textarea, .field select { width:100%; border:0; outline:0; background:var(--surface-2); border-radius:12px; padding:12px 13px; min-height:44px; resize:vertical; }
+.field input:focus, .field textarea:focus, .field select:focus { box-shadow:0 0 0 2px var(--text); }
+.input-wrap { position:relative; }
+.input-wrap input { padding-right:70px; }
+.input-actions { position:absolute; right:6px; top:50%; transform:translateY(-50%); display:flex; gap:2px; }
+.primary-button, .secondary-button, .danger-button, .biometric-button { min-height:44px; border-radius:12px; display:inline-flex; align-items:center; justify-content:center; gap:7px; font-weight:700; transition:transform var(--transition), background var(--transition), opacity var(--transition); }
+.primary-button { padding:0 14px; background:var(--text); color:var(--bg); }
+.secondary-button { padding:0 13px; background:var(--surface-2); }
+.secondary-button.compact, .danger-ghost.compact { min-height:36px; padding:0 10px; font-size:11px; }
+.danger-button { background:transparent; color:var(--danger); border:1px solid color-mix(in srgb,var(--danger) 30%,transparent); width:100%; margin-top:10px; }
+.favorite-button { min-height:36px; padding:0 10px; border-radius:10px; background:var(--surface-2); color:var(--muted); display:inline-flex; align-items:center; gap:6px; font-size:11px; font-weight:700; }
+.favorite-button.selected { color:var(--text); }
+.danger-ghost { min-height:36px; padding:0 10px; border-radius:10px; background:transparent; color:var(--danger); }
+.biometric-button { width:100%; background:transparent; color:var(--muted); }
+.feedback { padding:11px 12px; border-radius:12px; margin-top:11px; font-size:11px; }
+.feedback.success { background:#e9f9ed; color:#1e6b35; }
+.feedback.error { background:#fff0ef; color:#9e241c; }
+:root[data-theme="dark"] .feedback.success { background:#112417; color:#b8e7c3; }
+:root[data-theme="dark"] .feedback.error { background:#2a1312; color:#ffb8b3; }
+.auth-screen, .unlock-screen, .splash { min-height:100dvh; display:grid; place-items:center; padding:24px; }
+.auth-screen { background:radial-gradient(circle at 50% 0%, rgba(0,0,0,.035), transparent 45%), var(--bg); }
+.auth-card { width:min(460px,100%); padding:24px; border:1px solid var(--line); border-radius:26px; background:var(--surface); box-shadow:var(--shadow-lg); }
+.auth-brand { gap:10px; margin-bottom:28px; }
+.auth-brand > div:last-child { display:grid; gap:2px; }
+.auth-brand strong { font-size:15px; }
+.auth-brand span { font-size:11px; color:var(--muted); }
+.auth-copy h1, .unlock-copy h1 { margin:7px 0 8px; font-size:40px; letter-spacing:-.055em; line-height:.98; }
+.auth-copy p, .unlock-copy p { margin:0 0 20px; color:var(--muted); font-size:13px; line-height:1.55; }
+.auth-switch { text-align:center; margin-top:15px; font-size:11px; color:var(--muted); }
+.auth-switch button { background:transparent; text-decoration:underline; text-underline-offset:3px; font-weight:700; }
+.auth-trust { display:grid; gap:7px; margin-top:20px; padding-top:16px; border-top:1px solid var(--line); color:var(--muted); font-size:10px; }
+.auth-trust span { display:flex; align-items:center; gap:7px; }
+.unlock-screen { text-align:center; width:min(540px,100%); margin:auto; }
+.unlock-orb { width:64px; height:64px; display:grid; place-items:center; border-radius:22px; background:var(--surface-2); margin:0 auto 16px; }
+.unlock-copy { max-width:460px; }
+.unlock-form { width:min(380px,100%); display:grid; gap:10px; margin:8px auto 0; text-align:left; }
+.unlock-note { display:flex; align-items:center; justify-content:center; gap:7px; color:var(--muted); font-size:10px; margin-top:16px; }
+.splash { gap:9px; align-content:center; font-weight:700; }
+.splash span { font-size:15px; }
+.settings-card { border:1px solid var(--line); border-radius:24px; background:var(--surface); box-shadow:var(--shadow); overflow:hidden; }
+.settings-section { padding:18px; border-bottom:1px solid var(--line); }
+.settings-heading { justify-content:space-between; align-items:flex-start; gap:20px; }
+.settings-heading > div { display:grid; gap:5px; }
+.settings-heading strong { font-size:13px; }
+.settings-heading span { display:flex; align-items:center; gap:6px; font-size:10px; color:var(--muted); }
+.form-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; margin-top:14px; }
+.button-row { gap:8px; flex-wrap:wrap; margin-top:12px; }
+.segmented { gap:4px; padding:4px; border-radius:14px; background:var(--surface-2); margin-top:12px; }
+.segmented button { display:flex; align-items:center; justify-content:center; gap:6px; flex:1; min-height:36px; border-radius:10px; background:transparent; color:var(--muted); font-size:11px; font-weight:700; }
+.segmented button.selected { background:var(--text); color:var(--bg); }
+.security-list { display:grid; gap:8px; margin-top:12px; }
+.security-list > div { gap:8px; color:var(--muted); font-size:10px; }
+.alerts-panel { margin-left:auto; align-self:start; width:min(380px,calc(100vw - 24px)); height:auto; margin-top:76px; margin-right:14px; border-radius:20px; padding:16px; }
+.alerts-list { display:grid; gap:8px; margin-top:14px; }
+.alert-row { display:flex; gap:10px; padding:11px; border-radius:14px; background:var(--surface-2); }
+.alert-row > div:last-child { display:grid; gap:3px; }
+.alert-row strong { font-size:11px; }
+.alert-row span { font-size:10px; color:var(--muted); }
+.alert-icon.warning { color:#a66a00; }
+.panel-footer { display:flex; gap:6px; align-items:center; color:var(--muted); font-size:9px; margin-top:12px; }
+.toast { position:fixed; z-index:120; left:50%; bottom:96px; transform:translateX(-50%); padding:9px 12px; border-radius:999px; background:var(--text); color:var(--bg); font-size:10px; box-shadow:var(--shadow-lg); }
+.error-banner { position:fixed; z-index:121; left:50%; bottom:18px; transform:translateX(-50%); width:min(720px,calc(100vw - 24px)); padding:11px 13px; border-radius:13px; background:#7f1d1d; color:#fff; font-size:11px; box-shadow:var(--shadow-lg); cursor:pointer; }
+.detail-header { display:flex; justify-content:space-between; gap:12px; align-items:center; margin:16px 0; }
+.detail-name { display:block; font-size:18px; font-weight:720; letter-spacing:-.025em; }
+.detail-category { display:block; margin-top:4px; font-size:10px; color:var(--muted); }
+.detail-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; }
+.detail-grid.one { grid-template-columns:1fr; }
+.span-2 { grid-column:1/-1; }
+.note-box { padding:13px; border-radius:14px; background:var(--surface-2); display:grid; gap:4px; }
+.note-box strong { font-size:11px; }
+.note-box span { font-size:10px; color:var(--muted); line-height:1.45; }
+.modal-actions { display:flex; justify-content:flex-end; gap:8px; margin-top:2px; }
+
+.custom-fields-section { min-width:0; border-top:1px solid var(--line); padding-top:14px; }
+.custom-fields-header { display:flex; align-items:flex-start; justify-content:space-between; gap:12px; margin-bottom:11px; }
+.custom-fields-header > div { display:grid; gap:4px; }
+.custom-fields-header strong { font-size:12px; }
+.custom-fields-header span { color:var(--muted); font-size:10px; line-height:1.45; }
+.custom-field-row { display:grid; grid-template-columns:minmax(120px,1fr) minmax(150px,1.6fr) auto; align-items:end; gap:10px; padding:10px; border:1px solid var(--line); border-radius:14px; margin-bottom:8px; }
+.custom-field-actions { display:flex; align-items:center; gap:8px; padding-bottom:3px; }
+.custom-field-secret { display:inline-flex; align-items:center; gap:5px; font-size:10px; color:var(--muted); white-space:nowrap; }
+.custom-field-secret input { width:auto; min-height:0; accent-color:var(--text); }
+.custom-fields-empty { color:var(--muted); font-size:10px; line-height:1.45; padding:10px 0 2px; }
+.danger-text { color:var(--danger); }
+
+/* Site logos */
+.site-logo { display:block; object-fit:contain; flex:0 0 auto; }
+.site-logo-fallback { display:grid; place-items:center; color:#fff; font-weight:800; line-height:1; letter-spacing:.02em; }
+.input-wrap.prefixed input { padding-left:40px; padding-right:13px; }
+.input-prefix { position:absolute; left:10px; top:50%; transform:translateY(-50%); display:grid; place-items:center; pointer-events:none; }
+.detail-identity { display:flex; align-items:center; gap:11px; min-width:0; }
+.detail-identity > div { display:grid; min-width:0; }
+
+/* Social sign-in */
+.oauth-button { width:100%; min-height:46px; display:flex; align-items:center; justify-content:center; gap:9px; border-radius:12px; background:var(--surface-2); border:1px solid var(--line); font-weight:700; font-size:12px; transition:transform var(--transition), background var(--transition); }
+.oauth-button:hover:not(:disabled) { transform:translateY(-1px); }
+.auth-divider { display:flex; align-items:center; gap:10px; margin:14px 0; color:var(--muted); font-size:10px; }
+.auth-divider::before, .auth-divider::after { content:''; flex:1; height:1px; background:var(--line); }
+
+/* Hints and biometrics */
+.field-hint { font-size:10px; color:var(--muted); line-height:1.45; }
+.biometric-panel { display:grid; gap:10px; margin-top:12px; justify-items:start; }
+.biometric-panel .secondary-button { min-width:200px; }
+.biometric-status { display:flex; align-items:center; gap:8px; font-size:11px; color:var(--muted); }
+.status-dot { width:8px; height:8px; border-radius:50%; background:var(--muted); flex:0 0 auto; }
+.status-dot.on { background:#1e9e57; box-shadow:0 0 0 3px color-mix(in srgb,#1e9e57 22%,transparent); }
+@media (min-width: 900px) {
+  .bottom-nav { position:fixed; left:24px; transform:none; bottom:24px; width:92px; display:grid; grid-template-columns:1fr; padding:6px; }
+  .nav-item { min-height:46px; }
+  .fab { right:32px; bottom:32px; }
+  .main-content { padding-left:120px; }
+}
+@media (max-width: 700px) {
+  .topbar, .page-shell { padding-left:16px; padding-right:16px; }
+  .feature-row, .item-rail { grid-template-columns:1fr 1fr; }
+  .item-rail { overflow:auto; grid-auto-columns:150px; grid-template-columns:repeat(4,150px); }
+  .form-grid, .detail-grid { grid-template-columns:1fr; }
+  .custom-field-row { grid-template-columns:1fr; }
+  .custom-field-actions { justify-content:space-between; }
+  .span-2 { grid-column:auto; }
+  .hero-row { align-items:flex-start; }
+  .bank-stack { height:282px; }
+  .bank-card { padding:21px; }
+  .bank-card-number { font-size:18px; }
+}
+@media (max-width: 480px) {
+  .auth-card { padding:20px; border-radius:22px; }
+  .auth-copy h1, .unlock-copy h1 { font-size:34px; }
+  .stats-grid, .feature-row { gap:8px; }
+  .stat-card { padding:16px; }
+  .stat-value { font-size:32px; }
+  .feature-card { padding:14px; }
+  .bank-stack { height:255px; margin-top:20px; }
+  .bank-card { padding:18px; border-radius:22px; }
+  .bank-card-number { margin-top:23px; font-size:16px; }
+  .bank-chip-row { margin-top:21px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { scroll-behavior:auto !important; animation-duration:.01ms !important; animation-iteration-count:1 !important; transition-duration:.01ms !important; }
+}
+
+==================================================
+FILE: C:\Users\rizky\Documents\Dev\personal-vault\supabase\001_schema.sql
+==================================================
+create extension if not exists pgcrypto;
+
+create table if not exists public.profiles (
+  id uuid primary key references auth.users(id) on delete cascade,
+  display_name text not null default 'You',
+  avatar_url text,
+  vault_salt text,
+  vault_verifier jsonb,
+  theme text not null default 'system' check (theme in ('light','dark','system')),
+  card_style text not null default 'realistic' check (card_style in ('realistic','abstract')),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create table if not exists public.vault_items (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  item_type text not null check (item_type in ('password','bank_card','secure_note')),
+  category text not null,
+  payload jsonb not null,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create index if not exists idx_vault_items_user_updated on public.vault_items(user_id, updated_at desc);
+create index if not exists idx_vault_items_user_type on public.vault_items(user_id, item_type);
+
+create or replace function public.set_updated_at()
+returns trigger
+language plpgsql
+as $$
+begin
+  new.updated_at = now();
+  return new;
+end;
+$$;
+
+drop trigger if exists profiles_set_updated_at on public.profiles;
+create trigger profiles_set_updated_at
+before update on public.profiles
+for each row execute procedure public.set_updated_at();
+
+drop trigger if exists vault_items_set_updated_at on public.vault_items;
+create trigger vault_items_set_updated_at
+before update on public.vault_items
+for each row execute procedure public.set_updated_at();
+
+alter table public.profiles enable row level security;
+alter table public.vault_items enable row level security;
+
+drop policy if exists profiles_select_own on public.profiles;
+create policy profiles_select_own on public.profiles
+for select to authenticated
+using (id = auth.uid());
+
+drop policy if exists profiles_insert_own on public.profiles;
+create policy profiles_insert_own on public.profiles
+for insert to authenticated
+with check (id = auth.uid());
+
+drop policy if exists profiles_update_own on public.profiles;
+create policy profiles_update_own on public.profiles
+for update to authenticated
+using (id = auth.uid())
+with check (id = auth.uid());
+
+drop policy if exists vault_items_select_own on public.vault_items;
+create policy vault_items_select_own on public.vault_items
+for select to authenticated
+using (user_id = auth.uid());
+
+drop policy if exists vault_items_insert_own on public.vault_items;
+create policy vault_items_insert_own on public.vault_items
+for insert to authenticated
+with check (user_id = auth.uid());
+
+drop policy if exists vault_items_update_own on public.vault_items;
+create policy vault_items_update_own on public.vault_items
+for update to authenticated
+using (user_id = auth.uid())
+with check (user_id = auth.uid());
+
+drop policy if exists vault_items_delete_own on public.vault_items;
+create policy vault_items_delete_own on public.vault_items
+for delete to authenticated
+using (user_id = auth.uid());
+
+create or replace function public.handle_new_user()
+returns trigger
+language plpgsql
+security definer set search_path = public
+as $$
+begin
+  insert into public.profiles (id, display_name)
+  values (new.id, coalesce(new.raw_user_meta_data ->> 'display_name', split_part(coalesce(new.email, 'You'), '@', 1)))
+  on conflict (id) do nothing;
+  return new;
+end;
+$$;
+
+drop trigger if exists on_auth_user_created on auth.users;
+create trigger on_auth_user_created
+after insert on auth.users
+for each row execute procedure public.handle_new_user();
+
+-- Supabase Data API privileges for browser client.
+grant select, insert, update on public.profiles to authenticated;
+grant select, insert, update, delete on public.vault_items to authenticated;
+
+==================================================
+FILE: C:\Users\rizky\Documents\Dev\personal-vault\supabase\002_storage.sql
+==================================================
+-- Storage bucket for user avatars.
+--
+-- Run this after 001_schema.sql. The bucket is public for reads (avatars are
+-- not secrets) but every write is scoped to the owner's folder, which is
+-- <user_id>/..., so one user can never overwrite another user's file.
+
+insert into storage.buckets (id, name, public)
+values ('avatars', 'avatars', true)
+on conflict (id) do update set public = excluded.public;
+
+drop policy if exists avatars_read_all on storage.objects;
+create policy avatars_read_all on storage.objects
+for select
+to public
+using (bucket_id = 'avatars');
+
+drop policy if exists avatars_insert_own on storage.objects;
+create policy avatars_insert_own on storage.objects
+for insert
+to authenticated
+with check (
+  bucket_id = 'avatars'
+  and (storage.foldername(name))[1] = auth.uid()::text
+);
+
+drop policy if exists avatars_update_own on storage.objects;
+create policy avatars_update_own on storage.objects
+for update
+to authenticated
+using (
+  bucket_id = 'avatars'
+  and (storage.foldername(name))[1] = auth.uid()::text
+)
+with check (
+  bucket_id = 'avatars'
+  and (storage.foldername(name))[1] = auth.uid()::text
+);
+
+drop policy if exists avatars_delete_own on storage.objects;
+create policy avatars_delete_own on storage.objects
+for delete
+to authenticated
+using (
+  bucket_id = 'avatars'
+  and (storage.foldername(name))[1] = auth.uid()::text
+);
+
+==================================================
+FILE: C:\Users\rizky\Documents\Dev\personal-vault\supabase\002_verify.sql
+==================================================
+-- Run after 001_schema.sql.
+select table_name, row_security
+from information_schema.tables
+where table_schema = 'public' and table_name in ('profiles','vault_items')
+order by table_name;
+
+select policyname, tablename, cmd
+from pg_policies
+where schemaname = 'public' and tablename in ('profiles','vault_items')
+order by tablename, policyname;
+
+==================================================
+FILE: C:\Users\rizky\Documents\Dev\personal-vault\vite.config.js
+==================================================
+import { defineConfig } from 'vite'
+import react from '@vitejs/plugin-react'
+import { VitePWA } from 'vite-plugin-pwa'
+
+export default defineConfig({
+  plugins: [
+    react(),
+    VitePWA({
+      registerType: 'autoUpdate',
+      // Disable the service worker during local development so the browser
+      // never serves a stale cached build while you iterate on the app.
+      devOptions: {
+        enabled: false
+      },
+      includeAssets: ['pwa-192.png', 'pwa-512.png'],
+      manifest: {
+        name: 'Personal Vault',
+        short_name: 'Vault',
+        description: 'Private password and banking vault',
+        theme_color: '#ffffff',
+        background_color: '#ffffff',
+        display: 'standalone',
+        start_url: '/',
+        icons: [
+          { src: '/pwa-192.png', sizes: '192x192', type: 'image/png' },
+          { src: '/pwa-512.png', sizes: '512x512', type: 'image/png' }
+        ]
+      }
+    })
+  ]
+})
