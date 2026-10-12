@@ -1,6 +1,7 @@
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useMemo, useEffect, lazy, Suspense } from 'react'
 import DocumentCard from '../components/DocumentCard'
-import DocumentQrModal from '../components/DocumentQrModal'
+
+const DocumentQrModal = lazy(() => import('../components/DocumentQrModal'))
 import {
   Plus,
   Search,
@@ -262,10 +263,12 @@ export default function DocumentsPage({
 
       {/* QR Code Modal */}
       {selectedQrDoc && (
-        <DocumentQrModal
-          doc={selectedQrDoc}
-          onClose={() => setSelectedQrDoc(null)}
-        />
+        <Suspense fallback={null}>
+          <DocumentQrModal
+            doc={selectedQrDoc}
+            onClose={() => setSelectedQrDoc(null)}
+          />
+        </Suspense>
       )}
     </div>
   )

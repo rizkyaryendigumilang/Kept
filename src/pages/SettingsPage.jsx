@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo, useRef } from 'react'
+import { useEffect, useState, useMemo, useRef, lazy, Suspense } from 'react'
 import {
   Menu,
   X,
@@ -25,7 +25,8 @@ import {
   Camera,
   Image
 } from '../components/Icons'
-import AvatarCropModal from '../components/AvatarCropModal'
+
+const AvatarCropModal = lazy(() => import('../components/AvatarCropModal'))
 import AnimatedHamburger, { HAMBURGER_STYLES } from '../components/AnimatedHamburger'
 import ConfirmToast from '../components/ConfirmToast'
 
@@ -1210,15 +1211,17 @@ export default function SettingsPage({
         </div>
       )}
 
-      <AvatarCropModal
-        isOpen={cropModalOpen}
-        imageSrc={selectedImageSrc}
-        onClose={() => {
-          setCropModalOpen(false)
-          setSelectedImageSrc(null)
-        }}
-        onCropComplete={handleCropComplete}
-      />
+      <Suspense fallback={null}>
+        <AvatarCropModal
+          isOpen={cropModalOpen}
+          imageSrc={selectedImageSrc}
+          onClose={() => {
+            setCropModalOpen(false)
+            setSelectedImageSrc(null)
+          }}
+          onCropComplete={handleCropComplete}
+        />
+      </Suspense>
 
       {showResetAvatarConfirm && (
         <ConfirmToast

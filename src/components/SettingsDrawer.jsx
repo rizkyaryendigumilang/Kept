@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo, useRef } from 'react'
+import { useEffect, useState, useMemo, useRef, lazy, Suspense } from 'react'
 import {
   Menu,
   X,
@@ -28,7 +28,8 @@ import {
   Camera,
   Image
 } from './Icons'
-import AvatarCropModal from './AvatarCropModal'
+
+const AvatarCropModal = lazy(() => import('./AvatarCropModal'))
 import AnimatedHamburger, { HAMBURGER_STYLES } from './AnimatedHamburger'
 
 import {
@@ -1360,15 +1361,17 @@ export default function SettingsDrawer({
             </div>
           )}
 
-          <AvatarCropModal
-            isOpen={cropModalOpen}
-            imageSrc={selectedImageSrc}
-            onClose={() => {
-              setCropModalOpen(false)
-              setSelectedImageSrc(null)
-            }}
-            onCropComplete={handleCropComplete}
-          />
+          <Suspense fallback={null}>
+            <AvatarCropModal
+              isOpen={cropModalOpen}
+              imageSrc={selectedImageSrc}
+              onClose={() => {
+                setCropModalOpen(false)
+                setSelectedImageSrc(null)
+              }}
+              onCropComplete={handleCropComplete}
+            />
+          </Suspense>
         </aside>
       </div>
   )

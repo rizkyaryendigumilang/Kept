@@ -1,21 +1,23 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState, lazy, Suspense } from 'react'
 import AuthScreen from './components/AuthScreen'
-import ResetPasswordScreen from './components/ResetPasswordScreen'
 import UnlockScreen from './components/UnlockScreen'
 import TopBar from './components/TopBar'
 import BottomNav from './components/BottomNav'
 import AddSheet from './components/AddSheet'
-import AlertsPanel from './pages/AlertsPanel'
 import HomePage from './pages/HomePage'
-import VaultPage from './pages/VaultPage'
-import BankingPage from './pages/BankingPage'
-import SettingsPage from './pages/SettingsPage'
-import SettingsDrawer from './components/SettingsDrawer'
-import DocumentsPage from './pages/DocumentsPage'
-import ItemModal from './pages/ItemModal'
-import AddItemModal from './pages/AddItemModal'
-import AddDocumentModal from './pages/AddDocumentModal'
-import DocumentDetailModal from './pages/DocumentDetailModal'
+
+// Code splitting: Lazy-loaded pages & modals for fast initial load
+const ResetPasswordScreen = lazy(() => import('./components/ResetPasswordScreen'))
+const VaultPage = lazy(() => import('./pages/VaultPage'))
+const BankingPage = lazy(() => import('./pages/BankingPage'))
+const DocumentsPage = lazy(() => import('./pages/DocumentsPage'))
+const SettingsPage = lazy(() => import('./pages/SettingsPage'))
+const SettingsDrawer = lazy(() => import('./components/SettingsDrawer'))
+const AlertsPanel = lazy(() => import('./pages/AlertsPanel'))
+const ItemModal = lazy(() => import('./pages/ItemModal'))
+const AddItemModal = lazy(() => import('./pages/AddItemModal'))
+const AddDocumentModal = lazy(() => import('./pages/AddDocumentModal'))
+const DocumentDetailModal = lazy(() => import('./pages/DocumentDetailModal'))
 import { checkDocumentExpiry } from './lib/documents'
 import { supabase } from './lib/supabase'
 import {
@@ -715,7 +717,13 @@ Jangan pernah membagikan kode ini kepada siapapun!
   }
 
   if (authLoading) return <Splash />
-  if (recovery) return <ResetPasswordScreen onDone={() => setRecovery(false)} />
+  if (recovery) {
+    return (
+      <Suspense fallback={<Splash />}>
+        <ResetPasswordScreen onDone={() => setRecovery(false)} />
+      </Suspense>
+    )
+  }
   if (!session) return <AuthScreen />
   if (!profile) return <Splash />
   if (!profile.vault_salt || !profile.vault_verifier) {
@@ -763,78 +771,80 @@ Jangan pernah membagikan kode ini kepada siapapun!
             onAdd={() => setShowAdd(true)}
           />
         )}
-        {route === 'vault' && (
-          <VaultPage items={hydratedItems} onAdd={() => setShowAdd(true)} onOpen={openItem} />
-        )}
-        {route === 'documents' && (
-          <DocumentsPage
-            documents={documents}
-            onAdd={() => openAdd('document')}
-            onOpen={openItem}
-            onDownload={(doc) => {
-              if (doc.attachments?.pdf?.data) {
-                const a = document.createElement('a')
-                a.href = doc.attachments.pdf.data
-                a.download = doc.attachments.pdf.name || `${doc.name}.pdf`
-                a.click()
-              } else if (doc.attachments?.front?.data) {
-                const a = document.createElement('a')
-                a.href = doc.attachments.front.data
-                a.download = doc.attachments.front.name || `${doc.name}-depan.jpg`
-                a.click()
-              } else if (doc.attachments?.back?.data) {
-                const a = document.createElement('a')
-                a.href = doc.attachments.back.data
-                a.download = doc.attachments.back.name || `${doc.name}-belakang.jpg`
-                a.click()
-              }
-              recordSecurityActivity({
-                type: 'export_sensitive',
-                title: 'Ekspor Dokumen Didekripsi',
-                desc: `Pengguna mengunduh dokumen: ${doc.name}.`,
-                level: 'warning'
-              })
-            }}
-          />
-        )}
-        {route === 'banking' && (
-          <BankingPage
-            banks={banks}
-            styleMode={profile.card_style || 'realistic'}
-            onAdd={() => openAdd('bank-card')}
-            onOpen={openItem}
-          />
-        )}
-        {route === 'settings' && (
-          <SettingsPage
-            profile={profile}
-            user={session.user}
-            vaultKey={vaultKey}
-            items={hydratedItems}
-            documents={documents}
-            isOnline={isOnline}
-            pendingSyncCount={pendingSyncCount}
-            onTheme={updateTheme}
-            onCardStyle={updateCardStyle}
-            onSaveProfile={saveProfile}
-            onUploadAvatar={uploadProfileAvatar}
-            onRemoveAvatar={handleRemoveAvatar}
-            onSignOut={signOut}
-            onImport={() => document.getElementById('csv-import').click()}
-            onExport={exportEncrypted}
-            onChangeAccountPassword={handleChangeAccountPassword}
-            onChangeMasterPassword={handleChangeMasterPassword}
-            recoveryKey={activeRecoveryKey}
-            onDownloadEmergencySheet={handleDownloadEmergencySheet}
-            onLockVault={() => {
-              setVaultKey(null)
-              showToast('Vault telah dikunci.')
-            }}
-            showToast={showToast}
-            hamburgerStyle={hamburgerStyle}
-            onHamburgerStyle={updateHamburgerStyle}
-          />
-        )}
+        <Suspense fallback={<div className="page-shell"><div className="skeleton-page-loader" /></div>}>
+          {route === 'vault' && (
+            <VaultPage items={hydratedItems} onAdd={() => setShowAdd(true)} onOpen={openItem} />
+          )}
+          {route === 'documents' && (
+            <DocumentsPage
+              documents={documents}
+              onAdd={() => openAdd('document')}
+              onOpen={openItem}
+              onDownload={(doc) => {
+                if (doc.attachments?.pdf?.data) {
+                  const a = document.createElement('a')
+                  a.href = doc.attachments.pdf.data
+                  a.download = doc.attachments.pdf.name || `${doc.name}.pdf`
+                  a.click()
+                } else if (doc.attachments?.front?.data) {
+                  const a = document.createElement('a')
+                  a.href = doc.attachments.front.data
+                  a.download = doc.attachments.front.name || `${doc.name}-depan.jpg`
+                  a.click()
+                } else if (doc.attachments?.back?.data) {
+                  const a = document.createElement('a')
+                  a.href = doc.attachments.back.data
+                  a.download = doc.attachments.back.name || `${doc.name}-belakang.jpg`
+                  a.click()
+                }
+                recordSecurityActivity({
+                  type: 'export_sensitive',
+                  title: 'Ekspor Dokumen Didekripsi',
+                  desc: `Pengguna mengunduh dokumen: ${doc.name}.`,
+                  level: 'warning'
+                })
+              }}
+            />
+          )}
+          {route === 'banking' && (
+            <BankingPage
+              banks={banks}
+              styleMode={profile.card_style || 'realistic'}
+              onAdd={() => openAdd('bank-card')}
+              onOpen={openItem}
+            />
+          )}
+          {route === 'settings' && (
+            <SettingsPage
+              profile={profile}
+              user={session.user}
+              vaultKey={vaultKey}
+              items={hydratedItems}
+              documents={documents}
+              isOnline={isOnline}
+              pendingSyncCount={pendingSyncCount}
+              onTheme={updateTheme}
+              onCardStyle={updateCardStyle}
+              onSaveProfile={saveProfile}
+              onUploadAvatar={uploadProfileAvatar}
+              onRemoveAvatar={handleRemoveAvatar}
+              onSignOut={signOut}
+              onImport={() => document.getElementById('csv-import').click()}
+              onExport={exportEncrypted}
+              onChangeAccountPassword={handleChangeAccountPassword}
+              onChangeMasterPassword={handleChangeMasterPassword}
+              recoveryKey={activeRecoveryKey}
+              onDownloadEmergencySheet={handleDownloadEmergencySheet}
+              onLockVault={() => {
+                setVaultKey(null)
+                showToast('Vault telah dikunci.')
+              }}
+              showToast={showToast}
+              hamburgerStyle={hamburgerStyle}
+              onHamburgerStyle={updateHamburgerStyle}
+            />
+          )}
+        </Suspense>
       </main>
 
       <input id="csv-import" type="file" accept=".csv,text/csv" hidden onChange={importCsv} />
@@ -857,74 +867,76 @@ Jangan pernah membagikan kode ini kepada siapapun!
       </button>
 
       {showAdd && <AddSheet onClose={() => setShowAdd(false)} onChoose={openAdd} />}
-      {addMode && vaultKey && <AddItemModal mode={addMode} onClose={() => setAddMode(null)} onSubmit={saveItem} />}
-      {docAddModalOpen && vaultKey && (
-        <AddDocumentModal
-          onClose={() => setDocAddModalOpen(false)}
-          onSubmit={(docPayload) => saveItem({ ...docPayload, item_type: 'document' })}
-        />
-      )}
-      {selectedItem && selectedItem.item_type === 'document' ? (
-        <DocumentDetailModal
-          item={selectedItem}
-          onClose={() => setSelectedItem(null)}
-          onDelete={removeItem}
-          onSave={async (id, updatedDoc) => {
-            await saveItem({ ...updatedDoc, id, item_type: 'document' })
+      <Suspense fallback={null}>
+        {addMode && vaultKey && <AddItemModal mode={addMode} onClose={() => setAddMode(null)} onSubmit={saveItem} />}
+        {docAddModalOpen && vaultKey && (
+          <AddDocumentModal
+            onClose={() => setDocAddModalOpen(false)}
+            onSubmit={(docPayload) => saveItem({ ...docPayload, item_type: 'document' })}
+          />
+        )}
+        {selectedItem && selectedItem.item_type === 'document' ? (
+          <DocumentDetailModal
+            item={selectedItem}
+            onClose={() => setSelectedItem(null)}
+            onDelete={removeItem}
+            onSave={async (id, updatedDoc) => {
+              await saveItem({ ...updatedDoc, id, item_type: 'document' })
+            }}
+            onToggleFavorite={toggleFavorite}
+          />
+        ) : selectedItem ? (
+          <ItemModal
+            item={selectedItem}
+            onClose={() => setSelectedItem(null)}
+            onDelete={removeItem}
+            onSave={updateItem}
+            onToggleFavorite={toggleFavorite}
+          />
+        ) : null}
+        {alertsOpen && (
+          <AlertsPanel
+            alerts={alerts}
+            onClose={() => setAlertsOpen(false)}
+            onOpenItem={openItem}
+          />
+        )}
+        <SettingsDrawer
+          isOpen={menuOpen}
+          activeSubpage={menuSubpage}
+          onSubpageChange={setMenuSubpage}
+          onClose={() => {
+            setMenuOpen(false)
+            setMenuSubpage(null)
           }}
-          onToggleFavorite={toggleFavorite}
+          profile={profile}
+          user={session.user}
+          vaultKey={vaultKey}
+          items={hydratedItems}
+          documents={documents}
+          isOnline={isOnline}
+          pendingSyncCount={pendingSyncCount}
+          onTheme={updateTheme}
+          onCardStyle={updateCardStyle}
+          onSaveProfile={saveProfile}
+          onUploadAvatar={uploadProfileAvatar}
+          onRemoveAvatar={handleRemoveAvatar}
+          onSignOut={signOut}
+          onImport={() => document.getElementById('csv-import').click()}
+          onExport={exportEncrypted}
+          onChangeAccountPassword={handleChangeAccountPassword}
+          onChangeMasterPassword={handleChangeMasterPassword}
+          recoveryKey={activeRecoveryKey}
+          onDownloadEmergencySheet={handleDownloadEmergencySheet}
+          onLockVault={() => {
+            setVaultKey(null)
+            showToast('Vault telah dikunci.')
+          }}
+          showToast={showToast}
+          hamburgerStyle={hamburgerStyle}
+          onHamburgerStyle={updateHamburgerStyle}
         />
-      ) : selectedItem ? (
-        <ItemModal
-          item={selectedItem}
-          onClose={() => setSelectedItem(null)}
-          onDelete={removeItem}
-          onSave={updateItem}
-          onToggleFavorite={toggleFavorite}
-        />
-      ) : null}
-      {alertsOpen && (
-        <AlertsPanel
-          alerts={alerts}
-          onClose={() => setAlertsOpen(false)}
-          onOpenItem={openItem}
-        />
-      )}
-      <SettingsDrawer
-        isOpen={menuOpen}
-        activeSubpage={menuSubpage}
-        onSubpageChange={setMenuSubpage}
-        onClose={() => {
-          setMenuOpen(false)
-          setMenuSubpage(null)
-        }}
-        profile={profile}
-        user={session.user}
-        vaultKey={vaultKey}
-        items={hydratedItems}
-        documents={documents}
-        isOnline={isOnline}
-        pendingSyncCount={pendingSyncCount}
-        onTheme={updateTheme}
-        onCardStyle={updateCardStyle}
-        onSaveProfile={saveProfile}
-        onUploadAvatar={uploadProfileAvatar}
-        onRemoveAvatar={handleRemoveAvatar}
-        onSignOut={signOut}
-        onImport={() => document.getElementById('csv-import').click()}
-        onExport={exportEncrypted}
-        onChangeAccountPassword={handleChangeAccountPassword}
-        onChangeMasterPassword={handleChangeMasterPassword}
-        recoveryKey={activeRecoveryKey}
-        onDownloadEmergencySheet={handleDownloadEmergencySheet}
-        onLockVault={() => {
-          setVaultKey(null)
-          showToast('Vault telah dikunci.')
-        }}
-        showToast={showToast}
-        hamburgerStyle={hamburgerStyle}
-        onHamburgerStyle={updateHamburgerStyle}
-      />
+      </Suspense>
       {toast && <div className="toast">{toast}</div>}
       {error && (
         <div className="error-banner" onClick={() => setError('')}>
