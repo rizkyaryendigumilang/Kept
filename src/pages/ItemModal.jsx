@@ -11,6 +11,8 @@ import {
   Plus,
   X
 } from '../components/Icons'
+import { BANK_PRESETS } from '../lib/banks'
+import ConfirmToast from '../components/ConfirmToast'
 
 export default function ItemModal({
   item,
@@ -20,6 +22,7 @@ export default function ItemModal({
   onToggleFavorite
 }) {
   const [editing, setEditing] = useState(false)
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [form, setForm] = useState(normalizeItem(item))
   const [visibleSecrets, setVisibleSecrets] = useState({})
 
@@ -145,7 +148,7 @@ export default function ItemModal({
             />
           )}
 
-          <div>
+          <div className="detail-meta">
             <span className="detail-name">
               {form.name || 'Untitled'}
             </span>
@@ -156,50 +159,50 @@ export default function ItemModal({
           </div>
         </div>
 
-        <div className="button-row">
+        <div className="detail-actions">
           <button
             type="button"
             className={
               isFavorite
-                ? 'favorite-button selected'
-                : 'favorite-button'
+                ? 'action-pill-btn favorite selected'
+                : 'action-pill-btn favorite'
             }
             onClick={() => onToggleFavorite(item.id)}
           >
             <Star
-              size={15}
+              size={14}
               fill={isFavorite ? 'currentColor' : 'none'}
             />
-            Favorite
+            <span>Favorite</span>
           </button>
 
           {!editing ? (
             <button
               type="button"
-              className="secondary-button compact"
+              className="action-pill-btn edit"
               onClick={() => setEditing(true)}
             >
-              <Pencil size={15} />
-              Edit
+              <Pencil size={14} />
+              <span>Edit</span>
             </button>
           ) : (
             <button
               type="button"
-              className="secondary-button compact"
+              className="action-pill-btn cancel"
               onClick={cancelEdit}
             >
-              Cancel
+              <span>Cancel</span>
             </button>
           )}
 
           <button
             type="button"
-            className="danger-ghost compact"
-            onClick={() => onDelete(item.id)}
+            className="action-pill-btn delete"
+            onClick={() => setShowDeleteConfirm(true)}
             title="Delete"
             aria-label="Delete"
           >
-            <Trash2 size={15} />
+            <Trash2 size={14} />
           </button>
         </div>
       </div>
@@ -242,6 +245,19 @@ export default function ItemModal({
           </button>
         </div>
       )}
+
+      {showDeleteConfirm && (
+        <ConfirmToast
+          message={`Hapus "${form.name || 'item ini'}" secara permanen?`}
+          confirmLabel="Hapus"
+          cancelLabel="Batal"
+          onConfirm={() => {
+            setShowDeleteConfirm(false)
+            onDelete(item.id)
+          }}
+          onCancel={() => setShowDeleteConfirm(false)}
+        />
+      )}
     </Modal>
   )
 }
@@ -280,7 +296,7 @@ function normalizeItem(item) {
 
 function formatType(type) {
   if (type === 'bank_card') {
-    return 'Bank / ATM Card'
+    return 'Account'
   }
 
   if (type === 'secure_note') {
@@ -419,12 +435,6 @@ function ReadOnly({
           disabled
         />
 
-        <Field
-          label="Bank color"
-          value={item.color}
-          disabled
-        />
-
         {item.notes && (
           <div className="note-box span-2">
             <strong>Notes</strong>
@@ -552,90 +562,84 @@ function EditForm({
   if (item.item_type === 'bank_card') {
     return (
       <div className="detail-grid">
+        {/* Quick Bank Selector */}
+        <label className="field span-2">
+          <span>Pilih Bank</span>
+          <select
+            value={BANK_PRESETS.find(p => p.name.toLowerCase() === (item.bank_name || '').toLowerCase())?.id || ''}
+            onChange={(e) => {
+              const selectedId = e.target.value
+              const preset = BANK_PRESETS.find(p => p.id === selectedId)
+              if (preset) {
+                update('bank_name', preset.name)
+                update('color', preset.color)
+                update('card_brand', preset.cardBrand)
+              }
+            }}
+          >
+            <option value="">-- Pilih Bank --</option>
+            {BANK_PRESETS.map((preset) => (
+              <option key={preset.id} value={preset.id}>
+                {preset.name}
+              </option>
+            ))}
+          </select>
+        </label>
+
         <Field
           label="Name"
           value={item.name}
-          onChange={(value) =>
-            update('name', value)
-          }
-        />
-
-        <Field
-          label="Bank"
-          value={item.bank_name}
-          onChange={(value) =>
-            update('bank_name', value)
-          }
+          onChange={(value) => update('name', value)}
         />
 
         <Field
           label="Account owner"
           value={item.account_owner}
-          onChange={(value) =>
-            update('account_owner', value)
-          }
+          onChange={(value) => update('account_owner', value)}
         />
 
         <Field
           label="Card number"
           value={item.card_number}
           secret
-          visible={
-            visibleSecrets.edit_card_number
-          }
-          onToggle={() =>
-            toggleSecret('edit_card_number')
-          }
-          onChange={(value) =>
-            update('card_number', value)
-          }
+          visible={visibleSecrets.edit_card_number}
+          onToggle={() => toggleSecret('edit_card_number')}
+          onChange={(value) => update('card_number', value)}
         />
 
         <Field
           label="Account number"
           value={item.account_number}
           secret
-          visible={
-            visibleSecrets.edit_account_number
-          }
-          onToggle={() =>
-            toggleSecret('edit_account_number')
-          }
-          onChange={(value) =>
-            update('account_number', value)
-          }
+          visible={visibleSecrets.edit_account_number}
+          onToggle={() => toggleSecret('edit_account_number')}
+          onChange={(value) => update('account_number', value)}
         />
 
         <Field
           label="Registered phone"
           value={item.registered_phone}
-          onChange={(value) =>
-            update('registered_phone', value)
-          }
+          onChange={(value) => update('registered_phone', value)}
         />
 
-        <Field
-          label="Card brand"
-          value={item.card_brand}
-          onChange={(value) =>
-            update('card_brand', value)
-          }
-        />
+        <label className="field">
+          <span>Card brand</span>
+          <select
+            value={item.card_brand || 'DEBIT'}
+            onChange={(e) => update('card_brand', e.target.value)}
+          >
+            <option value="DEBIT">DEBIT / GPN</option>
+            <option value="VISA">VISA</option>
+            <option value="MASTERCARD">MASTERCARD</option>
+            <option value="JCB">JCB</option>
+            <option value="KREDIT">KREDIT</option>
+          </select>
+        </label>
 
         <Field
           label="Expiry"
           value={item.expiry}
-          onChange={(value) =>
-            update('expiry', value)
-          }
-        />
-
-        <Field
-          label="Bank color"
-          value={item.color}
-          onChange={(value) =>
-            update('color', value)
-          }
+          onChange={(value) => update('expiry', value)}
         />
 
         <label className="field span-2">

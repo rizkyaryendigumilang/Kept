@@ -1,5 +1,4 @@
 import { useState } from 'react'
-import { Fingerprint, KeyRound, ShieldCheck } from './Icons'
 import { supabase } from '../lib/supabase'
 
 function GoogleMark() {
@@ -121,23 +120,18 @@ export default function AuthScreen() {
   const blurb =
     mode === 'reset'
       ? 'Enter your account email and we will send you a secure reset link.'
-      : 'Passwords, bank cards and secure notes stay encrypted before they leave your device.'
+      : ''
 
   return (
     <main className="auth-screen">
       <div className="auth-card">
         <div className="auth-brand">
-          <div className="brand-mark large">V</div>
-          <div>
-            <strong>Vault</strong>
-            <span>Private by design</span>
-          </div>
+          <img src="/brand/kept-logo.png" alt="Kept" className="kept-auth-logo" />
         </div>
 
         <div className="auth-copy">
-          <div className="eyebrow">Personal vault</div>
           <h1>{heading}</h1>
-          <p>{blurb}</p>
+          {blurb && <p>{blurb}</p>}
         </div>
 
         {mode !== 'reset' && (
@@ -252,18 +246,6 @@ export default function AuthScreen() {
               </button>
             </>
           )}
-        </div>
-
-        <div className="auth-trust">
-          <span>
-            <ShieldCheck size={16} /> Encrypted vault
-          </span>
-          <span>
-            <KeyRound size={16} /> Master password
-          </span>
-          <span>
-            <Fingerprint size={16} /> Biometric unlock
-          </span>
         </div>
       </div>
     </main>

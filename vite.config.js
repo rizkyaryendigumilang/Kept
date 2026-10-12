@@ -7,16 +7,14 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
-      // Disable the service worker during local development so the browser
-      // never serves a stale cached build while you iterate on the app.
       devOptions: {
         enabled: false
       },
-      includeAssets: ['pwa-192.png', 'pwa-512.png'],
+      includeAssets: ['brand/kept-icon.png', 'brand/kept-logo.png', 'pwa-192.png', 'pwa-512.png'],
       manifest: {
-        name: 'Personal Vault',
-        short_name: 'Vault',
-        description: 'Private password and banking vault',
+        name: 'Kept',
+        short_name: 'Kept',
+        description: 'Zero-knowledge personal vault for passwords, banking and secure notes',
         theme_color: '#ffffff',
         background_color: '#ffffff',
         display: 'standalone',

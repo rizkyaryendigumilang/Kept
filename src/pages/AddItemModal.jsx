@@ -2,14 +2,8 @@ import { useMemo, useState } from 'react'
 import Modal from '../components/Modal'
 import SiteLogo from '../components/SiteLogo'
 import { Eye, EyeOff } from '../components/Icons'
+import { BANK_PRESETS } from '../lib/banks'
 
-const bankDefaults = [
-  { name: 'BCA', color: '#0056b3' },
-  { name: 'Mandiri', color: '#1f51a5' },
-  { name: 'BRI', color: '#0b3f88' },
-  { name: 'BNI', color: '#e87500' },
-  { name: 'Bank Jago', color: '#e95c35' }
-]
 
 const environmentOptions = [
   'Production',
@@ -170,7 +164,7 @@ export default function AddItemModal({
 
   const title =
     type === 'bank_card'
-      ? 'Add bank / ATM card'
+      ? 'Add Account'
       : type === 'secure_note'
         ? 'Add secure note'
         : 'Add password'
@@ -338,148 +332,127 @@ export default function AddItemModal({
           </>
         )}
 
-        {/* Bank / ATM Card */}
+        {/* Account */}
         {type === 'bank_card' && (
           <>
-            <Field
-              label="Record name"
-              value={form.name}
-              onChange={(value) =>
-                set('name', value)
-              }
-            />
+            {/* Live Mini Card Preview */}
+            <div className="mini-card-preview-container span-2">
+              <div
+                className="mini-card-preview"
+                style={{ backgroundColor: form.color || '#0056b3' }}
+              >
+                <div className="mini-card-top">
+                  <span className="mini-card-bank">{form.bank_name || 'Bank'}</span>
+                  <span className="mini-card-brand">{form.card_brand || 'DEBIT'}</span>
+                </div>
+                <div className="mini-card-number">
+                  {form.card_number
+                    ? form.card_number.replace(/\D/g, '').replace(/(.{4})/g, '$1 ').trim() || '•••• •••• •••• ••••'
+                    : '•••• •••• •••• ••••'}
+                </div>
+                <div className="mini-card-bottom">
+                  <div>
+                    <span className="mini-card-label">PEMEGANG KARTU</span>
+                    <strong className="mini-card-value">{form.account_owner || 'NAMA LENGKAP'}</strong>
+                  </div>
+                  <div>
+                    <span className="mini-card-label">BERLAKU</span>
+                    <strong className="mini-card-value">{form.expiry || 'MM/YY'}</strong>
+                  </div>
+                </div>
+              </div>
+            </div>
 
-            <label className="field">
-              <span>Bank</span>
-
+            {/* Quick Bank Selector */}
+            <label className="field span-2">
+              <span>Pilih Bank</span>
               <select
-                value={form.bank_name}
+                value={BANK_PRESETS.find(p => p.name.toLowerCase() === (form.bank_name || '').toLowerCase())?.id || ''}
                 onChange={(e) => {
-                  const value = e.target.value
-
-                  const hit =
-                    bankDefaults.find(
-                      (bank) =>
-                        bank.name === value
-                    )
-
-                  set(
-                    'bank_name',
-                    value
-                  )
-
-                  if (hit) {
-                    set(
-                      'color',
-                      hit.color
-                    )
+                  const selectedId = e.target.value
+                  const preset = BANK_PRESETS.find(p => p.id === selectedId)
+                  if (preset) {
+                    set('bank_name', preset.name)
+                    set('color', preset.color)
+                    set('card_brand', preset.cardBrand)
+                    if (!form.name || form.name === 'Bank card') {
+                      set('name', `Kartu Debit ${preset.name}`)
+                    }
                   }
                 }}
               >
-                {bankDefaults.map((bank) => (
-                  <option
-                    key={bank.name}
-                    value={bank.name}
-                  >
-                    {bank.name}
+                <option value="">-- Pilih Bank --</option>
+                {BANK_PRESETS.map((preset) => (
+                  <option key={preset.id} value={preset.id}>
+                    {preset.name}
                   </option>
                 ))}
-
-                <option value="Other">
-                  Other
-                </option>
               </select>
             </label>
 
             <Field
-              label="Account owner"
+              label="Nama Rekord / Label"
+              value={form.name}
+              placeholder="cth. Kartu Debit Utama, ATM Tabungan"
+              onChange={(value) => set('name', value)}
+            />
+
+            <Field
+              label="Nama Pemegang Kartu"
               value={form.account_owner}
-              onChange={(value) =>
-                set(
-                  'account_owner',
-                  value
-                )
-              }
+              placeholder="Sesuai nama di kartu"
+              onChange={(value) => set('account_owner', value)}
             />
 
             <Field
-              label="Card number"
+              label="Nomor Kartu ATM / Debit"
               value={form.card_number}
-              onChange={(value) =>
-                set(
-                  'card_number',
-                  value
-                )
-              }
+              placeholder="16 digit nomor kartu"
+              onChange={(value) => set('card_number', value)}
             />
 
             <Field
-              label="Account number"
+              label="Nomor Rekening"
               value={form.account_number}
-              onChange={(value) =>
-                set(
-                  'account_number',
-                  value
-                )
-              }
+              placeholder="Nomor rekening bank"
+              onChange={(value) => set('account_number', value)}
             />
 
             <Field
-              label="Registered phone"
-              value={
-                form.registered_phone
-              }
-              onChange={(value) =>
-                set(
-                  'registered_phone',
-                  value
-                )
-              }
+              label="Nomor HP Terdaftar"
+              value={form.registered_phone}
+              placeholder="08xxxxxxxxxx"
+              onChange={(value) => set('registered_phone', value)}
             />
 
-            <Field
-              label="Card brand"
-              value={form.card_brand}
-              onChange={(value) =>
-                set(
-                  'card_brand',
-                  value
-                )
-              }
-            />
+            <label className="field">
+              <span>Jenis / Brand Kartu</span>
+              <select
+                value={form.card_brand}
+                onChange={(e) => set('card_brand', e.target.value)}
+              >
+                <option value="DEBIT">DEBIT / GPN</option>
+                <option value="VISA">VISA</option>
+                <option value="MASTERCARD">MASTERCARD</option>
+                <option value="JCB">JCB</option>
+                <option value="KREDIT">KREDIT</option>
+              </select>
+            </label>
 
             <Field
-              label="Expiry"
+              label="Masa Berlaku (Valid Thru)"
               value={form.expiry}
-              onChange={(value) =>
-                set(
-                  'expiry',
-                  value
-                )
-              }
-            />
-
-            <Field
-              label="Card color"
-              value={form.color}
-              onChange={(value) =>
-                set('color', value)
-              }
+              placeholder="MM/YY (cth. 08/28)"
+              onChange={(value) => set('expiry', value)}
             />
 
             <label className="field span-2">
-              <span>Notes</span>
-
+              <span>Catatan Tambahan</span>
               <textarea
                 value={form.notes}
-                onChange={(e) =>
-                  set(
-                    'notes',
-                    e.target.value
-                  )
-                }
-                rows={4}
-                placeholder="Additional information..."
+                onChange={(e) => set('notes', e.target.value)}
+                rows={3}
+                placeholder="Informasi kantor cabang, batas penarikan, dll..."
               />
             </label>
 

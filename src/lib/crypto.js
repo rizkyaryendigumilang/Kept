@@ -75,3 +75,76 @@ export function stableJson(value) {
 export function keyFingerprint(rawKey) {
   return bytesToHex(rawKey.slice(0, 6))
 }
+
+const RECOVERY_CHARS = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ'
+
+export function generateRecoveryKey() {
+  const random = crypto.getRandomValues(new Uint8Array(20))
+  let str = ''
+  for (let i = 0; i < 20; i++) {
+    str += RECOVERY_CHARS[random[i] % RECOVERY_CHARS.length]
+  }
+  return `KEPT-${str.slice(0, 4)}-${str.slice(4, 8)}-${str.slice(8, 12)}-${str.slice(12, 16)}-${str.slice(16, 20)}`
+}
+
+export function normalizeRecoveryKey(key) {
+  return String(key || '')
+    .toUpperCase()
+    .replace(/[^A-Z0-9]/g, '')
+}
+
+async function deriveRecoveryWrappingKey(recoveryKey, saltBytes) {
+  const normalized = normalizeRecoveryKey(recoveryKey)
+  const baseKey = await crypto.subtle.importKey(
+    'raw',
+    textEncoder.encode(normalized),
+    { name: 'PBKDF2' },
+    false,
+    ['deriveKey']
+  )
+  return crypto.subtle.deriveKey(
+    {
+      name: 'PBKDF2',
+      salt: saltBytes,
+      iterations: 100000,
+      hash: 'SHA-256'
+    },
+    baseKey,
+    { name: 'AES-GCM', length: 256 },
+    false,
+    ['encrypt', 'decrypt']
+  )
+}
+
+export async function wrapMasterKeyWithRecovery(rawMasterKey, recoveryKey) {
+  const salt = crypto.getRandomValues(new Uint8Array(16))
+  const iv = crypto.getRandomValues(new Uint8Array(12))
+  const wrappingKey = await deriveRecoveryWrappingKey(recoveryKey, salt)
+  const cipher = await crypto.subtle.encrypt(
+    { name: 'AES-GCM', iv },
+    wrappingKey,
+    rawMasterKey
+  )
+  return {
+    v: 1,
+    salt: bytesToBase64(salt),
+    iv: bytesToBase64(iv),
+    ct: bytesToBase64(new Uint8Array(cipher))
+  }
+}
+
+export async function unwrapMasterKeyWithRecovery(envelope, recoveryKey) {
+  if (!envelope?.salt || !envelope?.iv || !envelope?.ct) {
+    throw new Error('Invalid recovery envelope format.')
+  }
+  const salt = base64ToBytes(envelope.salt)
+  const iv = base64ToBytes(envelope.iv)
+  const wrappingKey = await deriveRecoveryWrappingKey(recoveryKey, salt)
+  const plaintext = await crypto.subtle.decrypt(
+    { name: 'AES-GCM', iv },
+    wrappingKey,
+    base64ToBytes(envelope.ct)
+  )
+  return new Uint8Array(plaintext)
+}
+

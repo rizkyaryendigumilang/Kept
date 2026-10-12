@@ -1,4 +1,4 @@
-import { ChevronRight, CreditCard, KeyRound, Sparkles, ShieldCheck } from '../components/Icons'
+import { ChevronRight, CreditCard, KeyRound } from '../components/Icons'
 import SiteLogo from '../components/SiteLogo'
 import StatCard from '../components/StatCard'
 
@@ -14,26 +14,19 @@ export default function HomePage({ displayName, stats, favorites, recent, onNavi
         <button className="quick-add" onClick={onAdd}><span>+</span> Add</button>
       </section>
 
-      <section className="stats-grid">
+      <section className="stats-grid three">
         <StatCard label="Passwords" value={stats.passwords} hint="Social, web & project" onClick={() => onNavigate('vault')} />
-        <StatCard label="Banking" value={stats.banks} hint="Cards & account details" onClick={() => onNavigate('banking')} />
+        <StatCard label="Dokumen" value={stats.documents || 0} hint="KTP, SIM, Paspor & KK" onClick={() => onNavigate('documents')} />
+        <StatCard label="Account" value={stats.banks} hint="Cards & account details" onClick={() => onNavigate('banking')} />
       </section>
 
       <section className="section-block">
-        <div className="section-heading"><div><div className="eyebrow">Your vault</div><h2>Keep the important things close.</h2></div><button className="text-button" onClick={() => onNavigate('vault')}>View vault <ChevronRight size={16} /></button></div>
-        <div className="feature-row">
-          <div className="feature-card dark-feature"><div className="feature-icon"><ShieldCheck size={18} /></div><div><strong>Encrypted by default</strong><span>Only ciphertext is synced to Supabase.</span></div></div>
-          <div className="feature-card"><div className="feature-icon"><Sparkles size={18} /></div><div><strong>Clean and fast</strong><span>Compact views built for everyday use.</span></div></div>
-        </div>
-      </section>
-
-      <section className="section-block">
-        <div className="section-heading"><div><div className="eyebrow">Favorites</div><h2>Fast access</h2></div></div>
+        <div className="section-heading"><div><h2>Favorites</h2></div></div>
         {favorites.length === 0 ? <EmptyState text="Star your most used items to see them here." /> : <ItemRail items={favorites} onOpenItem={onOpenItem} />}
       </section>
 
       <section className="section-block compact-section">
-        <div className="section-heading"><div><div className="eyebrow">Recently used</div><h2>Back where you left off.</h2></div></div>
+        <div className="section-heading"><div><h2>Recently used</h2></div></div>
         {recent.length === 0 ? <EmptyState text="Recently opened items will appear here." /> : <ItemRail items={recent} onOpenItem={onOpenItem} />}
       </section>
     </div>

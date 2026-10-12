@@ -1,20 +1,46 @@
-import { Home, KeyRound, WalletCards } from './Icons'
+import { Home, KeyRound, WalletCards, FileText, Menu, X, ArrowLeft } from './Icons'
+import AnimatedHamburger from './AnimatedHamburger'
 
 const items = [
   { id: 'home', label: 'Home', icon: Home },
-  { id: 'vault', label: 'Vault', icon: KeyRound },
-  { id: 'banking', label: 'Banking', icon: WalletCards }
+  { id: 'vault', label: 'Password', icon: KeyRound },
+  { id: 'documents', label: 'Document', icon: FileText },
+  { id: 'banking', label: 'Account', icon: WalletCards },
+  { id: 'settings', label: 'Menu', icon: Menu }
 ]
 
-export default function BottomNav({ active, onChange }) {
+export default function BottomNav({ active, onChange, menuOpen = false, isSubpage = false, hamburgerStyle = 'squash' }) {
   return (
     <nav className="bottom-nav" aria-label="Primary navigation">
-      {items.map(({ id, label, icon: Icon }) => (
-        <button key={id} className={active === id ? 'nav-item active' : 'nav-item'} onClick={() => onChange(id)}>
-          <Icon size={18} strokeWidth={active === id ? 2.2 : 1.8} />
-          <span>{label}</span>
-        </button>
-      ))}
+      {items.map(({ id, label, icon: Icon }) => {
+        const isSettings = id === 'settings'
+        const isActive = isSettings ? menuOpen : active === id && !menuOpen
+        const DynamicIcon = isSettings && isSubpage ? ArrowLeft : Icon
+        const dynamicLabel = isSettings && isSubpage ? 'Kembali' : label
+        return (
+          <button
+            key={id}
+            className={`nav-item ${isActive ? 'active' : ''} ${isSettings ? 'nav-item-settings' : ''}`}
+            onClick={() => onChange(id)}
+            aria-current={isActive ? 'page' : undefined}
+          >
+            <div className={`nav-icon-wrap ${isSettings && menuOpen ? 'settings-open' : ''}`}>
+              {isSettings && !isSubpage ? (
+                <AnimatedHamburger
+                  toggled={menuOpen}
+                  style={hamburgerStyle}
+                  size={16}
+                  duration={0.3}
+                  rounded
+                />
+              ) : (
+                <DynamicIcon size={20} strokeWidth={isActive ? 2.2 : 1.7} />
+              )}
+            </div>
+            <span className="nav-label">{dynamicLabel}</span>
+          </button>
+        )
+      })}
     </nav>
   )
 }
