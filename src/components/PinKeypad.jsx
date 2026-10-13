@@ -1,5 +1,6 @@
 import { useEffect } from 'react'
 import { Lock, Delete, Check, Clock } from './Icons'
+import { haptic } from '../lib/haptics'
 
 export default function PinKeypad({
   value = '',
@@ -15,12 +16,14 @@ export default function PinKeypad({
   shake = false,
   busy = false,
   autoSubmit = false,
-  customBadgeIcon: CustomIcon
+  customBadgeIcon: CustomIcon,
+  lang = 'id'
 }) {
   function handlePressDigit(digit) {
     if (disabled || lockoutSeconds > 0 || busy) return
     if (value.length >= length) return
 
+    haptic('light')
     const next = value + digit
     onChange(next)
 
@@ -32,6 +35,7 @@ export default function PinKeypad({
   function handleBackspace() {
     if (disabled || lockoutSeconds > 0 || busy) return
     if (value.length > 0) {
+      haptic('light')
       onChange(value.slice(0, -1))
     }
   }
@@ -39,6 +43,7 @@ export default function PinKeypad({
   function handleCheckSubmit() {
     if (disabled || lockoutSeconds > 0 || busy) return
     if (value.length === length && onSubmit) {
+      haptic('medium')
       onSubmit(value)
     }
   }
@@ -76,6 +81,12 @@ export default function PinKeypad({
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [value, disabled, lockoutSeconds, busy, length, onChange, onSubmit, autoSubmit])
 
+  useEffect(() => {
+    if (shake || error) {
+      haptic('error')
+    }
+  }, [shake, error])
+
   return (
     <div className="pin-keypad-card">
       <div className="pin-lock-badge">
@@ -100,7 +111,11 @@ export default function PinKeypad({
         {lockoutSeconds > 0 ? (
           <div className="pin-feedback-msg lockout">
             <Clock size={13} />
-            <span>Tunggu 00:{lockoutSeconds.toString().padStart(2, '0')} sebelum mencoba lagi</span>
+            <span>
+              {lang === 'id'
+                ? `Tunggu 00:${lockoutSeconds.toString().padStart(2, '0')} sebelum mencoba lagi`
+                : `Wait 00:${lockoutSeconds.toString().padStart(2, '0')} before trying again`}
+            </span>
           </div>
         ) : error ? (
           <div className="pin-feedback-msg error">{error}</div>
@@ -131,7 +146,7 @@ export default function PinKeypad({
           className="pin-key-btn pin-action-key"
           disabled={disabled || lockoutSeconds > 0 || busy || value.length === 0}
           onClick={handleBackspace}
-          aria-label="Hapus angka terakhir"
+          aria-label={lang === 'id' ? 'Hapus angka terakhir' : 'Delete last digit'}
         >
           <Delete size={20} strokeWidth={1.8} />
         </button>
@@ -152,7 +167,7 @@ export default function PinKeypad({
           className="pin-key-btn pin-submit-key"
           disabled={disabled || lockoutSeconds > 0 || busy || value.length !== length}
           onClick={handleCheckSubmit}
-          aria-label="Buka vault"
+          aria-label={lang === 'id' ? 'Buka vault' : 'Unlock vault'}
         >
           <Check size={20} strokeWidth={2.8} />
         </button>

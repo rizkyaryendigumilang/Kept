@@ -31,6 +31,8 @@ import {
 
 const AvatarCropModal = lazy(() => import('./AvatarCropModal'))
 import AnimatedHamburger, { HAMBURGER_STYLES } from './AnimatedHamburger'
+import { haptic } from '../lib/haptics'
+import { getTranslation } from '../lib/i18n'
 
 import {
   enrollBiometric,
@@ -69,8 +71,11 @@ export default function SettingsDrawer({
   onLockVault,
   showToast,
   hamburgerStyle = 'squash',
-  onHamburgerStyle
+  onHamburgerStyle,
+  lang = 'id',
+  onLanguage
 }) {
+  const t = (k) => getTranslation(k, lang)
   const [internalActiveSubpage, setInternalActiveSubpage] = useState(null)
   const activeSubpage = externalActiveSubpage !== undefined ? externalActiveSubpage : internalActiveSubpage
   const [profileModalOpen, setProfileModalOpen] = useState(false)
@@ -393,38 +398,38 @@ export default function SettingsDrawer({
   const CATEGORIES = [
     {
       id: 'preferences',
-      label: 'Preferences',
-      desc: 'Tema tampilan, gaya visual kartu',
+      label: t('menu_preferences'),
+      desc: t('menu_preferences_desc'),
       icon: SlidersHorizontal
     },
     {
       id: 'security',
-      label: 'Security & Privacy',
-      desc: 'Master Password, biometrik, auto-lock, sesi',
+      label: t('menu_security'),
+      desc: t('menu_security_desc'),
       icon: ShieldCheck
     },
     {
       id: 'backup',
-      label: 'Backup & Sync',
-      desc: 'Status sinkronisasi, backup terenkripsi, restore',
+      label: t('menu_backup'),
+      desc: t('menu_backup_desc'),
       icon: Cloud
     },
     {
       id: 'storage',
-      label: 'Storage & Data',
-      desc: 'Penggunaan penyimpanan, ekspor, impor, hapus data',
+      label: t('menu_storage'),
+      desc: t('menu_storage_desc'),
       icon: Database
     },
     {
       id: 'notifications',
-      label: 'Notifications',
-      desc: 'Pengingat masa berlaku dokumen dan aktivitas',
+      label: t('menu_notifications'),
+      desc: t('menu_notifications_desc'),
       icon: Bell
     },
     {
       id: 'help',
-      label: 'Help & About',
-      desc: 'Panduan, FAQ, arsitektur enkripsi, kebijakan',
+      label: t('menu_help'),
+      desc: t('menu_help_desc'),
       icon: HelpCircle
     }
   ]
@@ -467,10 +472,10 @@ export default function SettingsDrawer({
                 type="button"
                 className="drawer-back-btn pill-button"
                 onClick={() => handleSetSubpage(null)}
-                aria-label="Kembali ke Menu"
+                aria-label={t('nav_back')}
               >
                 <ArrowLeft size={15} />
-                <span>Kembali</span>
+                <span>{t('nav_back')}</span>
               </button>
               <h3 className="drawer-subpage-title">
                 {CATEGORIES.find((c) => c.id === activeSubpage)?.label}
@@ -478,7 +483,7 @@ export default function SettingsDrawer({
             </div>
           ) : (
             <div className="drawer-header-left">
-              <h3 className="drawer-title">Menu</h3>
+              <h3 className="drawer-title">{t('menu_title')}</h3>
             </div>
           )}
 
@@ -486,8 +491,8 @@ export default function SettingsDrawer({
             type="button"
             className="drawer-close-btn"
             onClick={onClose}
-            aria-label="Tutup"
-            title="Tutup"
+            aria-label={t('action_close')}
+            title={t('action_close')}
           >
             <X size={18} />
           </button>
@@ -504,12 +509,12 @@ export default function SettingsDrawer({
                 onClick={() => setProfileModalOpen(true)}
                 role="button"
                 tabIndex={0}
-                title="Kelola foto profil & nama akun"
+                title={t('profile_edit_hint')}
               >
                 <div className="drawer-profile-avatar-wrapper">
                   <div className="drawer-profile-avatar">
                     {avatarPreview ? (
-                      <img src={avatarPreview} alt="Profil" />
+                      <img src={avatarPreview} alt={t('profile_manage')} />
                     ) : (
                       <span>{initials}</span>
                     )}
@@ -517,8 +522,8 @@ export default function SettingsDrawer({
                   <button
                     type="button"
                     className="camera-badge-btn"
-                    title="Ubah foto profil"
-                    aria-label="Ubah foto profil"
+                    title={t('profile_edit_hint')}
+                    aria-label={t('profile_edit_hint')}
                     onClick={(e) => {
                       e.stopPropagation()
                       setProfileModalOpen(true)
@@ -529,9 +534,9 @@ export default function SettingsDrawer({
                 </div>
                 <div className="drawer-profile-info">
                   <div className="drawer-profile-title-row">
-                    <strong>{profile?.display_name || 'Pengguna Kept'}</strong>
+                    <strong>{profile?.display_name || (lang === 'id' ? 'Pengguna Kept' : 'Kept User')}</strong>
                     <span className="security-tag-pill">
-                      <ShieldCheck size={11} /> Terenkripsi
+                      <ShieldCheck size={11} /> {t('encrypted')}
                     </span>
                   </div>
                   <span className="drawer-profile-email">{user?.email}</span>
@@ -574,7 +579,7 @@ export default function SettingsDrawer({
                   }}
                 >
                   <LogOut size={16} />
-                  <span>Sign Out</span>
+                  <span>{t('sign_out')}</span>
                 </button>
               </div>
             </div>
@@ -584,14 +589,47 @@ export default function SettingsDrawer({
           {activeSubpage === 'preferences' && (
             <div className="drawer-subpage-view">
               <p className="subpage-lead-desc">
-                Sesuaikan tampilan tema dan gaya visual kartu Anda.
+                {t('pref_lead')}
               </p>
+
+              {/* Language Selector */}
+              <div className="subpage-card">
+                <div className="subpage-card-heading">
+                  <strong>{t('pref_language')}</strong>
+                  <span>{t('pref_language_desc')}</span>
+                </div>
+
+                <div className="language-selector-grid">
+                  <button
+                    type="button"
+                    className={`language-pill-btn ${lang === 'id' ? 'selected' : ''}`}
+                    onClick={() => {
+                      haptic('light')
+                      if (onLanguage) onLanguage('id')
+                    }}
+                  >
+                    <span>🇮🇩</span>
+                    <span>{t('lang_id')}</span>
+                  </button>
+                  <button
+                    type="button"
+                    className={`language-pill-btn ${lang === 'en' ? 'selected' : ''}`}
+                    onClick={() => {
+                      haptic('light')
+                      if (onLanguage) onLanguage('en')
+                    }}
+                  >
+                    <span>🇬🇧</span>
+                    <span>{t('lang_en')}</span>
+                  </button>
+                </div>
+              </div>
 
               {/* Theme Selector */}
               <div className="subpage-card">
                 <div className="subpage-card-heading">
-                  <strong>Tampilan</strong>
-                  <span>Pilih tema yang nyaman untuk mata Anda.</span>
+                  <strong>{t('pref_theme')}</strong>
+                  <span>{t('pref_theme_desc')}</span>
                 </div>
 
                 <div className="segmented-grid">
@@ -600,21 +638,21 @@ export default function SettingsDrawer({
                     className={profile?.theme === 'light' ? 'selected' : ''}
                     onClick={() => onTheme('light')}
                   >
-                    <Sun size={15} /> Light
+                    <Sun size={15} /> {t('theme_light')}
                   </button>
                   <button
                     type="button"
                     className={profile?.theme === 'dark' ? 'selected' : ''}
                     onClick={() => onTheme('dark')}
                   >
-                    <Moon size={15} /> Dark
+                    <Moon size={15} /> {t('theme_dark')}
                   </button>
                   <button
                     type="button"
                     className={profile?.theme === 'system' ? 'selected' : ''}
                     onClick={() => onTheme('system')}
                   >
-                    <Laptop size={15} /> System
+                    <Laptop size={15} /> {t('theme_system')}
                   </button>
                 </div>
               </div>
@@ -622,8 +660,8 @@ export default function SettingsDrawer({
               {/* Card Style */}
               <div className="subpage-card">
                 <div className="subpage-card-heading">
-                  <strong>Gaya Kartu Bank</strong>
-                  <span>Pilih visual tampilan kartu di dompet digital.</span>
+                  <strong>{t('pref_card_style_title')}</strong>
+                  <span>{t('pref_card_style_desc')}</span>
                 </div>
 
                 <div className="segmented">
@@ -632,14 +670,14 @@ export default function SettingsDrawer({
                     className={profile?.card_style === 'realistic' ? 'selected' : ''}
                     onClick={() => onCardStyle('realistic')}
                   >
-                    Realistis
+                    {t('pref_card_realistic')}
                   </button>
                   <button
                     type="button"
                     className={profile?.card_style === 'abstract' ? 'selected' : ''}
                     onClick={() => onCardStyle('abstract')}
                   >
-                    Digital Minimalis
+                    {t('pref_card_minimal')}
                   </button>
                 </div>
               </div>
@@ -647,8 +685,8 @@ export default function SettingsDrawer({
               {/* Animated Hamburger Style */}
               <div className="subpage-card">
                 <div className="subpage-card-heading">
-                  <strong>Animasi Hamburger Menu 🍔</strong>
-                  <span>Pilih gaya transisi ikon dari hamburger-react.</span>
+                  <strong>{t('pref_hamburger_title')}</strong>
+                  <span>{t('pref_hamburger_desc')}</span>
                 </div>
 
                 <div className="segmented-grid three">
@@ -671,51 +709,51 @@ export default function SettingsDrawer({
           {activeSubpage === 'security' && (
             <div className="drawer-subpage-view">
               <p className="subpage-lead-desc">
-                Konfigurasi Master Password, auto-lock, biometrik, dan kunci pemulihan darurat.
+                {t('sec_lead')}
               </p>
 
               {/* Change Security PIN */}
               <div className="subpage-card">
                 <div className="subpage-card-heading">
-                  <strong>Ubah Security PIN</strong>
+                  <strong>{t('sec_pin_title')}</strong>
                 </div>
 
                 <form onSubmit={handleSubmitMasterPassword} className="subform-stack">
                   <label className="field">
-                    <span>Security PIN Saat Ini (6 Digit)</span>
+                    <span>{t('sec_pin_current')}</span>
                     <input
                       type="password"
                       inputMode="numeric"
                       maxLength={6}
                       value={masterCurrentPass}
                       onChange={(e) => setMasterCurrentPass(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                      placeholder="6 digit PIN lama"
+                      placeholder={t('sec_pin_current_ph')}
                       className="font-mono text-center letter-spacing-lg"
                       required
                     />
                   </label>
                   <label className="field">
-                    <span>Security PIN Baru (6 Digit)</span>
+                    <span>{t('sec_pin_new')}</span>
                     <input
                       type="password"
                       inputMode="numeric"
                       maxLength={6}
                       value={masterNewPass}
                       onChange={(e) => setMasterNewPass(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                      placeholder="6 digit PIN baru"
+                      placeholder={t('sec_pin_new_ph')}
                       className="font-mono text-center letter-spacing-lg"
                       required
                     />
                   </label>
                   <label className="field">
-                    <span>Konfirmasi Security PIN Baru</span>
+                    <span>{t('sec_pin_confirm')}</span>
                     <input
                       type="password"
                       inputMode="numeric"
                       maxLength={6}
                       value={masterConfirmPass}
                       onChange={(e) => setMasterConfirmPass(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                      placeholder="Ulangi 6 digit PIN baru"
+                      placeholder={t('sec_pin_confirm_ph')}
                       className="font-mono text-center letter-spacing-lg"
                       required
                     />
@@ -726,7 +764,7 @@ export default function SettingsDrawer({
 
                   <button className="primary-button pill-button mt-xs" disabled={masterPassBusy}>
                     <Lock size={14} />
-                    {masterPassBusy ? 'Mengenkripsi ulang vault…' : 'Perbarui Security PIN'}
+                    {masterPassBusy ? t('sec_pin_encrypting') : t('sec_pin_btn')}
                   </button>
                 </form>
               </div>
@@ -734,21 +772,21 @@ export default function SettingsDrawer({
               {/* Auto-Lock Setting */}
               <div className="subpage-card">
                 <div className="subpage-card-heading">
-                  <strong>Auto-Lock (Kunci Otomatis)</strong>
-                  <span>Kunci vault secara otomatis saat tidak ada aktivitas pengguna.</span>
+                  <strong>{t('sec_autolock_title')}</strong>
+                  <span>{t('sec_autolock_desc')}</span>
                 </div>
 
                 <label className="field">
-                  <span>Waktu Tidak Aktif</span>
+                  <span>{t('sec_autolock_label')}</span>
                   <select
                     value={autoLockMinutes}
                     onChange={(e) => handleAutoLockChange(e.target.value)}
                   >
-                    <option value="1">1 Menit (Maksimal)</option>
-                    <option value="5">5 Menit (Rekomendasi)</option>
-                    <option value="15">15 Menit (Standar)</option>
-                    <option value="30">30 Menit</option>
-                    <option value="0">Jangan Pernah (Kurang Aman)</option>
+                    <option value="1">{t('sec_autolock_1m')}</option>
+                    <option value="5">{t('sec_autolock_5m')}</option>
+                    <option value="15">{t('sec_autolock_15m')}</option>
+                    <option value="30">{t('sec_autolock_30m')}</option>
+                    <option value="0">{t('sec_autolock_never')}</option>
                   </select>
                 </label>
               </div>
@@ -756,15 +794,13 @@ export default function SettingsDrawer({
               {/* Biometric */}
               <div className="subpage-card">
                 <div className="subpage-card-heading">
-                  <strong>Autentikasi Biometrik</strong>
-                  <span>
-                    Buka vault di perangkat ini dengan Touch ID, Windows Hello, atau sensor sidik jari.
-                  </span>
+                  <strong>{t('sec_biometric_title')}</strong>
+                  <span>{t('sec_biometric_desc')}</span>
                 </div>
 
                 {!biometricSupported ? (
                   <div className="field-hint">
-                    Browser atau perangkat ini tidak mendukung WebAuthn biometric authenticator.
+                    {t('sec_biometric_unsupported')}
                   </div>
                 ) : (
                   <div className="biometric-panel-box">
@@ -772,8 +808,8 @@ export default function SettingsDrawer({
                       <span className={biometricEnrolled ? 'status-dot on' : 'status-dot'} />
                       <span>
                         {biometricEnrolled
-                          ? 'Biometrik aktif di perangkat ini'
-                          : 'Belum diaktifkan di perangkat ini'}
+                          ? t('sec_biometric_active')
+                          : t('sec_biometric_inactive')}
                       </span>
                     </div>
 
@@ -784,7 +820,7 @@ export default function SettingsDrawer({
                         onClick={disableBiometric}
                         disabled={biometricBusy}
                       >
-                        Nonaktifkan Biometrik
+                        {t('sec_biometric_disable')}
                       </button>
                     ) : (
                       <button
@@ -794,7 +830,7 @@ export default function SettingsDrawer({
                         disabled={biometricBusy || !vaultKey}
                       >
                         <Fingerprint size={15} />
-                        {biometricBusy ? 'Menunggu sensor…' : 'Aktifkan Biometrik'}
+                        {biometricBusy ? t('sec_biometric_waiting') : t('sec_biometric_enable')}
                       </button>
                     )}
 
@@ -806,14 +842,14 @@ export default function SettingsDrawer({
               {/* Perangkat & Sesi */}
               <div className="subpage-card">
                 <div className="subpage-card-heading">
-                  <strong>Perangkat & Sesi Aktif</strong>
-                  <span>Status sesi enkripsi lokal saat ini.</span>
+                  <strong>{t('sec_device_title')}</strong>
+                  <span>{t('sec_device_desc')}</span>
                 </div>
 
                 <div className="session-info-strip">
                   <div>
-                    <strong>Sesi Zero-Knowledge</strong>
-                    <span>Perangkat: {navigator?.platform || 'Desktop Browser'}</span>
+                    <strong>{t('sec_zk_session')}</strong>
+                    <span>{t('sec_device_prefix')} {navigator?.platform || 'Desktop Browser'}</span>
                   </div>
                   {onLockVault && (
                     <button
@@ -824,7 +860,7 @@ export default function SettingsDrawer({
                         onLockVault()
                       }}
                     >
-                      <Lock size={14} /> Kunci Vault
+                      <Lock size={14} /> {t('sec_lock_vault')}
                     </button>
                   )}
                 </div>
@@ -833,8 +869,8 @@ export default function SettingsDrawer({
               {/* Emergency Recovery Key */}
               <div className="subpage-card">
                 <div className="subpage-card-heading">
-                  <strong>Lupa Password & Recovery Key</strong>
-                  <span>Kunci pemulihan darurat untuk membuka vault jika Anda lupa master password.</span>
+                  <strong>{t('sec_recovery_title')}</strong>
+                  <span>{t('sec_recovery_desc')}</span>
                 </div>
 
                 {!showRecoveryDetails ? (
@@ -843,12 +879,12 @@ export default function SettingsDrawer({
                     className="secondary-button pill-button"
                     onClick={() => setShowRecoveryDetails(true)}
                   >
-                    <ShieldCheck size={14} /> Lihat Recovery Key
+                    <ShieldCheck size={14} /> {t('sec_recovery_view')}
                   </button>
                 ) : (
                   <div className="recovery-details-wrap">
                     <p className="field-hint">
-                      Simpan kunci ini secara offline di tempat yang aman. Kept tidak menyimpan kunci Anda di server.
+                      {t('sec_recovery_hint')}
                     </p>
                     {recoveryKey ? (
                       <div className="recovery-display-box">
@@ -860,20 +896,20 @@ export default function SettingsDrawer({
                             onClick={handleCopyRecoveryKey}
                           >
                             {copiedKey ? <Check size={14} /> : <Copy size={14} />}
-                            {copiedKey ? 'Tersalin' : 'Salin Kunci'}
+                            {copiedKey ? t('sec_recovery_copied') : t('sec_recovery_copy')}
                           </button>
                           <button
                             type="button"
                             className="secondary-button pill-button"
                             onClick={onDownloadEmergencySheet}
                           >
-                            <Download size={14} /> Unduh Emergency Sheet
+                            <Download size={14} /> {t('sec_recovery_download')}
                           </button>
                         </div>
                       </div>
                     ) : (
                       <div className="field-hint">
-                        Recovery key belum di-generate untuk sesi ini. Buat ulang saat mengubah master password.
+                        {t('sec_recovery_unavail')}
                       </div>
                     )}
                   </div>
@@ -883,28 +919,28 @@ export default function SettingsDrawer({
               {/* Account Password Change */}
               <div className="subpage-card">
                 <div className="subpage-card-heading">
-                  <strong>Password Akun (Login)</strong>
-                  <span>Password yang digunakan saat login ke akun Kept Anda.</span>
+                  <strong>{t('sec_acc_pass_title')}</strong>
+                  <span>{t('sec_acc_pass_desc')}</span>
                 </div>
 
                 <form onSubmit={handleSubmitAccountPassword} className="subform-stack">
                   <label className="field">
-                    <span>Password Baru (Min 8 Karakter)</span>
+                    <span>{t('sec_acc_pass_new')}</span>
                     <input
                       type="password"
                       value={accountNewPass}
                       onChange={(e) => setAccountNewPass(e.target.value)}
-                      placeholder="Password baru akun"
+                      placeholder={t('sec_acc_pass_new_ph')}
                       required
                     />
                   </label>
                   <label className="field">
-                    <span>Konfirmasi Password Baru</span>
+                    <span>{t('sec_acc_pass_confirm')}</span>
                     <input
                       type="password"
                       value={accountConfirmPass}
                       onChange={(e) => setAccountConfirmPass(e.target.value)}
-                      placeholder="Ulangi password baru"
+                      placeholder={t('sec_acc_pass_confirm_ph')}
                       required
                     />
                   </label>
@@ -914,7 +950,7 @@ export default function SettingsDrawer({
 
                   <button className="secondary-button pill-button mt-xs" disabled={accountPassBusy}>
                     <KeyRound size={14} />
-                    {accountPassBusy ? 'Menyimpan…' : 'Perbarui Password Akun'}
+                    {accountPassBusy ? t('sec_acc_pass_saving') : t('sec_acc_pass_btn')}
                   </button>
                 </form>
               </div>
@@ -925,24 +961,24 @@ export default function SettingsDrawer({
           {activeSubpage === 'backup' && (
             <div className="drawer-subpage-view">
               <p className="subpage-lead-desc">
-                Status cadangan terenkripsi dan pemulihan data vault Anda.
+                {t('backup_lead')}
               </p>
 
               {/* Backup Status */}
               <div className="subpage-card">
                 <div className="subpage-card-heading">
-                  <strong>Status Cadangan Vault</strong>
-                  <span>Semua entri dilindungi dengan enkripsi AES-256-GCM.</span>
+                  <strong>{t('backup_status_title')}</strong>
+                  <span>{t('backup_status_desc')}</span>
                 </div>
 
                 <div className="stat-cards-grid">
                   <div className="stat-mini-card">
                     <span className="stat-mini-num">{items.length}</span>
-                    <span className="stat-mini-label">Kredensial Vault</span>
+                    <span className="stat-mini-label">{t('backup_vault_creds')}</span>
                   </div>
                   <div className="stat-mini-card">
                     <span className="stat-mini-num">{documents.length}</span>
-                    <span className="stat-mini-label">Dokumen Tersimpan</span>
+                    <span className="stat-mini-label">{t('backup_stored_docs')}</span>
                   </div>
                 </div>
               </div>
@@ -950,8 +986,8 @@ export default function SettingsDrawer({
               {/* Restore */}
               <div className="subpage-card">
                 <div className="subpage-card-heading">
-                  <strong>Pemulihan Vault (Restore)</strong>
-                  <span>Pulihkan vault Anda dari file cadangan terenkripsi (.json).</span>
+                  <strong>{t('backup_restore_title')}</strong>
+                  <span>{t('backup_restore_desc')}</span>
                 </div>
 
                 <button
@@ -962,7 +998,7 @@ export default function SettingsDrawer({
                     onImport()
                   }}
                 >
-                  <Upload size={14} /> Impor & Pulihkan dari Cadangan
+                  <Upload size={14} /> {t('backup_restore_btn')}
                 </button>
               </div>
             </div>
@@ -972,14 +1008,14 @@ export default function SettingsDrawer({
           {activeSubpage === 'storage' && (
             <div className="drawer-subpage-view">
               <p className="subpage-lead-desc">
-                Pantau kapasitas penyimpanan lokal serta ekspor dan impor data vault.
+                {t('storage_lead')}
               </p>
 
               {/* Storage Capacity */}
               <div className="subpage-card">
                 <div className="subpage-card-heading">
-                  <strong>Kapasitas & Penyimpanan Lokal</strong>
-                  <span>Data terenkripsi disimpan lokal di IndexedDB perangkat ini.</span>
+                  <strong>{t('storage_capacity_title')}</strong>
+                  <span>{t('storage_capacity_desc')}</span>
                 </div>
 
                 <div className="storage-meter-box">
@@ -987,8 +1023,8 @@ export default function SettingsDrawer({
                     <div className="storage-meter-fill" style={{ width: '28%' }} />
                   </div>
                   <div className="storage-meta-row">
-                    <span>Database: IndexedDB (Aktif)</span>
-                    <span>Total {items.length + documents.length} Entri</span>
+                    <span>{t('storage_db_active')}</span>
+                    <span>{t('storage_total_entries')} {items.length + documents.length}</span>
                   </div>
                 </div>
               </div>
@@ -996,8 +1032,8 @@ export default function SettingsDrawer({
               {/* Export & Import */}
               <div className="subpage-card">
                 <div className="subpage-card-heading">
-                  <strong>Ekspor & Impor Data</strong>
-                  <span>Unduh salinan aman atau pindahkan data dari aplikasi lain.</span>
+                  <strong>{t('storage_export_import_title')}</strong>
+                  <span>{t('storage_export_import_desc')}</span>
                 </div>
 
                 <div className="button-col-stack">
@@ -1006,7 +1042,7 @@ export default function SettingsDrawer({
                     className="secondary-button pill-button"
                     onClick={onExport}
                   >
-                    <Download size={14} /> Ekspor Cadangan Terenkripsi (.json)
+                    <Download size={14} /> {t('storage_export_btn')}
                   </button>
 
                   <button
@@ -1017,7 +1053,7 @@ export default function SettingsDrawer({
                       onImport()
                     }}
                   >
-                    <Upload size={14} /> Impor File CSV / Backup
+                    <Upload size={14} /> {t('storage_import_btn')}
                   </button>
                 </div>
               </div>
@@ -1028,23 +1064,21 @@ export default function SettingsDrawer({
           {activeSubpage === 'notifications' && (
             <div className="drawer-subpage-view">
               <p className="subpage-lead-desc">
-                Pengingat masa berlaku dokumen dan preferensi notifikasi saat mengisi tanggal Berlaku Sampai.
+                {t('notif_lead')}
               </p>
 
               {/* Expiry Reminders Config */}
               <div className="subpage-card">
                 <div className="subpage-card-heading">
-                  <strong>Pengingat Masa Berlaku Dokumen</strong>
-                  <span>
-                    Kept otomatis mendeteksi tanggal "Berlaku Sampai" pada KTP, SIM, Paspor, BPJS, STNK, dan dokumen lainnya.
-                  </span>
+                  <strong>{t('notif_expiry_title')}</strong>
+                  <span>{t('notif_expiry_desc')}</span>
                 </div>
 
                 <div className="toggle-list">
                   <label className="toggle-row">
                     <div>
-                      <strong>Pengingat 90 Hari Sebelumnya</strong>
-                      <span>Direkomendasikan untuk Paspor dan Visa luar negeri.</span>
+                      <strong>{t('notif_d90_label')}</strong>
+                      <span>{t('notif_d90_desc')}</span>
                     </div>
                     <input
                       type="checkbox"
@@ -1055,8 +1089,8 @@ export default function SettingsDrawer({
 
                   <label className="toggle-row">
                     <div>
-                      <strong>Pengingat 30 Hari Sebelumnya</strong>
-                      <span>Ideal untuk perpanjangan SIM, STNK, dan asuransi.</span>
+                      <strong>{t('notif_d30_label')}</strong>
+                      <span>{t('notif_d30_desc')}</span>
                     </div>
                     <input
                       type="checkbox"
@@ -1067,8 +1101,8 @@ export default function SettingsDrawer({
 
                   <label className="toggle-row">
                     <div>
-                      <strong>Pengingat 7 Hari Sebelumnya</strong>
-                      <span>Peringatan mendesak sebelum masa berlaku habis.</span>
+                      <strong>{t('notif_d7_label')}</strong>
+                      <span>{t('notif_d7_desc')}</span>
                     </div>
                     <input
                       type="checkbox"
@@ -1079,8 +1113,8 @@ export default function SettingsDrawer({
 
                   <label className="toggle-row">
                     <div>
-                      <strong>Peringatan Dokumen Kedaluwarsa</strong>
-                      <span>Peringatan saat masa berlaku dokumen telah terlewati.</span>
+                      <strong>{t('notif_expired_label')}</strong>
+                      <span>{t('notif_expired_desc')}</span>
                     </div>
                     <input
                       type="checkbox"
@@ -1094,20 +1128,20 @@ export default function SettingsDrawer({
               {/* Browser Push Permission */}
               <div className="subpage-card">
                 <div className="subpage-card-heading">
-                  <strong>Notifikasi Browser</strong>
-                  <span>Terima pemberitahuan langsung di perangkat Anda.</span>
+                  <strong>{t('notif_browser_title')}</strong>
+                  <span>{t('notif_browser_desc')}</span>
                 </div>
 
                 <div className="notification-permission-box">
                   <div className="permission-status">
                     <span>
-                      Status Izin:{' '}
+                      {t('notif_status_label')}{' '}
                       <strong>
                         {browserPermission === 'granted'
-                          ? 'Diizinkan (Aktif)'
+                          ? t('notif_status_granted')
                           : browserPermission === 'denied'
-                          ? 'Ditolak'
-                          : 'Belum Diatur'}
+                          ? t('notif_status_denied')
+                          : t('notif_status_default')}
                       </strong>
                     </span>
                   </div>
@@ -1118,7 +1152,7 @@ export default function SettingsDrawer({
                       className="secondary-button pill-button"
                       onClick={requestNotificationPermission}
                     >
-                      <Bell size={14} /> Minta Izin Notifikasi Browser
+                      <Bell size={14} /> {t('notif_req_btn')}
                     </button>
                   )}
                 </div>
@@ -1127,13 +1161,13 @@ export default function SettingsDrawer({
               {/* Monitored Documents List */}
               <div className="subpage-card">
                 <div className="subpage-card-heading">
-                  <strong>Dokumen yang Sedang Dipantau ({expiringDocs.length})</strong>
-                  <span>Dokumen dengan tanggal Berlaku Sampai aktif.</span>
+                  <strong>{t('notif_monitored_title')} ({expiringDocs.length})</strong>
+                  <span>{t('notif_monitored_desc')}</span>
                 </div>
 
                 {expiringDocs.length === 0 ? (
                   <div className="field-hint">
-                    Belum ada dokumen dengan tanggal kedaluwarsa. Tambahkan dokumen dan isi "Berlaku Sampai" untuk memantau otomatis.
+                    {t('notif_monitored_empty')}
                   </div>
                 ) : (
                   <div className="monitored-docs-list">
@@ -1142,7 +1176,7 @@ export default function SettingsDrawer({
                         <div>
                           <strong>{doc.name}</strong>
                           <span className="doc-owner-caption">
-                            {doc.owner_name || 'Dokumen Resmi'} · Sampai: {doc.expiry_date}
+                            {doc.owner_name || (lang === 'id' ? 'Dokumen Resmi' : 'Official Document')} · {doc.expiry_date}
                           </span>
                         </div>
                         <span className={`doc-expiry-chip ${doc.audit?.status}`}>
@@ -1156,23 +1190,21 @@ export default function SettingsDrawer({
             </div>
           )}
 
-
-
           {/* SUBPAGE 7: HELP & ABOUT */}
           {activeSubpage === 'help' && (
             <div className="drawer-subpage-view">
               <p className="subpage-lead-desc">
-                Informasi arsitektur zero-knowledge, panduan, dan detail rilis aplikasi.
+                {t('help_lead')}
               </p>
 
               <div className="subpage-card">
                 <div className="subpage-card-heading">
-                  <strong>Tentang Kept</strong>
-                  <span>Private Vault & Identity Wallet Indonesia</span>
+                  <strong>{t('help_about_title')}</strong>
+                  <span>{t('help_about_desc')}</span>
                 </div>
                 <div className="about-info-stack">
                   <div className="about-info-item">
-                    <span>Versi Aplikasi:</span>
+                    <span>{t('help_version_label')}</span>
                     <strong>v0.1.0 (Production Ready)</strong>
                   </div>
                   <div className="about-info-item">
@@ -1180,11 +1212,11 @@ export default function SettingsDrawer({
                     <strong>Omarchy (Light-first minimalis)</strong>
                   </div>
                   <div className="about-info-item">
-                    <span>Tipografi:</span>
+                    <span>{lang === 'id' ? 'Tipografi:' : 'Typography:'}</span>
                     <strong>Geist Variable & JetBrains Mono</strong>
                   </div>
                   <div className="about-info-item">
-                    <span>Standar Kriptografi:</span>
+                    <span>{lang === 'id' ? 'Standar Kriptografi:' : 'Cryptography Standard:'}</span>
                     <strong>AES-256-GCM + PBKDF2 (100k rounds)</strong>
                   </div>
                 </div>
@@ -1192,17 +1224,17 @@ export default function SettingsDrawer({
 
               <div className="subpage-card">
                 <div className="subpage-card-heading">
-                  <strong>Arsitektur Keamanan Zero-Knowledge</strong>
-                  <span>Bagaimana data Anda dilindungi:</span>
+                  <strong>{t('help_zk_title')}</strong>
+                  <span>{t('help_zk_how')}</span>
                 </div>
                 <p className="about-text-body">
-                  1. <strong>Enkripsi Lokal:</strong> Seluruh password, detail kartu perbankan, dan scan dokumen resmi dienkripsi secara lokal di perangkat Anda sebelum dikirim ke internet.
+                  {t('help_zk_step1')}
                 </p>
                 <p className="about-text-body">
-                  2. <strong>Tidak Menyimpan Master Password:</strong> Server Supabase kami tidak pernah menerima, mengetahui, atau menyimpan master password Anda.
+                  {t('help_zk_step2')}
                 </p>
                 <p className="about-text-body">
-                  3. <strong>Hanya Ciphertext:</strong> Jika database kami mengalami kebocoran data, penyerang hanya melihat ciphertext acak tanpa kunci enkripsi.
+                  {t('help_zk_step3')}
                 </p>
               </div>
             </div>
@@ -1217,18 +1249,18 @@ export default function SettingsDrawer({
                 onMouseDown={(e) => e.stopPropagation()}
                 role="dialog"
                 aria-modal="true"
-                aria-label="Kelola Profil dan Foto"
+                aria-label={t('profile_modal_title')}
               >
                 <div className="profile-modal-header">
                   <div>
-                    <h3>Foto & Nama Pengguna</h3>
+                    <h3>{t('profile_modal_title')}</h3>
                     <p>{user?.email}</p>
                   </div>
                   <button
                     type="button"
                     className="icon-button close-btn"
                     onClick={() => setProfileModalOpen(false)}
-                    aria-label="Tutup"
+                    aria-label={t('action_close')}
                   >
                     <X size={18} />
                   </button>
@@ -1256,18 +1288,18 @@ export default function SettingsDrawer({
                     <div className="avatar-hero-display">
                       <div className="avatar-hero-circle">
                         {avatarPreview ? (
-                          <img src={avatarPreview} alt="Foto Profil" />
+                          <img src={avatarPreview} alt={t('profile_modal_title')} />
                         ) : (
                           <User size={36} strokeWidth={1.5} className="avatar-hero-placeholder-icon" />
                         )}
                       </div>
                       <div className="avatar-hero-status-title">
-                        {avatarPreview ? 'Foto profil aktif' : 'Belum ada foto'}
+                        {avatarPreview ? t('profile_active_photo') : t('profile_no_photo')}
                       </div>
                       <div className="avatar-hero-status-desc">
                         {avatarPreview
-                          ? 'Foto tersimpan di storage privat dan dimuat dengan signed URL aman.'
-                          : 'Tampilkan avatar default sampai pengguna mengunggah foto.'}
+                          ? t('profile_photo_desc_on')
+                          : t('profile_photo_desc_off')}
                       </div>
                     </div>
 
@@ -1282,9 +1314,9 @@ export default function SettingsDrawer({
                           <Camera size={18} strokeWidth={1.8} />
                         </div>
                         <div className="avatar-option-text">
-                          <strong className="avatar-option-title">Ambil Foto</strong>
+                          <strong className="avatar-option-title">{t('profile_take_photo')}</strong>
                           <span className="avatar-option-desc">
-                            Menggunakan kamera jika perangkat mendukungnya.
+                            {t('profile_take_photo_desc')}
                           </span>
                         </div>
                       </button>
@@ -1299,9 +1331,9 @@ export default function SettingsDrawer({
                           <Image size={18} strokeWidth={1.8} />
                         </div>
                         <div className="avatar-option-text">
-                          <strong className="avatar-option-title">Pilih dari Galeri</strong>
+                          <strong className="avatar-option-title">{t('profile_pick_gallery')}</strong>
                           <span className="avatar-option-desc">
-                            Mengunggah foto yang sudah tersedia.
+                            {t('profile_pick_gallery_desc')}
                           </span>
                         </div>
                       </button>
@@ -1316,9 +1348,9 @@ export default function SettingsDrawer({
                           <User size={18} strokeWidth={1.8} />
                         </div>
                         <div className="avatar-option-text">
-                          <strong className="avatar-option-title">Avatar Default</strong>
+                          <strong className="avatar-option-title">{t('profile_default_avatar')}</strong>
                           <span className="avatar-option-desc">
-                            Kembali menggunakan avatar bawaan.
+                            {t('profile_default_avatar_desc')}
                           </span>
                         </div>
                       </button>
@@ -1326,18 +1358,18 @@ export default function SettingsDrawer({
 
                     <div className="avatar-synced-pill-wrap">
                       <div className="avatar-synced-pill">
-                        <Check size={12} strokeWidth={2.5} /> Foto tersimpan dan tersinkron
+                        <Check size={12} strokeWidth={2.5} /> {t('profile_synced_pill')}
                       </div>
                     </div>
                   </div>
 
                   <div className="form-grid mt-md">
                     <label className="field">
-                      <span>Nama Tampilan</span>
+                      <span>{t('profile_name_label')}</span>
                       <input
                         value={name}
                         onChange={(e) => setName(e.target.value)}
-                        placeholder="Nama Anda"
+                        placeholder={t('profile_name_placeholder')}
                       />
                     </label>
                   </div>
@@ -1353,7 +1385,7 @@ export default function SettingsDrawer({
                         setProfileModalOpen(false)
                       }}
                     >
-                      Simpan Profil
+                      {t('profile_save_btn')}
                     </button>
                   </div>
                 </div>

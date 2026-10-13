@@ -9,14 +9,17 @@ import {
   unlockWithBiometric
 } from '../lib/biometric'
 import { isWeakPin, recordSecurityActivity } from '../lib/securityAudit'
+import { getTranslation } from '../lib/i18n'
 
 export default function UnlockScreen({
   profile,
   user,
   onUnlocked,
   onRecoverMasterPassword,
-  onResetVault
+  onResetVault,
+  lang = 'id'
 }) {
+  const t = (k) => getTranslation(k, lang)
   const [pin, setPin] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
@@ -293,12 +296,12 @@ export default function UnlockScreen({
         onChange={setPin}
         onSubmit={handleUnlockWithPin}
         length={6}
-        title="Enter your PIN"
-        subtitle="Enter your 6-digit security PIN"
+        title={t('unlock_pin_title')}
+        subtitle={t('unlock_pin_sub')}
         error={error}
         hint={
           failedAttempts > 0 && failedAttempts < 4
-            ? `Percobaan ${failedAttempts} dari 5`
+            ? t('unlock_attempt_hint').replace('{n}', failedAttempts)
             : ''
         }
         disabled={busy}
@@ -306,6 +309,7 @@ export default function UnlockScreen({
         shake={shake}
         busy={busy}
         autoSubmit={true}
+        lang={lang}
       />
 
       {/* Biometric Unlock Option */}
@@ -319,8 +323,8 @@ export default function UnlockScreen({
           <Fingerprint size={17} strokeWidth={2.2} />
           <span>
             {biometricBusy
-              ? 'Menunggu biometrik…'
-              : 'Buka dengan Face ID / Biometrik'}
+              ? t('unlock_biometric_waiting')
+              : t('unlock_biometric_btn')}
           </span>
         </button>
       )}
@@ -329,12 +333,12 @@ export default function UnlockScreen({
       {/* Secondary Recovery Links */}
       <div className="unlock-footer-links mt-md">
         <button type="button" className="text-button-link" onClick={openRecovery}>
-          Lupa Security PIN?
+          {t('unlock_forgot_pin')}
         </button>
       </div>
 
       <div className="unlock-note mt-sm">
-        <Lock size={13} /> Enkripsi Zero-Knowledge · AES-256-GCM & Argon2id
+        <Lock size={13} /> {t('unlock_zk_footer')}
       </div>
 
       {/* Recovery Modal with 3 Clear Scenarios */}
@@ -343,8 +347,8 @@ export default function UnlockScreen({
           <div className="recovery-modal" onMouseDown={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <div>
-                <div className="eyebrow">Pemulihan Akun Kept</div>
-                <h2>Lupa Security PIN</h2>
+                <div className="eyebrow">{t('recovery_modal_eyebrow')}</div>
+                <h2>{t('recovery_modal_title')}</h2>
               </div>
               <button className="icon-button" onClick={() => setShowRecovery(false)}>
                 <X size={18} />
@@ -355,7 +359,7 @@ export default function UnlockScreen({
             {recoveryStep === 'choose_method' && (
               <div className="modal-body-stack">
                 <p className="modal-description">
-                  Pilih salah satu metode pemulihan yang tersedia untuk membuka kembali vault dan mengatur PIN baru:
+                  {t('recovery_choose_desc')}
                 </p>
 
                 <div className="recovery-options-grid">
@@ -371,9 +375,9 @@ export default function UnlockScreen({
                         <Fingerprint size={22} />
                       </div>
                       <div className="recovery-card-content">
-                        <strong>Autentikasi Biometrik Perangkat</strong>
+                        <strong>{t('recovery_bio_title')}</strong>
                         <span>
-                          Perangkat ini terdaftar secara sah. Autentikasi dengan Touch ID / Face ID untuk langsung menyetel PIN baru.
+                          {t('recovery_bio_desc')}
                         </span>
                       </div>
                     </button>
@@ -383,8 +387,8 @@ export default function UnlockScreen({
                         <Fingerprint size={22} />
                       </div>
                       <div className="recovery-card-content">
-                        <strong>Biometrik Belum Terdaftar</strong>
-                        <span>Aktifkan biometrik di Pengaturan untuk pemulihan instan di masa mendatang.</span>
+                        <strong>{t('recovery_bio_unavail')}</strong>
+                        <span>{t('recovery_bio_unavail_desc')}</span>
                       </div>
                     </div>
                   )}
@@ -402,9 +406,9 @@ export default function UnlockScreen({
                       <KeyRound size={22} />
                     </div>
                     <div className="recovery-card-content">
-                      <strong>Gunakan Emergency Recovery Key</strong>
+                      <strong>{t('recovery_key_title')}</strong>
                       <span>
-                        Masukkan kunci pemulihan 24-karakter yang Anda simpan saat inisialisasi vault.
+                        {t('recovery_key_desc')}
                       </span>
                     </div>
                   </button>
@@ -422,9 +426,9 @@ export default function UnlockScreen({
                       <AlertTriangle size={22} />
                     </div>
                     <div className="recovery-card-content">
-                      <strong>Reset Vault (Darurat)</strong>
+                      <strong>{t('recovery_reset_title')}</strong>
                       <span>
-                        Jika Anda tidak memiliki akses biometrik maupun recovery key, hapus vault lama dan mulai dari awal.
+                        {t('recovery_reset_desc')}
                       </span>
                     </div>
                   </button>
@@ -438,7 +442,7 @@ export default function UnlockScreen({
             {recoveryStep === 'input_key' && (
               <form onSubmit={handleVerifyRecoveryKey} className="modal-body-stack">
                 <p className="modal-description">
-                  Masukkan <strong>Emergency Recovery Key</strong> (kode 24-karakter yang Anda simpan di tempat aman) untuk mendekripsi master key.
+                  {t('recovery_input_desc')}
                 </p>
 
                 <label className="field">
@@ -461,10 +465,10 @@ export default function UnlockScreen({
                     className="secondary-button"
                     onClick={() => setRecoveryStep('choose_method')}
                   >
-                    Kembali
+                    {t('recovery_back_btn')}
                   </button>
                   <button className="primary-button" disabled={recoveryBusy || !recoveryKey.trim()}>
-                    {recoveryBusy ? 'Memverifikasi…' : 'Verifikasi Kunci'}
+                    {recoveryBusy ? t('recovery_verifying') : t('recovery_verify_btn')}
                   </button>
                 </div>
               </form>
@@ -474,15 +478,15 @@ export default function UnlockScreen({
             {recoveryStep === 'set_new_pin' && (
               <form onSubmit={handleSetNewPin} className="modal-body-stack">
                 <div className="feedback success">
-                  <Check size={14} /> Identitas terverifikasi! Silakan buat 6-Digit Security PIN baru.
+                  <Check size={14} /> {t('recovery_verified_notice')}
                 </div>
 
                 <p className="modal-description">
-                  Semua data vault Anda akan dienkripsi ulang secara aman dengan 6-digit PIN baru.
+                  {t('recovery_new_pin_desc')}
                 </p>
 
                 <label className="field">
-                  <span>Security PIN Baru (6 Digit)</span>
+                  <span>{t('recovery_new_pin_label')}</span>
                   <input
                     type="password"
                     inputMode="numeric"
@@ -497,14 +501,14 @@ export default function UnlockScreen({
                 </label>
 
                 <label className="field">
-                  <span>Konfirmasi PIN Baru</span>
+                  <span>{t('recovery_confirm_pin_label')}</span>
                   <input
                     type="password"
                     inputMode="numeric"
                     maxLength={6}
                     value={confirmPin}
                     onChange={(e) => setConfirmPin(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                    placeholder="Ketik ulang 6 digit PIN"
+                    placeholder={t('recovery_confirm_pin_ph')}
                     className="font-mono text-center letter-spacing-lg"
                     required
                   />
@@ -517,7 +521,7 @@ export default function UnlockScreen({
                     className="primary-button"
                     disabled={recoveryBusy || newPin.length !== 6 || confirmPin.length !== 6}
                   >
-                    {recoveryBusy ? 'Mengenkripsi ulang vault…' : 'Simpan & Buka Vault'}
+                    {recoveryBusy ? t('recovery_reencrypting') : t('recovery_set_pin_btn')}
                   </button>
                 </div>
               </form>
@@ -529,18 +533,18 @@ export default function UnlockScreen({
                 <div className="danger-notice">
                   <AlertTriangle size={20} className="danger-icon" />
                   <div>
-                    <strong>Peringatan Reset Vault</strong>
+                    <strong>{t('recovery_reset_warning_title')}</strong>
                     <p>
-                      Karena Kept menerapkan enkripsi <em>zero-knowledge</em> murni, tanpa PIN atau Recovery Key, data lama tidak dapat didekripsi oleh siapapun.
+                      {t('recovery_reset_warning_1')}
                     </p>
                     <p>
-                      Mereset vault akan menghapus seluruh rekaman terenkripsi dan mengembalikan ke setup awal yang bersih.
+                      {t('recovery_reset_warning_2')}
                     </p>
                   </div>
                 </div>
 
                 <label className="field">
-                  <span>Ketik "RESET" untuk mengonfirmasi:</span>
+                  <span>{t('recovery_reset_type_confirm')}</span>
                   <input
                     value={resetConfirmText}
                     onChange={(e) => setResetConfirmText(e.target.value)}
@@ -558,14 +562,14 @@ export default function UnlockScreen({
                     className="secondary-button"
                     onClick={() => setRecoveryStep('choose_method')}
                   >
-                    Kembali
+                    {t('recovery_back_btn')}
                   </button>
                   <button
                     type="submit"
                     className="danger-button"
                     disabled={recoveryBusy || resetConfirmText.trim().toUpperCase() !== 'RESET'}
                   >
-                    {recoveryBusy ? 'Mereset vault…' : 'Hapus & Reset Vault'}
+                    {recoveryBusy ? t('recovery_resetting_btn') : t('recovery_reset_btn')}
                   </button>
                 </div>
               </form>

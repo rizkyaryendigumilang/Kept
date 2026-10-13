@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { supabase } from '../lib/supabase'
+import { getTranslation } from '../lib/i18n'
 
 function GoogleMark() {
   return (
@@ -24,7 +25,8 @@ function GoogleMark() {
   )
 }
 
-export default function AuthScreen() {
+export default function AuthScreen({ lang = 'id' }) {
+  const t = (k) => getTranslation(k, lang)
   const [mode, setMode] = useState('sign-in')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -69,7 +71,9 @@ export default function AuthScreen() {
 
         if (!data.session) {
           setMessage(
-            'Account created. Check your email to confirm your address, then sign in.'
+            lang === 'id'
+              ? 'Akun berhasil dibuat. Cek email Anda untuk konfirmasi, lalu masuk.'
+              : 'Account created. Check your email to confirm your address, then sign in.'
           )
         }
       } else {
@@ -81,11 +85,13 @@ export default function AuthScreen() {
         if (resetError) throw resetError
 
         setMessage(
-          'If that email has an account, a reset link is on its way. Check your inbox and spam folder.'
+          lang === 'id'
+            ? 'Jika email tersebut terdaftar, tautan reset telah dikirim. Periksa kotak masuk dan folder spam Anda.'
+            : 'If that email has an account, a reset link is on its way. Check your inbox and spam folder.'
         )
       }
     } catch (err) {
-      setError(err.message || 'Authentication failed.')
+      setError(err.message || (lang === 'id' ? 'Autentikasi gagal.' : 'Authentication failed.'))
     } finally {
       setBusy(false)
     }
@@ -105,21 +111,21 @@ export default function AuthScreen() {
 
       if (oauthError) throw oauthError
     } catch (err) {
-      setError(err.message || 'Google sign-in failed.')
+      setError(err.message || (lang === 'id' ? 'Gagal masuk dengan Google.' : 'Google sign-in failed.'))
       setBusy(false)
     }
   }
 
   const heading =
     mode === 'sign-in'
-      ? 'Welcome back.'
+      ? t('auth_signin_title')
       : mode === 'sign-up'
-        ? 'Build your private vault.'
-        : 'Reset your password.'
+        ? t('auth_signup_title')
+        : t('auth_reset_title')
 
   const blurb =
     mode === 'reset'
-      ? 'Enter your account email and we will send you a secure reset link.'
+      ? t('auth_reset_blurb')
       : ''
 
   return (
@@ -143,11 +149,11 @@ export default function AuthScreen() {
               disabled={busy}
             >
               <GoogleMark />
-              Continue with Google
+              {t('auth_google_btn')}
             </button>
 
             <div className="auth-divider">
-              <span>or</span>
+              <span>{t('auth_or')}</span>
             </div>
           </>
         )}
@@ -155,20 +161,20 @@ export default function AuthScreen() {
         <form onSubmit={submit} className="form-stack">
           {mode === 'sign-up' && (
             <label className="field">
-              <span>Name</span>
+              <span>{t('auth_name')}</span>
               <input
                 value={displayName}
                 onChange={(e) =>
                   setDisplayName(e.target.value)
                 }
-                placeholder="Your name"
+                placeholder={t('auth_name_ph')}
                 autoComplete="name"
               />
             </label>
           )}
 
           <label className="field">
-            <span>Email</span>
+            <span>{t('auth_email')}</span>
             <input
               value={email}
               onChange={(e) => setEmail(e.target.value)}
@@ -181,13 +187,13 @@ export default function AuthScreen() {
 
           {mode !== 'reset' && (
             <label className="field">
-              <span>Password</span>
+              <span>{t('auth_password')}</span>
               <input
                 value={password}
                 onChange={(e) =>
                   setPassword(e.target.value)
                 }
-                placeholder="At least 8 characters"
+                placeholder={t('auth_password_ph')}
                 type="password"
                 autoComplete={
                   mode === 'sign-in'
@@ -205,19 +211,19 @@ export default function AuthScreen() {
             disabled={busy}
           >
             {busy
-              ? 'Working…'
+              ? t('auth_working')
               : mode === 'sign-in'
-                ? 'Continue'
+                ? t('auth_btn_signin')
                 : mode === 'sign-up'
-                  ? 'Create account'
-                  : 'Send reset link'}
+                  ? t('auth_btn_signup')
+                  : t('auth_btn_reset')}
           </button>
         </form>
 
         {mode === 'sign-in' && (
           <div className="auth-switch">
             <button onClick={() => switchMode('reset')}>
-              Forgot password?
+              {t('auth_forgot_password')}
             </button>
           </div>
         )}
@@ -233,16 +239,16 @@ export default function AuthScreen() {
         <div className="auth-switch">
           {mode === 'sign-in' ? (
             <>
-              New here?{' '}
+              {t('auth_new_here')}{' '}
               <button onClick={() => switchMode('sign-up')}>
-                Create an account
+                {t('auth_create_account')}
               </button>
             </>
           ) : (
             <>
-              Already have an account?{' '}
+              {t('auth_have_account')}{' '}
               <button onClick={() => switchMode('sign-in')}>
-                Sign in
+                {t('auth_signin_link')}
               </button>
             </>
           )}

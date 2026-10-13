@@ -77,7 +77,7 @@ function generateQRMatrix(text) {
   return { matrix, size }
 }
 
-export default function DocumentQrModal({ doc, onClose }) {
+export default function DocumentQrModal({ doc, onClose, lang = 'id' }) {
   const [copied, setCopied] = useState(false)
 
   if (!doc) return null
@@ -107,15 +107,15 @@ export default function DocumentQrModal({ doc, onClose }) {
           <div className="doc-qr-title-stack">
             <div className="doc-qr-eyebrow">
               <QrCode size={13} />
-              <span>Verifikasi & Share Dokumen</span>
+              <span>{lang === 'id' ? 'Verifikasi & Bagikan Dokumen' : 'Verify & Share Document'}</span>
             </div>
-            <h3>{doc.name || 'Dokumen Resmi'}</h3>
+            <h3>{doc.name || (lang === 'id' ? 'Dokumen Resmi' : 'Official Document')}</h3>
           </div>
           <button
             type="button"
             className="icon-button close-btn"
             onClick={onClose}
-            aria-label="Tutup"
+            aria-label={lang === 'id' ? 'Tutup' : 'Close'}
           >
             <X size={18} />
           </button>
@@ -152,17 +152,17 @@ export default function DocumentQrModal({ doc, onClose }) {
           <div className="doc-qr-meta">
             <div className="doc-qr-status">
               <ShieldCheck size={14} className="tone-green" />
-              <span>Tervalidasi Terenkripsi Zero-Knowledge</span>
+              <span>{lang === 'id' ? 'Tervalidasi Terenkripsi Zero-Knowledge' : 'Validated Zero-Knowledge Encryption'}</span>
             </div>
             {doc.doc_number && (
               <div className="doc-qr-num">
-                <span className="doc-qr-num-label">Nomor Dokumen:</span>
+                <span className="doc-qr-num-label">{lang === 'id' ? 'Nomor Dokumen:' : 'Document Number:'}</span>
                 <code>{doc.doc_number}</code>
               </div>
             )}
             {doc.owner_name && (
               <div className="doc-qr-owner">
-                <span>Pemilik: <strong>{doc.owner_name}</strong></span>
+                <span>{lang === 'id' ? 'Pemilik:' : 'Owner:'} <strong>{doc.owner_name}</strong></span>
               </div>
             )}
           </div>
@@ -175,14 +175,14 @@ export default function DocumentQrModal({ doc, onClose }) {
             onClick={handleCopyData}
           >
             {copied ? <Check size={14} /> : <Copy size={14} />}
-            <span>{copied ? 'Tersalin' : 'Salin Data QR'}</span>
+            <span>{copied ? (lang === 'id' ? 'Tersalin' : 'Copied') : (lang === 'id' ? 'Salin Data QR' : 'Copy QR Data')}</span>
           </button>
           <button
             type="button"
             className="primary-button pill-button btn-sm"
             onClick={onClose}
           >
-            Selesai
+            {lang === 'id' ? 'Selesai' : 'Done'}
           </button>
         </div>
       </div>

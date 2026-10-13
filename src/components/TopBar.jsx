@@ -1,5 +1,7 @@
-import { Bell, Home, KeyRound, WalletCards, FileText, Menu, X, ArrowLeft } from './Icons'
+import { Bell, Home, KeyRound, WalletCards, FileText, Menu, X, ArrowLeft, Search } from './Icons'
 import AnimatedHamburger from './AnimatedHamburger'
+import { haptic } from '../lib/haptics'
+import { getTranslation } from '../lib/i18n'
 
 export default function TopBar({
   user,
@@ -14,15 +16,20 @@ export default function TopBar({
   onOpenMenu,
   onSettings,
   currentRoute,
-  onNavigate
+  onNavigate,
+  onOpenSearch,
+  lang = 'id'
 }) {
   const handleMenuClick = onOpenMenu || onSettings
+  const t = (k) => getTranslation(k, lang)
+
+  const isMac = typeof navigator !== 'undefined' && /Mac|iPhone|iPod|iPad/i.test(navigator.userAgent)
 
   const navLinks = [
-    { id: 'home', label: 'Home', icon: Home },
-    { id: 'vault', label: 'Password', icon: KeyRound },
-    { id: 'documents', label: 'Document', icon: FileText },
-    { id: 'banking', label: 'Account', icon: WalletCards }
+    { id: 'home', label: t('nav_home'), icon: Home },
+    { id: 'vault', label: t('nav_password'), icon: KeyRound },
+    { id: 'documents', label: t('nav_document'), icon: FileText },
+    { id: 'banking', label: t('nav_account'), icon: WalletCards }
   ]
 
   return (
@@ -51,7 +58,10 @@ export default function TopBar({
             <button
               key={id}
               className={`desktop-nav-item ${isActive ? 'active' : ''}`}
-              onClick={() => onNavigate(id)}
+              onClick={() => {
+                haptic('light')
+                onNavigate(id)
+              }}
             >
               <Icon size={16} strokeWidth={isActive ? 2.2 : 1.8} />
               <span>{label}</span>
@@ -61,7 +71,31 @@ export default function TopBar({
       </nav>
 
       <div className="top-actions">
-        <button className="icon-button notification-button" onClick={onAlerts} aria-label="Notifications">
+        {onOpenSearch && (
+          <button
+            type="button"
+            className="topbar-search-trigger"
+            onClick={() => {
+              haptic('light')
+              onOpenSearch()
+            }}
+            title={`${t('search_prompt')} (${isMac ? '⌘K' : 'Ctrl+K'})`}
+            aria-label={t('search_prompt')}
+          >
+            <Search size={14} />
+            <span className="topbar-search-text">{t('search_prompt')}</span>
+            <span className="topbar-search-shortcut">{isMac ? '⌘K' : 'Ctrl+K'}</span>
+          </button>
+        )}
+
+        <button
+          className="icon-button notification-button"
+          onClick={() => {
+            haptic('light')
+            onAlerts()
+          }}
+          aria-label={t('notifications')}
+        >
           <Bell size={18} strokeWidth={1.8} />
           {unread > 0 && <span className="notification-badge">{unread}</span>}
         </button>

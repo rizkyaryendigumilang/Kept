@@ -2,7 +2,7 @@ import { Eye, EyeOff, KeyRound, Copy, Check } from './Icons'
 import SiteLogo from './SiteLogo'
 import { useEffect, useState } from 'react'
 
-export default function PasswordCard({ item, password, onOpen }) {
+export default function PasswordCard({ item, password, onOpen, lang = 'id' }) {
   const [revealed, setRevealed] = useState(false)
   const [copied, setCopied] = useState(false)
   useEffect(() => {
@@ -26,12 +26,12 @@ export default function PasswordCard({ item, password, onOpen }) {
           <strong>{item.name}</strong>
           <span className="category-chip">{item.categoryLabel}</span>
         </div>
-        <span className="item-secondary">{item.username || 'No username'}</span>
+        <span className="item-secondary">{item.username || (lang === 'id' ? 'Tanpa username' : 'No username')}</span>
         <div className="secret-row">
           <span className={revealed ? 'secret-value revealed' : 'secret-value'}>{revealed ? password : '••••••••••••'}</span>
           <div className="secret-actions">
-            <button className="mini-icon" title="Copy password" onClick={copyPassword}>{copied ? <Check size={15} /> : <Copy size={15} />}</button>
-            <button className="mini-icon" title={revealed ? 'Hide password' : 'Reveal password'} onClick={(event) => { event.stopPropagation(); setRevealed((v) => !v) }}>
+            <button className="mini-icon" title={lang === 'id' ? 'Salin password' : 'Copy password'} onClick={copyPassword}>{copied ? <Check size={15} /> : <Copy size={15} />}</button>
+            <button className="mini-icon" title={revealed ? (lang === 'id' ? 'Sembunyikan password' : 'Hide password') : (lang === 'id' ? 'Tampilkan password' : 'Reveal password')} onClick={(event) => { event.stopPropagation(); setRevealed((v) => !v) }}>
               {revealed ? <EyeOff size={15} /> : <Eye size={15} />}
             </button>
           </div>

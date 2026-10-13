@@ -5,6 +5,7 @@ import TopBar from './components/TopBar'
 import BottomNav from './components/BottomNav'
 import AddSheet from './components/AddSheet'
 import HomePage from './pages/HomePage'
+import Loader from './components/Loader'
 
 // Code splitting: Lazy-loaded pages & modals for fast initial load
 const ResetPasswordScreen = lazy(() => import('./components/ResetPasswordScreen'))
@@ -18,6 +19,7 @@ const ItemModal = lazy(() => import('./pages/ItemModal'))
 const AddItemModal = lazy(() => import('./pages/AddItemModal'))
 const AddDocumentModal = lazy(() => import('./pages/AddDocumentModal'))
 const DocumentDetailModal = lazy(() => import('./pages/DocumentDetailModal'))
+const CommandPalette = lazy(() => import('./components/CommandPalette'))
 import { checkDocumentExpiry } from './lib/documents'
 import { supabase } from './lib/supabase'
 import {
@@ -94,8 +96,27 @@ export default function App() {
   const [isOnline, setIsOnline] = useState(navigator.onLine)
   const [pendingSyncCount, setPendingSyncCount] = useState(0)
   const [activeRecoveryKey, setActiveRecoveryKey] = useState('')
+  const [lang, setLang] = useState(() => localStorage.getItem('kept_language') || 'id')
+  const [searchOpen, setSearchOpen] = useState(false)
 
   const bootstrappedUserRef = useRef(null)
+
+  function handleLanguageChange(newLang) {
+    setLang(newLang)
+    localStorage.setItem('kept_language', newLang)
+  }
+
+  // Global shortcut for Command Palette (Ctrl+K or Cmd+K)
+  useEffect(() => {
+    function handleKeyDown(e) {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault()
+        setSearchOpen((prev) => !prev)
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [])
 
   function handleToggleMenu() {
     if (!menuOpen) {
@@ -268,6 +289,10 @@ export default function App() {
     [hydratedItems]
   )
   const alerts = useMemo(() => buildAlerts(hydratedItems), [hydratedItems])
+  const expiryAlerts = useMemo(
+    () => alerts.filter((a) => a.type.startsWith('card_') || a.type.startsWith('doc_')),
+    [alerts]
+  )
   const banks = useMemo(
     () => hydratedItems.filter((i) => i.item_type === 'bank_card').map((b, i) => ({ ...b, _renderIndex: i })),
     [hydratedItems]
@@ -720,14 +745,14 @@ Jangan pernah membagikan kode ini kepada siapapun!
   if (recovery) {
     return (
       <Suspense fallback={<Splash />}>
-        <ResetPasswordScreen onDone={() => setRecovery(false)} />
+        <ResetPasswordScreen onDone={() => setRecovery(false)} lang={lang} />
       </Suspense>
     )
   }
-  if (!session) return <AuthScreen />
+  if (!session) return <AuthScreen lang={lang} />
   if (!profile) return <Splash />
   if (!profile.vault_salt || !profile.vault_verifier) {
-    return <FirstVaultSetup onCreate={initializeVault} />
+    return <FirstVaultSetup onCreate={initializeVault} lang={lang} />
   }
   if (!vaultKey) {
     return (
@@ -737,6 +762,7 @@ Jangan pernah membagikan kode ini kepada siapapun!
         onUnlocked={unlock}
         onRecoverMasterPassword={handleRecoverMasterPassword}
         onResetVault={handleResetVault}
+        lang={lang}
       />
     )
   }
@@ -757,6 +783,8 @@ Jangan pernah membagikan kode ini kepada siapapun!
         onSettings={handleToggleMenu}
         currentRoute={route}
         onNavigate={setRoute}
+        onOpenSearch={() => setSearchOpen(true)}
+        lang={lang}
       />
 
       <main className="main-content">
@@ -766,14 +794,16 @@ Jangan pernah membagikan kode ini kepada siapapun!
             stats={stats}
             favorites={favorites}
             recent={recent}
+            expiryAlerts={expiryAlerts}
             onNavigate={setRoute}
             onOpenItem={openItem}
             onAdd={() => setShowAdd(true)}
+            lang={lang}
           />
         )}
-        <Suspense fallback={<div className="page-shell"><div className="skeleton-page-loader" /></div>}>
+        <Suspense fallback={<div className="page-shell" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '35vh' }}><Loader /></div>}>
           {route === 'vault' && (
-            <VaultPage items={hydratedItems} onAdd={() => setShowAdd(true)} onOpen={openItem} />
+            <VaultPage items={hydratedItems} onAdd={() => setShowAdd(true)} onOpen={openItem} lang={lang} />
           )}
           {route === 'documents' && (
             <DocumentsPage
@@ -804,6 +834,7 @@ Jangan pernah membagikan kode ini kepada siapapun!
                   level: 'warning'
                 })
               }}
+              lang={lang}
             />
           )}
           {route === 'banking' && (
@@ -812,6 +843,7 @@ Jangan pernah membagikan kode ini kepada siapapun!
               styleMode={profile.card_style || 'realistic'}
               onAdd={() => openAdd('bank-card')}
               onOpen={openItem}
+              lang={lang}
             />
           )}
           {route === 'settings' && (
@@ -842,6 +874,8 @@ Jangan pernah membagikan kode ini kepada siapapun!
               showToast={showToast}
               hamburgerStyle={hamburgerStyle}
               onHamburgerStyle={updateHamburgerStyle}
+              lang={lang}
+              onLanguage={handleLanguageChange}
             />
           )}
         </Suspense>
@@ -853,6 +887,7 @@ Jangan pernah membagikan kode ini kepada siapapun!
         menuOpen={menuOpen}
         isSubpage={Boolean(menuSubpage)}
         hamburgerStyle={hamburgerStyle}
+        lang={lang}
         onChange={(r) => {
           if (r === 'settings' || r === 'menu') {
             handleToggleMenu()
@@ -862,17 +897,15 @@ Jangan pernah membagikan kode ini kepada siapapun!
           }
         }}
       />
-      <button className="fab" aria-label="Add item" onClick={() => setShowAdd(true)}>
-        +
-      </button>
 
-      {showAdd && <AddSheet onClose={() => setShowAdd(false)} onChoose={openAdd} />}
+      {showAdd && <AddSheet onClose={() => setShowAdd(false)} onChoose={openAdd} lang={lang} />}
       <Suspense fallback={null}>
-        {addMode && vaultKey && <AddItemModal mode={addMode} onClose={() => setAddMode(null)} onSubmit={saveItem} />}
+        {addMode && vaultKey && <AddItemModal mode={addMode} onClose={() => setAddMode(null)} onSubmit={saveItem} lang={lang} />}
         {docAddModalOpen && vaultKey && (
           <AddDocumentModal
             onClose={() => setDocAddModalOpen(false)}
             onSubmit={(docPayload) => saveItem({ ...docPayload, item_type: 'document' })}
+            lang={lang}
           />
         )}
         {selectedItem && selectedItem.item_type === 'document' ? (
@@ -884,6 +917,7 @@ Jangan pernah membagikan kode ini kepada siapapun!
               await saveItem({ ...updatedDoc, id, item_type: 'document' })
             }}
             onToggleFavorite={toggleFavorite}
+            lang={lang}
           />
         ) : selectedItem ? (
           <ItemModal
@@ -892,6 +926,7 @@ Jangan pernah membagikan kode ini kepada siapapun!
             onDelete={removeItem}
             onSave={updateItem}
             onToggleFavorite={toggleFavorite}
+            lang={lang}
           />
         ) : null}
         {alertsOpen && (
@@ -899,6 +934,7 @@ Jangan pernah membagikan kode ini kepada siapapun!
             alerts={alerts}
             onClose={() => setAlertsOpen(false)}
             onOpenItem={openItem}
+            lang={lang}
           />
         )}
         <SettingsDrawer
@@ -935,6 +971,18 @@ Jangan pernah membagikan kode ini kepada siapapun!
           showToast={showToast}
           hamburgerStyle={hamburgerStyle}
           onHamburgerStyle={updateHamburgerStyle}
+          lang={lang}
+          onLanguage={handleLanguageChange}
+        />
+        <CommandPalette
+          isOpen={searchOpen}
+          onClose={() => setSearchOpen(false)}
+          items={hydratedItems}
+          documents={documents}
+          banks={banks}
+          onOpenItem={openItem}
+          showToast={showToast}
+          lang={lang}
         />
       </Suspense>
       {toast && <div className="toast">{toast}</div>}
@@ -952,11 +1000,15 @@ function Splash() {
     <div className="splash">
       <img src="/brand/kept-icon.png" alt="Kept" className="kept-splash-icon" />
       <span className="kept-splash-text">Kept</span>
+      <div style={{ marginTop: 20 }}>
+        <Loader />
+      </div>
     </div>
   )
 }
 
-function FirstVaultSetup({ onCreate }) {
+function FirstVaultSetup({ onCreate, lang = 'id' }) {
+  const t = (k) => getTranslation(k, lang)
   const [pin, setPin] = useState('')
   const [confirmPin, setConfirmPin] = useState('')
   const [err, setErr] = useState('')
@@ -1002,9 +1054,9 @@ Simpan dokumen ini dengan aman dan jangan berikan ke siapapun!
     e.preventDefault()
     const check = isWeakPin(pin)
     if (check.isWeak) return setErr(check.reason)
-    if (pin !== confirmPin) return setErr('Konfirmasi Security PIN tidak cocok.')
+    if (pin !== confirmPin) return setErr(t('setup_err_match'))
     if (!confirmedBackup) {
-      return setErr('Harap konfirmasi bahwa Anda telah menyimpan Recovery Key.')
+      return setErr(t('setup_err_backup'))
     }
     onCreate(pin, generatedKey)
   }
@@ -1016,16 +1068,16 @@ Simpan dokumen ini dengan aman dan jangan berikan ke siapapun!
       </div>
 
       <div className="unlock-copy">
-        <div className="eyebrow">Setup Awal</div>
-        <h1>Inisialisasi Security PIN Vault</h1>
+        <div className="eyebrow">{t('setup_eyebrow')}</div>
+        <h1>{t('setup_title')}</h1>
         <p>
-          Tentukan 6-digit Security PIN utama Anda. Kunci ini digunakan untuk menurunkan AES-256 key dan tidak pernah dikirim ke server.
+          {t('setup_desc')}
         </p>
       </div>
 
       <form onSubmit={handleSubmit} className="unlock-form">
         <label className="field">
-          <span>Security PIN (6 Digit Angka)</span>
+          <span>{t('setup_pin_label')}</span>
           <input
             type="password"
             inputMode="numeric"
@@ -1038,19 +1090,19 @@ Simpan dokumen ini dengan aman dan jangan berikan ke siapapun!
             autoFocus
           />
           <span className="field-hint">
-            Gunakan 6 digit acak. Hindari urutan seperti 123456 atau 111111.
+            {t('setup_pin_hint')}
           </span>
         </label>
 
         <label className="field">
-          <span>Konfirmasi Security PIN</span>
+          <span>{t('setup_confirm_pin_label')}</span>
           <input
             type="password"
             inputMode="numeric"
             maxLength={6}
             value={confirmPin}
             onChange={(e) => setConfirmPin(e.target.value.replace(/\D/g, '').slice(0, 6))}
-            placeholder="Ulangi 6 digit PIN"
+            placeholder={t('setup_confirm_pin_ph')}
             className="font-mono text-center letter-spacing-lg"
             required
           />
@@ -1060,10 +1112,10 @@ Simpan dokumen ini dengan aman dan jangan berikan ke siapapun!
         <div className="emergency-kit-box">
           <div className="kit-header">
             <ShieldCheck size={16} />
-            <strong>Emergency Recovery Key Anda</strong>
+            <strong>{t('setup_kit_title')}</strong>
           </div>
           <p className="kit-description">
-            Simpan kode pemulihan ini sekarang. Jika Anda lupa Security PIN, kode ini adalah satu-satunya cara membuka vault Anda kembali.
+            {t('setup_kit_desc')}
           </p>
 
           <code className="font-mono recovery-code">{generatedKey}</code>
@@ -1071,11 +1123,11 @@ Simpan dokumen ini dengan aman dan jangan berikan ke siapapun!
           <div className="button-row mt-sm">
             <button type="button" className="secondary-button pill-button" onClick={handleCopy}>
               {copiedKey ? <Check size={14} /> : <Copy size={14} />}
-              {copiedKey ? 'Tersalin' : 'Salin Kode'}
+              {copiedKey ? t('setup_copied_btn') : t('setup_copy_btn')}
             </button>
             <button type="button" className="secondary-button pill-button" onClick={handleDownloadKit}>
               <Download size={14} />
-              Unduh Emergency Kit
+              {t('setup_download_kit_btn')}
             </button>
           </div>
 
@@ -1085,7 +1137,7 @@ Simpan dokumen ini dengan aman dan jangan berikan ke siapapun!
               checked={confirmedBackup}
               onChange={(e) => setConfirmedBackup(e.target.checked)}
             />
-            <span>Saya telah menyimpan Emergency Recovery Key ini di tempat aman.</span>
+            <span>{t('setup_confirm_checkbox')}</span>
           </label>
         </div>
 
@@ -1095,12 +1147,12 @@ Simpan dokumen ini dengan aman dan jangan berikan ke siapapun!
           className="primary-button pill-button mt-md"
           disabled={pin.length !== 6 || confirmPin.length !== 6 || !confirmedBackup}
         >
-          Buat Vault & Aktifkan PIN
+          {t('setup_submit_btn')}
         </button>
       </form>
 
       <div className="unlock-note">
-        <Lock size={13} /> Zero-knowledge encryption: data hanya dapat didekripsi di perangkat Anda.
+        <Lock size={13} /> {t('setup_zk_note')}
       </div>
     </main>
   )

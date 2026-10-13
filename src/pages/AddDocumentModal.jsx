@@ -17,8 +17,10 @@ import {
   Calendar,
   BadgeCheck
 } from '../components/Icons'
+import { getTranslation } from '../lib/i18n'
 
-export default function AddDocumentModal({ onClose, onSubmit }) {
+export default function AddDocumentModal({ onClose, onSubmit, lang = 'id' }) {
+  const t = (k) => getTranslation(k, lang)
   const [selectedTemplateId, setSelectedTemplateId] = useState('ktp')
   const template = useMemo(() => getTemplateById(selectedTemplateId), [selectedTemplateId])
 
@@ -155,16 +157,15 @@ export default function AddDocumentModal({ onClose, onSubmit }) {
 
   return (
     <Modal
-      title="Tambah Dokumen"
+      title={t('doc_modal_title')}
       eyebrow={categoryInfo.name}
-      badge="Draft UI"
       wide
       onClose={onClose}
     >
       <form onSubmit={handleSubmit} className="form-stack">
         {/* Template Selector */}
         <label className="field">
-          <span>Jenis Dokumen</span>
+          <span>{t('doc_modal_type')}</span>
           <select
             value={selectedTemplateId}
             onChange={(e) => handleTemplateChange(e.target.value)}
@@ -183,34 +184,34 @@ export default function AddDocumentModal({ onClose, onSubmit }) {
 
         {/* Document Name */}
         <label className="field">
-          <span>Nama Dokumen *</span>
+          <span>{t('doc_field_name')} *</span>
           <input
             type="text"
             required
             value={form.name}
-            placeholder="cth. KTP Pribadi, Ijazah S1"
+            placeholder={lang === 'id' ? 'cth. KTP Pribadi, Ijazah S1' : 'e.g. Personal ID, Bachelor Diploma'}
             onChange={(e) => setForm({ ...form, name: e.target.value })}
           />
         </label>
 
         {/* Owner Name */}
         <label className="field">
-          <span>Nama Pemilik</span>
+          <span>{t('doc_field_owner')}</span>
           <input
             type="text"
             value={form.owner_name}
-            placeholder="Nama pemilik dokumen"
+            placeholder={lang === 'id' ? 'Nama pemilik dokumen' : 'Document owner name'}
             onChange={(e) => setForm({ ...form, owner_name: e.target.value })}
           />
         </label>
 
         {/* Document Number */}
         <label className="field">
-          <span>{template.docNumberLabel || 'Nomor Identitas'}</span>
+          <span>{template.docNumberLabel || t('doc_field_number')}</span>
           <input
             type="text"
             value={form.doc_number}
-            placeholder={template.docNumberPlaceholder || 'Opsional'}
+            placeholder={template.docNumberPlaceholder || (lang === 'id' ? 'Opsional' : 'Optional')}
             onChange={(e) => setForm({ ...form, doc_number: e.target.value })}
           />
         </label>
@@ -218,7 +219,7 @@ export default function AddDocumentModal({ onClose, onSubmit }) {
         {/* Issue Date & Expiry Date Row */}
         <div className="detail-grid">
           <label className="field">
-            <span>Tanggal Terbit</span>
+            <span>{t('doc_field_issue')}</span>
             <input
               type="date"
               value={form.issue_date}
@@ -227,11 +228,11 @@ export default function AddDocumentModal({ onClose, onSubmit }) {
           </label>
 
           <label className="field">
-            <span>Berlaku Sampai</span>
+            <span>{t('doc_field_expiry')}</span>
             <input
               type="text"
               value={form.expiry_date}
-              placeholder="YYYY-MM-DD atau Seumur Hidup"
+              placeholder={lang === 'id' ? 'YYYY-MM-DD atau Seumur Hidup' : 'YYYY-MM-DD or Lifetime'}
               onChange={(e) => setForm({ ...form, expiry_date: e.target.value })}
             />
           </label>
@@ -271,13 +272,13 @@ export default function AddDocumentModal({ onClose, onSubmit }) {
 
         {/* Scan Dokumen Dropzone & Attachments */}
         <div className="field span-2">
-          <span>Scan Dokumen</span>
+          <span>{lang === 'id' ? 'Scan Dokumen' : 'Document Scan'}</span>
           <div className="doc-scan-dropzone">
             <div className="doc-scan-icon-wrap">
               <ScanLine size={24} />
             </div>
-            <strong>Tambah scan depan dan belakang</strong>
-            <p>Foto dari kamera, galeri, atau PDF (Data dienkripsi end-to-end)</p>
+            <strong>{lang === 'id' ? 'Tambah scan depan dan belakang' : 'Add front and back scan'}</strong>
+            <p>{lang === 'id' ? 'Foto dari kamera, galeri, atau PDF (Data dienkripsi end-to-end)' : 'Photo from camera, gallery, or PDF (End-to-end encrypted)'}</p>
 
             <div className="doc-scan-slot-buttons">
               {/* Slot: Front */}
@@ -289,7 +290,7 @@ export default function AddDocumentModal({ onClose, onSubmit }) {
                   onChange={(e) => handleFileUpload('front', e.target.files[0])}
                 />
                 <Camera size={13} />
-                <span>Front {form.attachments.front ? '✓' : ''}</span>
+                <span>{lang === 'id' ? 'Depan' : 'Front'} {form.attachments.front ? '✓' : ''}</span>
               </label>
 
               {/* Slot: Back */}
@@ -301,7 +302,7 @@ export default function AddDocumentModal({ onClose, onSubmit }) {
                   onChange={(e) => handleFileUpload('back', e.target.files[0])}
                 />
                 <Camera size={13} />
-                <span>Back {form.attachments.back ? '✓' : ''}</span>
+                <span>{lang === 'id' ? 'Belakang' : 'Back'} {form.attachments.back ? '✓' : ''}</span>
               </label>
 
               {/* Slot: PDF */}
@@ -321,7 +322,7 @@ export default function AddDocumentModal({ onClose, onSubmit }) {
             {isProcessingOcr && (
               <div className="ocr-status-pill">
                 <Sparkles size={13} className="spin-slow" />
-                <span>Membaca teks dari scan secara lokal...</span>
+                <span>{t('doc_ocr_reading')}</span>
               </div>
             )}
             {ocrSuccess && (
@@ -338,14 +339,14 @@ export default function AddDocumentModal({ onClose, onSubmit }) {
                   <div className="attachment-chip">
                     <img src={form.attachments.front.data} alt="Front preview" />
                     <div className="attachment-meta">
-                      <strong>Depan (Front)</strong>
+                      <strong>{lang === 'id' ? 'Depan (Front)' : 'Front'}</strong>
                       <span>{form.attachments.front.size}</span>
                     </div>
                     <button
                       type="button"
                       className="icon-button"
                       onClick={() => removeAttachment('front')}
-                      title="Hapus"
+                      title={t('action_delete')}
                     >
                       <X size={14} />
                     </button>
@@ -356,14 +357,14 @@ export default function AddDocumentModal({ onClose, onSubmit }) {
                   <div className="attachment-chip">
                     <img src={form.attachments.back.data} alt="Back preview" />
                     <div className="attachment-meta">
-                      <strong>Belakang (Back)</strong>
+                      <strong>{lang === 'id' ? 'Belakang (Back)' : 'Back'}</strong>
                       <span>{form.attachments.back.size}</span>
                     </div>
                     <button
                       type="button"
                       className="icon-button"
                       onClick={() => removeAttachment('back')}
-                      title="Hapus"
+                      title={t('action_delete')}
                     >
                       <X size={14} />
                     </button>
@@ -383,7 +384,7 @@ export default function AddDocumentModal({ onClose, onSubmit }) {
                       type="button"
                       className="icon-button"
                       onClick={() => removeAttachment('pdf')}
-                      title="Hapus"
+                      title={t('action_delete')}
                     >
                       <X size={14} />
                     </button>
@@ -396,27 +397,27 @@ export default function AddDocumentModal({ onClose, onSubmit }) {
 
         {/* Notes */}
         <label className="field span-2">
-          <span>Catatan Tambahan</span>
+          <span>{t('field_notes')}</span>
           <textarea
             rows={2}
             value={form.notes}
-            placeholder="Informasi penting, instansi terkait, atau lokasi fisik dokumen..."
+            placeholder={lang === 'id' ? 'Informasi penting, instansi terkait, atau lokasi fisik dokumen...' : 'Important info, issuing agency, or physical document location...'}
             onChange={(e) => setForm({ ...form, notes: e.target.value })}
           />
         </label>
 
         {/* Footer Helper matching the mockup */}
         <p className="mockup-helper-footer">
-          Mockup konseptual. Seluruh field selain nama dokumen dapat dikosongkan.
+          {t('doc_helper_footer')}
         </p>
 
         {/* Action Buttons */}
         <div className="modal-actions">
           <button type="button" className="secondary-button pill-button" onClick={onClose}>
-            Batal
+            {t('action_cancel')}
           </button>
           <button type="submit" className="primary-button pill-button">
-            Simpan Dokumen
+            {t('doc_save_btn')}
           </button>
         </div>
       </form>

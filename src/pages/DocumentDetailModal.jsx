@@ -17,14 +17,18 @@ import {
 import { getTemplateById, checkDocumentExpiry } from '../lib/documents'
 import DocumentCard from '../components/DocumentCard'
 import ConfirmToast from '../components/ConfirmToast'
+import { getTranslation } from '../lib/i18n'
+import { haptic } from '../lib/haptics'
 
 export default function DocumentDetailModal({
   item,
   onClose,
   onDelete,
   onSave,
-  onToggleFavorite
+  onToggleFavorite,
+  lang = 'id'
 }) {
+  const t = (k) => getTranslation(k, lang)
   const [isEditing, setIsEditing] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [form, setForm] = useState({ ...item })
@@ -71,28 +75,39 @@ export default function DocumentDetailModal({
       <div className="doc-detail-top-actions">
         <button
           className={`action-pill-btn favorite ${item.favorite ? 'selected' : ''}`}
-          onClick={() => onToggleFavorite(item.id)}
+          onClick={() => {
+            haptic('light')
+            onToggleFavorite(item.id)
+          }}
         >
           <Star size={14} fill={item.favorite ? 'currentColor' : 'none'} />
-          <span>{item.favorite ? 'Favorit' : 'Jadikan Favorit'}</span>
+          <span>{item.favorite ? (lang === 'id' ? 'Favorit' : 'Favorite') : (lang === 'id' ? 'Jadikan Favorit' : 'Add to Favorites')}</span>
         </button>
 
         <button
           className="action-pill-btn"
-          onClick={() => setIsEditing((prev) => !prev)}
+          onClick={() => {
+            haptic('light')
+            setIsEditing((prev) => !prev)
+          }}
+          title={isEditing ? t('action_cancel') : t('action_edit')}
+          aria-label={isEditing ? t('action_cancel') : t('action_edit')}
         >
           <Pencil size={14} />
-          <span>{isEditing ? 'Batal Edit' : 'Edit'}</span>
+          <span>{isEditing ? t('action_cancel') : t('action_edit')}</span>
         </button>
 
         <button
           className="action-pill-btn delete"
-          onClick={() => setShowDeleteConfirm(true)}
-          title="Hapus Dokumen"
-          aria-label="Hapus Dokumen"
+          onClick={() => {
+            haptic('light')
+            setShowDeleteConfirm(true)
+          }}
+          title={t('action_delete')}
+          aria-label={t('action_delete')}
         >
           <Trash2 size={14} />
-          <span>Hapus</span>
+          <span>{t('action_delete')}</span>
         </button>
       </div>
 
@@ -380,10 +395,10 @@ export default function DocumentDetailModal({
               className="secondary-button pill-button"
               onClick={() => setIsEditing(false)}
             >
-              Batal
+              {t('action_cancel')}
             </button>
             <button type="submit" className="primary-button pill-button">
-              Simpan Perubahan
+              {t('action_save')}
             </button>
           </div>
         </form>
@@ -391,15 +406,20 @@ export default function DocumentDetailModal({
 
       {showDeleteConfirm && (
         <ConfirmToast
-          message={`Hapus dokumen "${form.name}" secara permanen?`}
-          confirmLabel="Hapus"
-          cancelLabel="Batal"
+          message={
+            lang === 'id'
+              ? `Hapus dokumen "${form.name}" secara permanen?`
+              : `Permanently delete document "${form.name}"?`
+          }
+          confirmLabel={t('action_delete')}
+          cancelLabel={t('action_cancel')}
           onConfirm={() => {
             setShowDeleteConfirm(false)
             onDelete(item.id)
             onClose()
           }}
           onCancel={() => setShowDeleteConfirm(false)}
+          lang={lang}
         />
       )}
     </Modal>

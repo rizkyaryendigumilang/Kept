@@ -13,6 +13,8 @@ import {
   ChevronRight
 } from '../components/Icons'
 import { DOCUMENT_CATEGORIES } from '../lib/documents'
+import { getTranslation } from '../lib/i18n'
+import { haptic } from '../lib/haptics'
 
 const CARDS_PER_PAGE = 6 // 3 x 2 grid
 
@@ -20,12 +22,14 @@ export default function DocumentsPage({
   documents = [],
   onAdd,
   onOpen,
-  onDownload
+  onDownload,
+  lang = 'id'
 }) {
   const [query, setQuery] = useState('')
   const [activeCategory, setActiveCategory] = useState('all')
   const [currentPage, setCurrentPage] = useState(1)
   const [selectedQrDoc, setSelectedQrDoc] = useState(null)
+  const t = (k) => getTranslation(k, lang)
 
   // Persist viewMode preference: 'preview' | 'hide'
   const [viewMode, setViewMode] = useState(() => {
@@ -33,6 +37,7 @@ export default function DocumentsPage({
   })
 
   function handleToggleViewMode() {
+    haptic('light')
     const nextMode = viewMode === 'preview' ? 'hide' : 'preview'
     setViewMode(nextMode)
     localStorage.setItem('kept_doc_view_mode', nextMode)
@@ -70,8 +75,17 @@ export default function DocumentsPage({
 
   function handleHeaderQrClick() {
     if (filtered.length > 0) {
+      haptic('light')
       setSelectedQrDoc(filtered[0])
     }
+  }
+
+  const categoryNameMap = {
+    '01_identity': t('doc_cat_identity'),
+    '02_education': t('doc_cat_education'),
+    '03_mobility': t('doc_cat_mobility'),
+    '04_health_assets': t('doc_cat_health'),
+    '05_other': t('doc_cat_other')
   }
 
   return (
@@ -79,13 +93,16 @@ export default function DocumentsPage({
       {/* Clean Header matching User Mockup */}
       <div className="doc-page-header">
         <div className="doc-page-title-row">
-          <h1 className="doc-page-title">Documents</h1>
+          <h1 className="doc-page-title">{t('documents_title')}</h1>
           <button
             type="button"
             className="doc-add-circle-btn"
-            onClick={onAdd}
-            aria-label="Tambah Dokumen"
-            title="Tambah Dokumen"
+            onClick={() => {
+              haptic('light')
+              onAdd()
+            }}
+            aria-label={t('doc_add_title')}
+            title={t('doc_add_title')}
           >
             <Plus size={18} strokeWidth={2.2} />
           </button>
@@ -95,7 +112,7 @@ export default function DocumentsPage({
         <div className="doc-page-subrow">
           <div className="doc-subrow-left">
             <span className="doc-count-badge">
-              {filtered.length} {filtered.length === 1 ? 'document' : 'documents'}
+              {filtered.length} {filtered.length === 1 ? t('doc_count_singular') : t('doc_count_plural')}
             </span>
 
             {/* Icon buttons without text, saving space as requested */}
@@ -104,16 +121,8 @@ export default function DocumentsPage({
                 type="button"
                 className={`doc-icon-control-btn ${viewMode === 'preview' ? 'active' : ''}`}
                 onClick={handleToggleViewMode}
-                title={
-                  viewMode === 'preview'
-                    ? 'Mode Tampilan: Preview Aktif (Ketuk untuk Hide Preview)'
-                    : 'Mode Tampilan: Hide Preview Aktif (Ketuk untuk Tampilkan Preview)'
-                }
-                aria-label={
-                  viewMode === 'preview'
-                    ? 'Sembunyikan Preview'
-                    : 'Tampilkan Preview'
-                }
+                title={viewMode === 'preview' ? t('doc_view_hide') : t('doc_view_preview')}
+                aria-label={viewMode === 'preview' ? t('doc_view_hide') : t('doc_view_preview')}
               >
                 {viewMode === 'preview' ? (
                   <Eye size={15} strokeWidth={2.2} />
@@ -127,8 +136,8 @@ export default function DocumentsPage({
                 className="doc-icon-control-btn"
                 onClick={handleHeaderQrClick}
                 disabled={filtered.length === 0}
-                title="Tampilkan QR Code Dokumen"
-                aria-label="Tampilkan QR Code Dokumen"
+                title="QR Code"
+                aria-label="QR Code"
               >
                 <QrCode size={15} strokeWidth={2.2} />
               </button>
@@ -141,7 +150,7 @@ export default function DocumentsPage({
             <input
               type="search"
               value={query}
-              placeholder="Cari..."
+              placeholder={t('doc_search_placeholder')}
               onChange={(e) => setQuery(e.target.value)}
             />
           </div>
@@ -154,9 +163,12 @@ export default function DocumentsPage({
           <button
             type="button"
             className={`doc-cat-pill ${activeCategory === 'all' ? 'active' : ''}`}
-            onClick={() => setActiveCategory('all')}
+            onClick={() => {
+              haptic('light')
+              setActiveCategory('all')
+            }}
           >
-            Semua ({documents.length})
+            {t('filter_all')} ({documents.length})
           </button>
           {DOCUMENT_CATEGORIES.map((cat) => {
             const count = documents.filter((d) => d.category === cat.id).length
@@ -166,9 +178,12 @@ export default function DocumentsPage({
                 key={cat.id}
                 type="button"
                 className={`doc-cat-pill ${activeCategory === cat.id ? 'active' : ''}`}
-                onClick={() => setActiveCategory(cat.id)}
+                onClick={() => {
+                  haptic('light')
+                  setActiveCategory(cat.id)
+                }}
               >
-                {cat.name} ({count})
+                {categoryNameMap[cat.id] || cat.name} ({count})
               </button>
             )
           })}
@@ -181,20 +196,23 @@ export default function DocumentsPage({
           <FileText size={36} strokeWidth={1.7} />
           <strong>
             {query || activeCategory !== 'all'
-              ? 'Tidak ada dokumen yang sesuai filter.'
-              : 'Belum ada dokumen tersimpan.'}
+              ? t('search_empty_title')
+              : t('doc_empty_title')}
           </strong>
           <span>
             {query || activeCategory !== 'all'
-              ? 'Coba ganti kata kunci pencarian atau pilih kategori lain.'
-              : 'Unggah KTP, SIM, Paspor, KK, atau Kontrak Anda dalam brankas terenkripsi.'}
+              ? t('doc_empty_filter')
+              : t('doc_empty_desc')}
           </span>
           <button
             type="button"
             className="primary-button pill-button mt-sm"
-            onClick={onAdd}
+            onClick={() => {
+              haptic('light')
+              onAdd()
+            }}
           >
-            <Plus size={16} /> Tambah Dokumen
+            <Plus size={16} /> {t('doc_add_title')}
           </button>
         </div>
       ) : (
@@ -210,9 +228,16 @@ export default function DocumentsPage({
                 key={doc.id}
                 doc={doc}
                 viewMode={viewMode}
-                onOpen={onOpen}
+                onOpen={(d) => {
+                  haptic('medium')
+                  onOpen(d)
+                }}
                 onDownload={onDownload}
-                onQr={setSelectedQrDoc}
+                onQr={(d) => {
+                  haptic('light')
+                  setSelectedQrDoc(d)
+                }}
+                lang={lang}
               />
             ))}
           </div>
@@ -223,12 +248,15 @@ export default function DocumentsPage({
               <button
                 type="button"
                 className="doc-page-btn"
-                onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                onClick={() => {
+                  haptic('light')
+                  setCurrentPage((p) => Math.max(1, p - 1))
+                }}
                 disabled={currentPage === 1}
-                aria-label="Halaman Sebelumnya"
+                aria-label={lang === 'id' ? 'Halaman Sebelumnya' : 'Previous page'}
               >
                 <ChevronLeft size={16} />
-                <span>Sebelumnya</span>
+                <span>{lang === 'id' ? 'Sebelumnya' : 'Previous'}</span>
               </button>
 
               <div className="doc-page-numbers">
@@ -239,7 +267,10 @@ export default function DocumentsPage({
                     className={`doc-page-num-pill ${
                       currentPage === pageNum ? 'active' : ''
                     }`}
-                    onClick={() => setCurrentPage(pageNum)}
+                    onClick={() => {
+                      haptic('light')
+                      setCurrentPage(pageNum)
+                    }}
                   >
                     {pageNum}
                   </button>
@@ -249,11 +280,14 @@ export default function DocumentsPage({
               <button
                 type="button"
                 className="doc-page-btn"
-                onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                onClick={() => {
+                  haptic('light')
+                  setCurrentPage((p) => Math.min(totalPages, p + 1))
+                }}
                 disabled={currentPage === totalPages}
-                aria-label="Halaman Selanjutnya"
+                aria-label={lang === 'id' ? 'Halaman Selanjutnya' : 'Next page'}
               >
-                <span>Selanjutnya</span>
+                <span>{lang === 'id' ? 'Selanjutnya' : 'Next'}</span>
                 <ChevronRight size={16} />
               </button>
             </div>
@@ -267,6 +301,7 @@ export default function DocumentsPage({
           <DocumentQrModal
             doc={selectedQrDoc}
             onClose={() => setSelectedQrDoc(null)}
+            lang={lang}
           />
         </Suspense>
       )}

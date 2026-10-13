@@ -1,27 +1,41 @@
 import { Home, KeyRound, WalletCards, FileText, Menu, X, ArrowLeft } from './Icons'
 import AnimatedHamburger from './AnimatedHamburger'
+import { haptic } from '../lib/haptics'
+import { getTranslation } from '../lib/i18n'
 
-const items = [
-  { id: 'home', label: 'Home', icon: Home },
-  { id: 'vault', label: 'Password', icon: KeyRound },
-  { id: 'documents', label: 'Document', icon: FileText },
-  { id: 'banking', label: 'Account', icon: WalletCards },
-  { id: 'settings', label: 'Menu', icon: Menu }
-]
+export default function BottomNav({
+  active,
+  onChange,
+  menuOpen = false,
+  isSubpage = false,
+  hamburgerStyle = 'squash',
+  lang = 'id'
+}) {
+  const t = (k) => getTranslation(k, lang)
 
-export default function BottomNav({ active, onChange, menuOpen = false, isSubpage = false, hamburgerStyle = 'squash' }) {
+  const items = [
+    { id: 'home', label: t('nav_home'), icon: Home },
+    { id: 'vault', label: t('nav_password'), icon: KeyRound },
+    { id: 'documents', label: t('nav_document'), icon: FileText },
+    { id: 'banking', label: t('nav_account'), icon: WalletCards },
+    { id: 'settings', label: t('nav_menu'), icon: Menu }
+  ]
+
   return (
     <nav className="bottom-nav" aria-label="Primary navigation">
       {items.map(({ id, label, icon: Icon }) => {
         const isSettings = id === 'settings'
         const isActive = isSettings ? menuOpen : active === id && !menuOpen
         const DynamicIcon = isSettings && isSubpage ? ArrowLeft : Icon
-        const dynamicLabel = isSettings && isSubpage ? 'Kembali' : label
+        const dynamicLabel = isSettings && isSubpage ? t('nav_back') : label
         return (
           <button
             key={id}
             className={`nav-item ${isActive ? 'active' : ''} ${isSettings ? 'nav-item-settings' : ''}`}
-            onClick={() => onChange(id)}
+            onClick={() => {
+              haptic('light')
+              onChange(id)
+            }}
             aria-current={isActive ? 'page' : undefined}
           >
             <div className={`nav-icon-wrap ${isSettings && menuOpen ? 'settings-open' : ''}`}>

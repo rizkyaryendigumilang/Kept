@@ -1,31 +1,47 @@
 import { useMemo, useState } from 'react'
 import BankCard from '../components/BankCard'
 import { Plus, CreditCard, ShieldCheck, ChevronRight } from '../components/Icons'
+import { getTranslation } from '../lib/i18n'
+import { haptic } from '../lib/haptics'
 
-export default function BankingPage({ banks, styleMode, onAdd, onOpen }) {
+export default function BankingPage({ banks = [], styleMode, onAdd, onOpen, lang = 'id' }) {
   const [index, setIndex] = useState(0)
   const active = banks[index]
   const go = (direction) => setIndex((current) => (current + direction + banks.length) % banks.length)
+  const t = (k) => getTranslation(k, lang)
 
   return (
     <div className="page-shell banking-page">
       <section className="hero-row banking-heading">
         <div>
-          <div className="eyebrow">Account</div>
-          <h1>Kartu Anda, sekali usap.</h1>
+          <div className="eyebrow">{t('banking_eyebrow')}</div>
+          <h1>{t('banking_heading')}</h1>
         </div>
-        <button className="quick-add pill-button" onClick={onAdd}>
-          <Plus size={16} /> Tambah Kartu
+        <button
+          className="quick-add pill-button"
+          onClick={() => {
+            haptic('light')
+            onAdd()
+          }}
+        >
+          <Plus size={16} /> {t('add_card')}
         </button>
       </section>
 
       {banks.length === 0 ? (
         <div className="empty-state large">
           <ShieldCheck size={28} />
-          <strong>Belum ada kartu tersimpan.</strong>
-          <span>Tambahkan kartu ATM / debit / kredit pertama Anda untuk memulai dompet digital.</span>
-          <button className="primary-button pill-button" onClick={onAdd} style={{ marginTop: '12px' }}>
-            <Plus size={16} /> Tambah Kartu Pertama
+          <strong>{t('no_cards_yet')}</strong>
+          <span>{t('no_cards_desc')}</span>
+          <button
+            className="primary-button pill-button"
+            onClick={() => {
+              haptic('light')
+              onAdd()
+            }}
+            style={{ marginTop: '12px' }}
+          >
+            <Plus size={16} /> {t('add_first_card')}
           </button>
         </div>
       ) : (
@@ -51,9 +67,15 @@ export default function BankingPage({ banks, styleMode, onAdd, onOpen }) {
           </div>
 
           <div className="bank-actions-row">
-            <button className="open-card-button pill-button" onClick={() => onOpen(active)}>
+            <button
+              className="open-card-button pill-button"
+              onClick={() => {
+                haptic('light')
+                onOpen(active)
+              }}
+            >
               <CreditCard size={15} />
-              <span>Detail Kartu</span>
+              <span>{t('card_details')}</span>
               <ChevronRight size={14} />
             </button>
           </div>

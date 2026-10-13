@@ -3,7 +3,7 @@ import Modal from '../components/Modal'
 import SiteLogo from '../components/SiteLogo'
 import { Eye, EyeOff } from '../components/Icons'
 import { BANK_PRESETS } from '../lib/banks'
-
+import { getTranslation } from '../lib/i18n'
 
 const environmentOptions = [
   'Production',
@@ -16,8 +16,10 @@ const environmentOptions = [
 export default function AddItemModal({
   mode,
   onClose,
-  onSubmit
+  onSubmit,
+  lang = 'id'
 }) {
+  const t = (k) => getTranslation(k, lang)
   const type = mode.startsWith('password')
     ? 'password'
     : mode === 'bank-card'
@@ -164,17 +166,21 @@ export default function AddItemModal({
 
   const title =
     type === 'bank_card'
-      ? 'Add Account'
+      ? t('modal_add_bank_card')
       : type === 'secure_note'
-        ? 'Add secure note'
-        : 'Add password'
+        ? t('modal_add_note')
+        : category === 'social'
+          ? t('modal_add_social')
+          : category === 'project'
+            ? t('modal_add_project')
+            : t('modal_add_web')
 
   const eyebrow =
     type === 'password'
-      ? 'Secure record'
+      ? t('nav_password')
       : type === 'bank_card'
-        ? 'Banking'
-        : 'Secure note'
+        ? t('nav_account')
+        : t('choice_note')
 
   return (
     <Modal
@@ -192,10 +198,10 @@ export default function AddItemModal({
           <Field
             label={
               category === 'project'
-                ? 'Project name'
+                ? (lang === 'id' ? 'Nama Proyek' : 'Project name')
                 : category === 'social'
-                  ? 'Platform'
-                  : 'Website'
+                  ? (lang === 'id' ? 'Platform / Nama Akun' : 'Platform')
+                  : (lang === 'id' ? 'Situs Web / Layanan' : 'Website')
             }
             value={form.name}
             onChange={(value) =>
@@ -207,7 +213,7 @@ export default function AddItemModal({
         {/* Secure Note */}
         {type === 'secure_note' && (
           <label className="field span-2">
-            <span>Private note</span>
+            <span>{lang === 'id' ? 'Catatan Rahasia' : 'Private note'}</span>
 
             <textarea
               value={form.note}
@@ -215,7 +221,7 @@ export default function AddItemModal({
                 set('note', e.target.value)
               }
               rows={9}
-              placeholder="Write anything you want to keep secure..."
+              placeholder={lang === 'id' ? 'Tulis informasi rahasia apa pun yang ingin Anda amankan...' : 'Write anything you want to keep secure...'}
             />
           </label>
         )}
@@ -224,7 +230,7 @@ export default function AddItemModal({
         {type === 'password' && (
           <>
             <Field
-              label="Username / Email"
+              label={t('field_username')}
               value={form.username}
               onChange={(value) =>
                 set('username', value)
@@ -232,7 +238,7 @@ export default function AddItemModal({
             />
 
             <Field
-              label="Password"
+              label={t('field_password')}
               value={form.password}
               onChange={(value) =>
                 set('password', value)
@@ -241,7 +247,7 @@ export default function AddItemModal({
             />
 
             <label className="field">
-              <span>URL</span>
+              <span>{t('field_url')}</span>
 
               <div
                 className={
@@ -276,7 +282,7 @@ export default function AddItemModal({
             {category === 'project' && (
               <>
                 <label className="field">
-                  <span>Environment</span>
+                  <span>{t('field_environment')}</span>
 
                   <select
                     value={form.environment}
@@ -288,7 +294,7 @@ export default function AddItemModal({
                     }
                   >
                     <option value="">
-                      Not specified
+                      {lang === 'id' ? 'Tidak ditentukan' : 'Not specified'}
                     </option>
 
                     {environmentOptions.map(
@@ -305,7 +311,7 @@ export default function AddItemModal({
                 </label>
 
                 <Field
-                  label="Service"
+                  label={lang === 'id' ? 'Layanan / Server' : 'Service'}
                   value={form.service}
                   onChange={(value) =>
                     set('service', value)
@@ -315,7 +321,7 @@ export default function AddItemModal({
             )}
 
             <label className="field span-2">
-              <span>Notes</span>
+              <span>{t('field_notes')}</span>
 
               <textarea
                 value={form.notes}
@@ -326,7 +332,7 @@ export default function AddItemModal({
                   )
                 }
                 rows={5}
-                placeholder="Additional information..."
+                placeholder={t('field_notes_ph')}
               />
             </label>
           </>
@@ -352,11 +358,11 @@ export default function AddItemModal({
                 </div>
                 <div className="mini-card-bottom">
                   <div>
-                    <span className="mini-card-label">PEMEGANG KARTU</span>
-                    <strong className="mini-card-value">{form.account_owner || 'NAMA LENGKAP'}</strong>
+                    <span className="mini-card-label">{lang === 'id' ? 'PEMEGANG KARTU' : 'CARDHOLDER'}</span>
+                    <strong className="mini-card-value">{form.account_owner || (lang === 'id' ? 'NAMA LENGKAP' : 'FULL NAME')}</strong>
                   </div>
                   <div>
-                    <span className="mini-card-label">BERLAKU</span>
+                    <span className="mini-card-label">{lang === 'id' ? 'BERLAKU' : 'EXPIRES'}</span>
                     <strong className="mini-card-value">{form.expiry || 'MM/YY'}</strong>
                   </div>
                 </div>
@@ -365,7 +371,7 @@ export default function AddItemModal({
 
             {/* Quick Bank Selector */}
             <label className="field span-2">
-              <span>Pilih Bank</span>
+              <span>{lang === 'id' ? 'Pilih Bank' : 'Select Bank'}</span>
               <select
                 value={BANK_PRESETS.find(p => p.name.toLowerCase() === (form.bank_name || '').toLowerCase())?.id || ''}
                 onChange={(e) => {
@@ -376,12 +382,12 @@ export default function AddItemModal({
                     set('color', preset.color)
                     set('card_brand', preset.cardBrand)
                     if (!form.name || form.name === 'Bank card') {
-                      set('name', `Kartu Debit ${preset.name}`)
+                      set('name', `${lang === 'id' ? 'Kartu Debit' : 'Debit Card'} ${preset.name}`)
                     }
                   }
                 }}
               >
-                <option value="">-- Pilih Bank --</option>
+                <option value="">{lang === 'id' ? '-- Pilih Bank --' : '-- Select Bank --'}</option>
                 {BANK_PRESETS.map((preset) => (
                   <option key={preset.id} value={preset.id}>
                     {preset.name}
@@ -391,42 +397,42 @@ export default function AddItemModal({
             </label>
 
             <Field
-              label="Nama Rekord / Label"
+              label={lang === 'id' ? 'Nama Rekord / Label' : 'Record Label / Name'}
               value={form.name}
-              placeholder="cth. Kartu Debit Utama, ATM Tabungan"
+              placeholder={lang === 'id' ? 'cth. Kartu Debit Utama, ATM Tabungan' : 'e.g. Primary Debit Card, Savings ATM'}
               onChange={(value) => set('name', value)}
             />
 
             <Field
-              label="Nama Pemegang Kartu"
+              label={t('field_card_owner')}
               value={form.account_owner}
-              placeholder="Sesuai nama di kartu"
+              placeholder={t('field_card_owner_ph')}
               onChange={(value) => set('account_owner', value)}
             />
 
             <Field
-              label="Nomor Kartu ATM / Debit"
+              label={t('field_card_number')}
               value={form.card_number}
-              placeholder="16 digit nomor kartu"
+              placeholder={t('field_card_number_ph')}
               onChange={(value) => set('card_number', value)}
             />
 
             <Field
-              label="Nomor Rekening"
+              label={t('field_acc_number')}
               value={form.account_number}
-              placeholder="Nomor rekening bank"
+              placeholder={t('field_acc_number_ph')}
               onChange={(value) => set('account_number', value)}
             />
 
             <Field
-              label="Nomor HP Terdaftar"
+              label={t('field_registered_phone')}
               value={form.registered_phone}
               placeholder="08xxxxxxxxxx"
               onChange={(value) => set('registered_phone', value)}
             />
 
             <label className="field">
-              <span>Jenis / Brand Kartu</span>
+              <span>{t('field_card_brand')}</span>
               <select
                 value={form.card_brand}
                 onChange={(e) => set('card_brand', e.target.value)}
@@ -440,31 +446,31 @@ export default function AddItemModal({
             </label>
 
             <Field
-              label="Masa Berlaku (Valid Thru)"
+              label={t('field_card_expiry')}
               value={form.expiry}
               placeholder="MM/YY (cth. 08/28)"
               onChange={(value) => set('expiry', value)}
             />
 
             <label className="field span-2">
-              <span>Catatan Tambahan</span>
+              <span>{t('field_notes')}</span>
               <textarea
                 value={form.notes}
                 onChange={(e) => set('notes', e.target.value)}
                 rows={3}
-                placeholder="Informasi kantor cabang, batas penarikan, dll..."
+                placeholder={t('field_notes_ph')}
               />
             </label>
 
             <div className="note-box span-2">
               <strong>
-                Security rule
+                {lang === 'id' ? 'Aturan Keamanan' : 'Security Rule'}
               </strong>
 
               <span>
-                PIN, CVV, OTP and recovery
-                codes should not be entered
-                as normal stored fields.
+                {lang === 'id'
+                  ? 'PIN ATM, CVV, OTP, dan kode pemulihan jangan pernah disimpan sebagai teks biasa.'
+                  : 'PIN, CVV, OTP and recovery codes should not be entered as normal stored fields.'}
               </span>
             </div>
           </>
@@ -475,12 +481,11 @@ export default function AddItemModal({
           <div className="custom-fields-header">
             <div>
               <strong>
-                Custom fields
+                {t('custom_fields_title')}
               </strong>
 
               <span>
-                Add any additional information
-                you want to keep secure.
+                {t('custom_fields_desc')}
               </span>
             </div>
 
@@ -489,7 +494,7 @@ export default function AddItemModal({
               className="secondary-button"
               onClick={addCustomField}
             >
-              + Add field
+              {t('custom_fields_add')}
             </button>
           </div>
 
@@ -501,7 +506,7 @@ export default function AddItemModal({
               >
                 <label className="field">
                   <span>
-                    Field name
+                    {lang === 'id' ? 'Nama Field' : 'Field name'}
                   </span>
 
                   <input
@@ -518,7 +523,7 @@ export default function AddItemModal({
                 </label>
 
                 <label className="field">
-                  <span>Value</span>
+                  <span>{lang === 'id' ? 'Nilai' : 'Value'}</span>
 
                   <input
                     value={field.value}
@@ -534,7 +539,7 @@ export default function AddItemModal({
                         ? 'password'
                         : 'text'
                     }
-                    placeholder="Enter value"
+                    placeholder={lang === 'id' ? 'Masukkan nilai' : 'Enter value'}
                   />
                 </label>
 
@@ -552,7 +557,7 @@ export default function AddItemModal({
                       }
                     />
 
-                    Secret
+                    {lang === 'id' ? 'Rahasia' : 'Secret'}
                   </label>
 
                   <button
@@ -564,7 +569,7 @@ export default function AddItemModal({
                       )
                     }
                   >
-                    Remove
+                    {lang === 'id' ? 'Hapus' : 'Remove'}
                   </button>
                 </div>
               </div>
@@ -574,9 +579,7 @@ export default function AddItemModal({
           {!form.custom_fields
             ?.length && (
             <div className="custom-fields-empty">
-              No custom fields. Add one if
-              you need to store something
-              specific.
+              {t('custom_fields_empty')}
             </div>
           )}
         </div>
@@ -594,14 +597,14 @@ export default function AddItemModal({
             className="secondary-button"
             onClick={onClose}
           >
-            Cancel
+            {t('action_cancel')}
           </button>
 
           <button
             className="primary-button"
             type="submit"
           >
-            Save securely
+            {t('field_save_securely')}
           </button>
         </div>
       </form>

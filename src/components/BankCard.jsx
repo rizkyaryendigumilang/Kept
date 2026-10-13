@@ -1,6 +1,7 @@
 import { CreditCard, Copy, Check, Eye, EyeOff } from './Icons'
 import { motion, useMotionValue, useTransform } from 'motion/react'
 import { useEffect, useState } from 'react'
+import { haptic } from '../lib/haptics'
 
 function formatNumber(value, mode) {
   const digits = (value || '').replace(/\D/g, '')
@@ -34,6 +35,7 @@ export default function BankCard({ bank, styleMode, index, total, cardIndex, onS
     event.stopPropagation()
     await navigator.clipboard.writeText(bank.card_number || '')
     setCopied(true)
+    haptic('success')
     setTimeout(() => setCopied(false), 1300)
   }
 
@@ -49,6 +51,7 @@ export default function BankCard({ bank, styleMode, index, total, cardIndex, onS
       }}
       onDragEnd={(_, info) => {
         if (total > 1 && (Math.abs(info.offset.x) > 50 || Math.abs(info.velocity.x) > 250)) {
+          haptic('medium')
           onSwipe(info.offset.x > 0 ? 'right' : 'left')
         }
       }}

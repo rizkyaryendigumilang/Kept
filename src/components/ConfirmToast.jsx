@@ -1,15 +1,30 @@
+import { useEffect } from 'react'
 import { AlertTriangle, Trash2 } from './Icons'
+import { haptic } from '../lib/haptics'
 
 export default function ConfirmToast({
-  message = 'Apakah Anda yakin ingin menghapus item ini?',
-  confirmLabel = 'Hapus',
-  cancelLabel = 'Batal',
+  message,
+  confirmLabel,
+  cancelLabel,
   onConfirm,
   onCancel,
   icon: CustomIcon,
-  tone = 'danger'
+  tone = 'danger',
+  lang = 'id'
 }) {
+  const displayMessage =
+    message ||
+    (lang === 'id'
+      ? 'Apakah Anda yakin ingin menghapus item ini?'
+      : 'Are you sure you want to delete this item?')
+  const displayConfirm = confirmLabel || (lang === 'id' ? 'Hapus' : 'Delete')
+  const displayCancel = cancelLabel || (lang === 'id' ? 'Batal' : 'Cancel')
+
   const IconComponent = CustomIcon || (tone === 'danger' ? Trash2 : AlertTriangle)
+
+  useEffect(() => {
+    haptic(tone === 'danger' ? 'warning' : 'medium')
+  }, [tone])
 
   return (
     <div className={`confirm-toast-container tone-${tone}`} role="alertdialog" aria-modal="true">
@@ -18,23 +33,29 @@ export default function ConfirmToast({
           <IconComponent size={15} />
         </div>
         <div className="confirm-toast-message">
-          {message}
+          {displayMessage}
         </div>
         <div className="confirm-toast-actions">
           <button
             type="button"
             className="confirm-toast-btn cancel-btn"
-            onClick={onCancel}
+            onClick={() => {
+              haptic('light')
+              onCancel()
+            }}
           >
-            {cancelLabel}
+            {displayCancel}
           </button>
           <button
             type="button"
             className="confirm-toast-btn delete-btn"
-            onClick={onConfirm}
+            onClick={() => {
+              haptic('heavy')
+              onConfirm()
+            }}
             autoFocus
           >
-            {confirmLabel}
+            {displayConfirm}
           </button>
         </div>
       </div>

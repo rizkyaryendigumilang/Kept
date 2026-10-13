@@ -1,5 +1,4 @@
 import React from 'react'
-
 import {
   Search,
   Plus,
@@ -9,25 +8,27 @@ import {
   KeyRound,
   StickyNote
 } from '../components/Icons'
-
 import PasswordCard from '../components/PasswordCard'
+import { getTranslation } from '../lib/i18n'
+import { haptic } from '../lib/haptics'
 
-const filters = [
-  { id: 'all', label: 'All', icon: KeyRound },
-  { id: 'social', label: 'Social Media', icon: Instagram },
-  { id: 'web', label: 'Web Password', icon: Globe },
-  { id: 'project', label: 'Project Password', icon: FolderLock },
-  { id: 'secure_note', label: 'Secure Note', icon: StickyNote }
-]
-
-export default function VaultPage({ items, onAdd, onOpen }) {
+export default function VaultPage({ items = [], onAdd, onOpen, lang = 'id' }) {
   const [filter, setFilter] = React.useState('all')
   const [query, setQuery] = React.useState('')
+  const t = (k) => getTranslation(k, lang)
+
+  const filters = [
+    { id: 'all', label: t('filter_all'), icon: KeyRound },
+    { id: 'social', label: t('filter_social'), icon: Instagram },
+    { id: 'web', label: t('filter_web'), icon: Globe },
+    { id: 'project', label: t('filter_project'), icon: FolderLock },
+    { id: 'secure_note', label: t('filter_notes'), icon: StickyNote }
+  ]
 
   const filtered = items.filter((item) => {
     const matchesFilter =
       filter === 'all'
-        ? item.item_type !== 'bank_card'
+        ? item.item_type !== 'bank_card' && item.item_type !== 'document'
         : item.category === filter
 
     const haystack = `
@@ -43,7 +44,7 @@ export default function VaultPage({ items, onAdd, onOpen }) {
   })
 
   const counts = {
-    all: items.filter((item) => item.item_type !== 'bank_card').length,
+    all: items.filter((item) => item.item_type !== 'bank_card' && item.item_type !== 'document').length,
     social: items.filter((item) => item.category === 'social').length,
     web: items.filter((item) => item.category === 'web').length,
     project: items.filter((item) => item.category === 'project').length,
@@ -54,31 +55,30 @@ export default function VaultPage({ items, onAdd, onOpen }) {
     <div className="page-shell">
       <section className="hero-row">
         <div>
-          <div className="eyebrow">Vault</div>
-
-          <h1>Passwords, organized.</h1>
-
-          <p>
-            Choose a category or search the whole vault.
-          </p>
+          <div className="eyebrow">{t('vault_eyebrow')}</div>
+          <h1>{t('vault_heading')}</h1>
         </div>
 
-        <button className="quick-add" onClick={onAdd}>
-          <Plus size={17} />
-          Add
+        <button
+          className="quick-add pill-button"
+          onClick={() => {
+            haptic('light')
+            onAdd()
+          }}
+        >
+          <Plus size={16} />
+          {t('add_item')}
         </button>
       </section>
 
       {/* Search */}
       <div className="search-box">
         <Search size={18} />
-
         <input
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="Search your vault"
+          placeholder={t('vault_search_placeholder')}
         />
-
         <span>{filtered.length}</span>
       </div>
 
@@ -88,13 +88,14 @@ export default function VaultPage({ items, onAdd, onOpen }) {
           <button
             className={filter === id ? 'filter active' : 'filter'}
             key={id}
-            onClick={() => setFilter(id)}
+            onClick={() => {
+              haptic('light')
+              setFilter(id)
+            }}
           >
             <Icon size={15} />
-
             <span>{label}</span>
-
-            <small>{counts[id]}</small>
+            <small>{counts[id] || 0}</small>
           </button>
         ))}
       </div>
@@ -108,7 +109,10 @@ export default function VaultPage({ items, onAdd, onOpen }) {
                 <button
                   key={item.id}
                   className="vault-list-card"
-                  onClick={() => onOpen(item)}
+                  onClick={() => {
+                    haptic('medium')
+                    onOpen(item)
+                  }}
                 >
                   <div className="item-icon tone-neutral">
                     <StickyNote size={18} />
@@ -117,14 +121,13 @@ export default function VaultPage({ items, onAdd, onOpen }) {
                   <div className="item-copy">
                     <div className="item-title-row">
                       <strong>{item.name}</strong>
-
                       <span className="category-chip">
-                        Secure Note
+                        {t('type_note')}
                       </span>
                     </div>
 
                     <span className="item-secondary">
-                      Private note
+                      {item.notes ? item.notes.slice(0, 50) : t('type_note')}
                     </span>
                   </div>
                 </button>
@@ -136,24 +139,22 @@ export default function VaultPage({ items, onAdd, onOpen }) {
                 key={item.id}
                 item={item}
                 password={item.password || ''}
-                onOpen={() => onOpen(item)}
+                onOpen={() => {
+                  haptic('medium')
+                  onOpen(item)
+                }}
+                lang={lang}
               />
             )
           })
         ) : (
           <div className="empty-state large">
             <KeyRound size={20} />
-
             <strong>
-              {query
-                ? 'No matching vault items.'
-                : 'No vault items yet.'}
+              {query ? t('search_empty_title') : t('vault_empty_title')}
             </strong>
-
             <span>
-              {query
-                ? 'Try another search or category.'
-                : 'Use Add to create your first password or note.'}
+              {query ? t('search_empty_desc') : t('vault_empty_desc')}
             </span>
           </div>
         )}

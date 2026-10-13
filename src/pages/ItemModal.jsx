@@ -13,14 +13,18 @@ import {
 } from '../components/Icons'
 import { BANK_PRESETS } from '../lib/banks'
 import ConfirmToast from '../components/ConfirmToast'
+import { getTranslation } from '../lib/i18n'
+import { haptic } from '../lib/haptics'
 
 export default function ItemModal({
   item,
   onClose,
   onDelete,
   onSave,
-  onToggleFavorite
+  onToggleFavorite,
+  lang = 'id'
 }) {
+  const t = (k) => getTranslation(k, lang)
   const [editing, setEditing] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [form, setForm] = useState(normalizeItem(item))
@@ -128,9 +132,9 @@ export default function ItemModal({
     <Modal
       title={
         item.item_type === 'bank_card'
-          ? 'Card details'
+          ? (lang === 'id' ? 'Detail kartu' : 'Card details')
           : item.item_type === 'secure_note'
-            ? 'Secure note'
+            ? (lang === 'id' ? 'Catatan aman' : 'Secure note')
             : item.name
       }
       eyebrow={formatType(item.item_type)}
@@ -173,7 +177,7 @@ export default function ItemModal({
               size={14}
               fill={isFavorite ? 'currentColor' : 'none'}
             />
-            <span>Favorite</span>
+            <span>{isFavorite ? (lang === 'id' ? 'Favorit' : 'Favorite') : (lang === 'id' ? 'Jadikan Favorit' : 'Add to Favorites')}</span>
           </button>
 
           {!editing ? (
@@ -181,17 +185,21 @@ export default function ItemModal({
               type="button"
               className="action-pill-btn edit"
               onClick={() => setEditing(true)}
+              title={t('action_edit')}
+              aria-label={t('action_edit')}
             >
               <Pencil size={14} />
-              <span>Edit</span>
+              <span>{t('action_edit')}</span>
             </button>
           ) : (
             <button
               type="button"
               className="action-pill-btn cancel"
               onClick={cancelEdit}
+              title={t('action_cancel')}
+              aria-label={t('action_cancel')}
             >
-              <span>Cancel</span>
+              <span>{t('action_cancel')}</span>
             </button>
           )}
 
@@ -199,10 +207,11 @@ export default function ItemModal({
             type="button"
             className="action-pill-btn delete"
             onClick={() => setShowDeleteConfirm(true)}
-            title="Delete"
-            aria-label="Delete"
+            title={t('action_delete')}
+            aria-label={t('action_delete')}
           >
             <Trash2 size={14} />
+            <span>{t('action_delete')}</span>
           </button>
         </div>
       </div>
@@ -229,33 +238,38 @@ export default function ItemModal({
         <div className="modal-actions">
           <button
             type="button"
-            className="secondary-button"
+            className="secondary-button pill-button"
             onClick={cancelEdit}
           >
-            Cancel
+            {t('action_cancel')}
           </button>
 
           <button
             type="button"
-            className="primary-button"
+            className="primary-button pill-button"
             onClick={save}
             disabled={!String(form.name || '').trim()}
           >
-            Save changes
+            {t('action_save')}
           </button>
         </div>
       )}
 
       {showDeleteConfirm && (
         <ConfirmToast
-          message={`Hapus "${form.name || 'item ini'}" secara permanen?`}
-          confirmLabel="Hapus"
-          cancelLabel="Batal"
+          message={
+            lang === 'id'
+              ? `Hapus "${form.name || 'item ini'}" secara permanen?`
+              : `Permanently delete "${form.name || 'this item'}"?`
+          }
+          confirmLabel={t('action_delete')}
+          cancelLabel={t('action_cancel')}
           onConfirm={() => {
             setShowDeleteConfirm(false)
             onDelete(item.id)
           }}
           onCancel={() => setShowDeleteConfirm(false)}
+          lang={lang}
         />
       )}
     </Modal>

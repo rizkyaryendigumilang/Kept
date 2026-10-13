@@ -48,7 +48,8 @@ export default function DocumentCard({
   viewMode = 'preview', // 'preview' | 'hide'
   onOpen,
   onDownload,
-  onQr
+  onQr,
+  lang = 'id'
 }) {
   const [menuOpen, setMenuOpen] = useState(false)
   const [copied, setCopied] = useState(false)
@@ -112,7 +113,7 @@ export default function DocumentCard({
             handleCardClick()
           }
         }}
-        aria-label={`Buka dokumen ${fileName}`}
+        aria-label={lang === 'id' ? `Buka dokumen ${fileName}` : `Open document ${fileName}`}
       >
         <div className="doc-compact-left">
           <div className="doc-pdf-icon-badge" aria-hidden="true">
@@ -131,8 +132,8 @@ export default function DocumentCard({
             type="button"
             className="doc-menu-btn"
             onClick={() => setMenuOpen((v) => !v)}
-            aria-label="Menu Dokumen"
-            title="Menu Dokumen"
+            aria-label={lang === 'id' ? 'Menu Dokumen' : 'Document Menu'}
+            title={lang === 'id' ? 'Menu Dokumen' : 'Document Menu'}
           >
             <MoreHorizontal size={16} />
           </button>
@@ -141,20 +142,20 @@ export default function DocumentCard({
             <div className="doc-dropdown-menu">
               <button type="button" onClick={() => { setMenuOpen(false); handleCardClick() }}>
                 <Eye size={14} />
-                <span>Buka Dokumen</span>
+                <span>{lang === 'id' ? 'Buka Dokumen' : 'Open Document'}</span>
               </button>
               <button type="button" onClick={handleDownloadClick}>
                 <Download size={14} />
-                <span>Download PDF</span>
+                <span>{lang === 'id' ? 'Download PDF' : 'Download PDF'}</span>
               </button>
               <button type="button" onClick={handleQrClick}>
                 <QrCode size={14} />
-                <span>Lihat QR Code</span>
+                <span>{lang === 'id' ? 'Lihat QR Code' : 'View QR Code'}</span>
               </button>
               {doc.doc_number && (
                 <button type="button" onClick={handleCopyNumber}>
                   {copied ? <Check size={14} /> : <Copy size={14} />}
-                  <span>{copied ? 'Nomor Tersalin' : 'Salin Nomor Dokumen'}</span>
+                  <span>{copied ? (lang === 'id' ? 'Nomor Tersalin' : 'Number Copied') : (lang === 'id' ? 'Salin Nomor Dokumen' : 'Copy Document Number')}</span>
                 </button>
               )}
             </div>
@@ -226,8 +227,8 @@ export default function DocumentCard({
             type="button"
             className="doc-menu-btn"
             onClick={() => setMenuOpen((v) => !v)}
-            aria-label="Menu Dokumen"
-            title="Menu Dokumen"
+            aria-label={lang === 'id' ? 'Menu Dokumen' : 'Document Menu'}
+            title={lang === 'id' ? 'Menu Dokumen' : 'Document Menu'}
           >
             <MoreHorizontal size={16} />
           </button>
@@ -236,20 +237,20 @@ export default function DocumentCard({
             <div className="doc-dropdown-menu">
               <button type="button" onClick={() => { setMenuOpen(false); handleCardClick() }}>
                 <Eye size={14} />
-                <span>Buka Dokumen</span>
+                <span>{lang === 'id' ? 'Buka Dokumen' : 'Open Document'}</span>
               </button>
               <button type="button" onClick={handleDownloadClick}>
                 <Download size={14} />
-                <span>Download PDF</span>
+                <span>{lang === 'id' ? 'Download PDF' : 'Download PDF'}</span>
               </button>
               <button type="button" onClick={handleQrClick}>
                 <QrCode size={14} />
-                <span>Lihat QR Code</span>
+                <span>{lang === 'id' ? 'Lihat QR Code' : 'View QR Code'}</span>
               </button>
               {doc.doc_number && (
                 <button type="button" onClick={handleCopyNumber}>
                   {copied ? <Check size={14} /> : <Copy size={14} />}
-                  <span>{copied ? 'Nomor Tersalin' : 'Salin Nomor Dokumen'}</span>
+                  <span>{copied ? (lang === 'id' ? 'Nomor Tersalin' : 'Number Copied') : (lang === 'id' ? 'Salin Nomor Dokumen' : 'Copy Document Number')}</span>
                 </button>
               )}
             </div>
