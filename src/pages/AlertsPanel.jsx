@@ -14,19 +14,22 @@ import {
   Download,
   Trash2,
   Check,
-  Fingerprint
+  Fingerprint,
+  RefreshCw
 } from '../components/Icons'
 import {
   getSecurityActivityLogs,
   getTrustedDevices,
   revokeTrustedDevice,
-  removeTrustedDevice
+  removeTrustedDevice,
+  recordSecurityActivity
 } from '../lib/securityAudit'
+import { scanVaultPasswordBreaches, getLastBreachScan } from '../lib/pwned'
 import ConfirmToast from '../components/ConfirmToast'
 import { getTranslation } from '../lib/i18n'
 import { haptic } from '../lib/haptics'
 
-export default function AlertsPanel({ alerts = [], onClose, onOpenItem, lang = 'id' }) {
+export default function AlertsPanel({ alerts = [], items = [], onClose, onOpenItem, lang = 'id' }) {
   // Navigation tabs: 'alerts' | 'activity' | 'devices'
   const [activeTab, setActiveTab] = useState('alerts')
   const [filter, setFilter] = useState('all')
@@ -53,12 +56,59 @@ export default function AlertsPanel({ alerts = [], onClose, onOpenItem, lang = '
     }
   }, [])
 
+  // Breach Scan States
+  const [scanBusy, setScanBusy] = useState(false)
+  const [scanProgress, setScanProgress] = useState({ current: 0, total: 0 })
+  const [scanData, setScanData] = useState(() => getLastBreachScan())
+
+  async function handleRunBreachScan() {
+    if (scanBusy) return
+    haptic('medium')
+    setScanBusy(true)
+    setScanProgress({ current: 0, total: items.length })
+    try {
+      const breachedList = await scanVaultPasswordBreaches(items, (current, total) => {
+        setScanProgress({ current, total })
+      })
+      const newScan = {
+        scannedAt: new Date().toISOString(),
+        totalScanned: items.filter((i) => (i.item_type === 'password' || !i.item_type) && i.password).length,
+        breachedCount: breachedList.length,
+        breachedResults: breachedList
+      }
+      setScanData(newScan)
+
+      if (breachedList.length > 0) {
+        haptic('error')
+        recordSecurityActivity({
+          type: 'security_warning',
+          title: 'Pemindaian Kebocoran Password',
+          desc: `Ditemukan ${breachedList.length} password yang telah bocor dalam database publik.`,
+          level: 'danger'
+        })
+      } else {
+        haptic('success')
+        recordSecurityActivity({
+          type: 'security_audit',
+          title: 'Pemindaian Kebocoran Selesai',
+          desc: 'Seluruh password vault dinyatakan aman dari database kebocoran publik.',
+          level: 'info'
+        })
+      }
+    } catch {
+      // ignore
+    } finally {
+      setScanBusy(false)
+    }
+  }
+
   // Calculate Health Score
   const healthStats = useMemo(() => {
     let score = 100
     let reusedCount = 0
     let weakCount = 0
     let cardCount = 0
+    let expiryCount = 0
 
     alerts.forEach((alert) => {
       if (alert.type === 'reused_password') {
@@ -67,14 +117,20 @@ export default function AlertsPanel({ alerts = [], onClose, onOpenItem, lang = '
       } else if (alert.type === 'weak_password') {
         weakCount += 1
         score -= 8
-      } else if (alert.type === 'card_expired') {
+      } else if (alert.type === 'card_expired' || alert.type === 'doc_expired') {
         cardCount += 1
+        expiryCount += 1
         score -= 12
-      } else if (alert.type === 'card_expiring_soon') {
+      } else if (alert.type === 'card_expiring_soon' || alert.type === 'doc_expiring_soon') {
         cardCount += 1
+        expiryCount += 1
         score -= 6
       }
     })
+
+    if (scanData?.breachedCount > 0) {
+      score -= scanData.breachedCount * 18
+    }
 
     score = Math.max(0, Math.min(100, score))
 
@@ -82,9 +138,11 @@ export default function AlertsPanel({ alerts = [], onClose, onOpenItem, lang = '
       score,
       reusedCount,
       weakCount,
-      cardCount
+      cardCount,
+      expiryCount,
+      breachedCount: scanData?.breachedCount || 0
     }
-  }, [alerts])
+  }, [alerts, scanData])
 
   const healthStatus = useMemo(() => {
     if (healthStats.score >= 85) {
@@ -110,6 +168,9 @@ export default function AlertsPanel({ alerts = [], onClose, onOpenItem, lang = '
 
   const filteredAlerts = useMemo(() => {
     if (filter === 'all') return alerts
+    if (filter === 'expiry') {
+      return alerts.filter((a) => a.type.startsWith('card_') || a.type.startsWith('doc_'))
+    }
     return alerts.filter((a) => a.level === filter)
   }, [alerts, filter])
 
@@ -226,36 +287,48 @@ export default function AlertsPanel({ alerts = [], onClose, onOpenItem, lang = '
         {/* ======================================================== */}
         {activeTab === 'alerts' && (
           <div className="tab-content-area">
-            {/* Health Score Summary Card */}
-            <div className="health-score-card">
-              <div className="health-score-header">
-                <div className="health-number-wrap">
-                  <span className="health-score-num" style={{ color: healthStatus.color }}>
+            {/* Unified Compact Health & Security Hub */}
+            <div className="health-score-card compact-health-card">
+              <div className="health-compact-top-row">
+                <div className="health-score-badge-inline">
+                  <span className="health-score-val" style={{ color: healthStatus.color }}>
                     {healthStats.score}
                   </span>
-                  <span className="health-score-total">/100</span>
-                </div>
-                <div className="health-text-wrap">
-                  <div className={`health-status-badge tone-${healthStatus.tone}`}>
+                  <span className="health-score-denom">/100</span>
+                  <span className={`health-status-chip tone-${healthStatus.tone}`}>
                     {healthStatus.label}
-                  </div>
-                  <p className="health-desc">
-                    {healthStats.score >= 85
-                      ? lang === 'id'
-                        ? 'Sebagian besar kredensial Anda aman dan terlindungi dengan baik.'
-                        : 'Most of your credentials are secure and well protected.'
-                      : healthStats.score >= 60
-                      ? lang === 'id'
-                        ? 'Ditemukan beberapa kredensial yang lemah atau berulang.'
-                        : 'Some credentials were found to be weak or reused.'
-                      : lang === 'id'
-                      ? 'Segera perbarui password duplikat dan lemah untuk mencegah kebocoran.'
-                      : 'Please update duplicate and weak passwords promptly.'}
-                  </p>
+                  </span>
+                </div>
+
+                <div className="health-scanner-action-inline">
+                  {scanBusy ? (
+                    <span className="scanner-status-tag scanning">
+                      <RefreshCw size={11} className="spin-slow" />
+                      <span>{t('breach_scanning')} ({scanProgress.current}/{scanProgress.total})</span>
+                    </span>
+                  ) : (
+                    <button
+                      type="button"
+                      className="scanner-micro-btn"
+                      onClick={handleRunBreachScan}
+                      title={t('breach_checker_desc')}
+                    >
+                      <ShieldCheck size={13} className={scanData?.breachedCount > 0 ? 'text-danger' : 'text-emerald'} />
+                      <span>
+                        {scanData
+                          ? scanData.breachedCount === 0
+                            ? (lang === 'id' ? '0 Kebocoran' : '0 Breaches')
+                            : `${scanData.breachedCount} ` + (lang === 'id' ? 'Bocor' : 'Breached')
+                          : t('breach_scan_btn')}
+                      </span>
+                      <RefreshCw size={10} className="opacity-70" />
+                    </button>
+                  )}
                 </div>
               </div>
 
-              <div className="health-progress-bar">
+              {/* Slim Health Score Line */}
+              <div className="health-progress-bar slim">
                 <div
                   className="health-progress-fill"
                   style={{
@@ -265,21 +338,60 @@ export default function AlertsPanel({ alerts = [], onClose, onOpenItem, lang = '
                 />
               </div>
 
-              {/* Quick Metrics */}
-              <div className="health-metrics-row">
-                <div className="metric-pill">
-                  <KeyRound size={13} />
+              {/* Compact Quick Metrics Row */}
+              <div className="health-metrics-row compact">
+                <div className="metric-pill micro">
+                  <KeyRound size={11} />
                   <span>{healthStats.weakCount} {lang === 'id' ? 'Lemah' : 'Weak'}</span>
                 </div>
-                <div className="metric-pill">
-                  <Lock size={13} />
+                <div className="metric-pill micro">
+                  <Lock size={11} />
                   <span>{healthStats.reusedCount} {lang === 'id' ? 'Duplikat' : 'Reused'}</span>
                 </div>
-                <div className="metric-pill">
-                  <CreditCard size={13} />
-                  <span>{healthStats.cardCount} {lang === 'id' ? 'Kartu Exp' : 'Expired'}</span>
+                <div className="metric-pill micro">
+                  <CreditCard size={11} />
+                  <span>{healthStats.cardCount} {lang === 'id' ? 'Kartu' : 'Card'}</span>
                 </div>
+                {healthStats.expiryCount > 0 && (
+                  <div className="metric-pill micro tone-warning">
+                    <AlertTriangle size={11} />
+                    <span>{healthStats.expiryCount} {t('filter_expiry')}</span>
+                  </div>
+                )}
+                {healthStats.breachedCount > 0 && (
+                  <div className="metric-pill micro tone-danger">
+                    <ShieldAlert size={11} />
+                    <span>{healthStats.breachedCount} {t('breach_metric_label')}</span>
+                  </div>
+                )}
               </div>
+
+              {/* Breached items alert bar if any */}
+              {scanData?.breachedCount > 0 && (
+                <div className="scanner-breached-compact-box">
+                  <div className="scanner-breached-compact-header">
+                    <AlertTriangle size={12} className="text-danger" />
+                    <strong>{scanData.breachedCount} {t('breach_found_title')}</strong>
+                  </div>
+                  <div className="scanner-breached-chips-row">
+                    {scanData.breachedResults.map((b) => {
+                      const matchedItem = items.find((i) => i.id === b.itemId)
+                      return (
+                        <button
+                          key={b.itemId}
+                          type="button"
+                          className="scanner-breached-chip"
+                          onClick={() => matchedItem && onOpenItem(matchedItem)}
+                          title={lang === 'id' ? 'Buka item untuk mengganti password' : 'Open item to update password'}
+                        >
+                          <span className="scanner-chip-name">{b.itemName}</span>
+                          <span className="scanner-chip-count">{b.count.toLocaleString()}x</span>
+                        </button>
+                      )
+                    })}
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Filter Tabs */}
@@ -312,6 +424,18 @@ export default function AlertsPanel({ alerts = [], onClose, onOpenItem, lang = '
                 >
                   {lang === 'id' ? 'Peringatan' : 'Warning'} ({alerts.filter((a) => a.level === 'warning').length})
                 </button>
+                {healthStats.expiryCount > 0 && (
+                  <button
+                    className={`filter pill-button ${filter === 'expiry' ? 'active' : ''}`}
+                    onClick={() => {
+                      haptic('light')
+                      setFilter('expiry')
+                    }}
+                  >
+                    <AlertTriangle size={12} />
+                    <span>{t('filter_expiry')} ({healthStats.expiryCount})</span>
+                  </button>
+                )}
               </div>
             )}
 

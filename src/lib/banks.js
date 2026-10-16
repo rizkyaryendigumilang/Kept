@@ -23,6 +23,20 @@ export const BANK_PRESETS = [
   { id: 'chase', name: 'Chase', color: '#117aca', domains: ['chase.com'], cardBrand: 'VISA' }
 ]
 
+export const EMONEY_PRESETS = [
+  { id: 'flazz', name: 'Flazz BCA', color: '#0066b3', domains: ['bca.co.id/flazz', 'flazz'], cardBrand: 'FLAZZ' },
+  { id: 'mandiri_emoney', name: 'Mandiri e-Money', color: '#003d79', domains: ['bankmandiri.co.id/e-money', 'emoney'], cardBrand: 'E-MONEY' },
+  { id: 'bni_tapcash', name: 'BNI TapCash', color: '#e87500', domains: ['bni.co.id/tapcash', 'tapcash'], cardBrand: 'TAPCASH' },
+  { id: 'bri_brizzi', name: 'BRI Brizzi', color: '#00529c', domains: ['bri.co.id/brizzi', 'brizzi'], cardBrand: 'BRIZZI' },
+  { id: 'gopay', name: 'GoPay', color: '#00aed6', domains: ['gopay.co.id', 'gojek.com', 'gopay'], cardBrand: 'E-WALLET' },
+  { id: 'ovo', name: 'OVO', color: '#4c3494', domains: ['ovo.id', 'ovo'], cardBrand: 'E-WALLET' },
+  { id: 'dana', name: 'DANA', color: '#118eea', domains: ['dana.id', 'dana'], cardBrand: 'E-WALLET' },
+  { id: 'shopeepay', name: 'ShopeePay', color: '#ee4d2d', domains: ['shopee.co.id', 'shopeepay'], cardBrand: 'E-WALLET' },
+  { id: 'linkaja', name: 'LinkAja', color: '#e31b23', domains: ['linkaja.id', 'linkaja'], cardBrand: 'E-WALLET' },
+  { id: 'jakcard', name: 'JakCard Bank DKI', color: '#ea1d24', domains: ['bankdki.co.id/jakcard', 'jakcard'], cardBrand: 'JAKCARD' },
+  { id: 'kmt', name: 'KMT KRL Commuter', color: '#c41230', domains: ['krl.co.id', 'kmt'], cardBrand: 'KMT' }
+]
+
 export const POPULAR_CARD_COLORS = [
   '#0056b3', // BCA Blue
   '#003d79', // Mandiri Navy

@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, memo } from 'react'
 import {
   FileText,
   Download,
@@ -43,7 +43,7 @@ function getDisplayFileSize(doc) {
   return sizes[hash % sizes.length]
 }
 
-export default function DocumentCard({
+function DocumentCard({
   doc,
   viewMode = 'preview', // 'preview' | 'hide'
   onOpen,
@@ -260,3 +260,5 @@ export default function DocumentCard({
     </article>
   )
 }
+
+export default memo(DocumentCard)

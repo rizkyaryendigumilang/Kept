@@ -9,6 +9,7 @@ export {
   KeyRound,
   Lock,
   LogOut,
+  Mail,
   Menu,
   MoreHorizontal,
   Plus,
@@ -58,5 +59,23 @@ export {
   ShieldAlert,
   QrCode,
   MoreVertical,
-  ExternalLink
+  ExternalLink,
+  FileSpreadsheet,
+  RotateCcw,
+  Share2,
+  Send,
+  Flame,
+  Timer,
+  CheckCheck,
+  Building2,
+  Key,
+  HeartPulse,
+  Gift,
+  Tag,
+  Radio,
+  Layers,
+  Grid,
+  Cpu,
+  Info
 } from 'lucide-react'
+

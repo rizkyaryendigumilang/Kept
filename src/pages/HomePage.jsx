@@ -1,4 +1,4 @@
-import { ChevronRight, CreditCard, KeyRound, FileText, AlertTriangle } from '../components/Icons'
+import { ChevronRight, CreditCard, KeyRound, FileText, AlertTriangle, Sparkles, Star, X } from '../components/Icons'
 import SiteLogo from '../components/SiteLogo'
 import StatCard from '../components/StatCard'
 import { haptic } from '../lib/haptics'
@@ -10,8 +10,12 @@ export default function HomePage({
   favorites = [],
   recent = [],
   expiryAlerts = [],
+  suggestedFavorite = null,
+  onToggleFavorite,
+  onDismissSuggestion,
   onNavigate,
   onOpenItem,
+  onOpenAlerts,
   onAdd,
   lang = 'id'
 }) {
@@ -28,15 +32,46 @@ export default function HomePage({
 
   return (
     <div className="page-shell">
-      {/* Expiry Reminders Banner (Prominent on Home) */}
+      {/* Hero Overview */}
+      <section className="hero-row">
+        <div>
+          <div className="eyebrow">{t('overview')}</div>
+          <h1>{greeting}, {displayName || 'there'}.</h1>
+          <p>{t('private_space_ready')}</p>
+        </div>
+        <button
+          className="quick-add pill-button"
+          onClick={() => {
+            haptic('light')
+            onAdd()
+          }}
+        >
+          <span>+</span> {t('add_item')}
+        </button>
+      </section>
+
+      {/* Compact Expiry Attention Widget in Overview */}
       {expiryAlerts.length > 0 && (
-        <section className="expiry-reminder-container" aria-label={t('expiry_alert_title')}>
+        <section className="expiry-reminder-container" aria-label={t('expiry_compact_heading')}>
           <div className="expiry-reminder-header">
             <div className="expiry-reminder-title-wrap">
-              <AlertTriangle size={17} />
-              <strong>{t('expiry_alert_title')}</strong>
+              <AlertTriangle size={15} />
+              <strong>{t('expiry_compact_heading')}</strong>
+              <span className="expiry-reminder-count">{expiryAlerts.length}</span>
             </div>
-            <span className="expiry-reminder-count">{expiryAlerts.length}</span>
+            {onOpenAlerts && (
+              <button
+                type="button"
+                className="expiry-reminder-action-link"
+                onClick={() => {
+                  haptic('light')
+                  onOpenAlerts()
+                }}
+              >
+                <span>{t('expiry_view_in_alerts')}</span>
+                <ChevronRight size={13} />
+              </button>
+            )}
           </div>
 
           <div className="expiry-reminder-list">
@@ -57,7 +92,7 @@ export default function HomePage({
                 >
                   <div className="expiry-item-left">
                     <div className={`expiry-item-icon ${isExpired ? 'danger' : ''}`}>
-                      {isCard ? <CreditCard size={15} /> : <FileText size={15} />}
+                      {isCard ? <CreditCard size={14} /> : <FileText size={14} />}
                     </div>
                     <div className="expiry-item-text">
                       <strong>{alert.title}</strong>
@@ -74,24 +109,6 @@ export default function HomePage({
           </div>
         </section>
       )}
-
-      {/* Hero Overview */}
-      <section className="hero-row">
-        <div>
-          <div className="eyebrow">{t('overview')}</div>
-          <h1>{greeting}, {displayName || 'there'}.</h1>
-          <p>{t('private_space_ready')}</p>
-        </div>
-        <button
-          className="quick-add pill-button"
-          onClick={() => {
-            haptic('light')
-            onAdd()
-          }}
-        >
-          <span>+</span> {t('add_item')}
-        </button>
-      </section>
 
       {/* Stats Grid */}
       <section className="stats-grid three">
@@ -123,6 +140,50 @@ export default function HomePage({
           }}
         />
       </section>
+
+      {/* Smart Favorite Suggestion Banner based on frequent access */}
+      {suggestedFavorite && (
+        <div className="fav-suggestion-card">
+          <div className="fav-suggestion-left">
+            <div className="fav-suggestion-sparkle">
+              <Sparkles size={14} className="text-amber-400" />
+            </div>
+            <div className="fav-suggestion-text">
+              <strong>{t('fav_suggest_title')}</strong>
+              <span>
+                {lang === 'id'
+                  ? `Sering Anda buka: Sematkan "${suggestedFavorite.name}" ke Favorit?`
+                  : `Frequently opened: Pin "${suggestedFavorite.name}" to Favorites?`}
+              </span>
+            </div>
+          </div>
+          <div className="fav-suggestion-actions">
+            <button
+              type="button"
+              className="fav-suggestion-add-btn"
+              onClick={() => {
+                haptic('success')
+                onToggleFavorite(suggestedFavorite.id)
+              }}
+            >
+              <Star size={12} fill="currentColor" />
+              <span>{t('fav_suggest_btn')}</span>
+            </button>
+            <button
+              type="button"
+              className="fav-suggestion-dismiss-btn"
+              onClick={() => {
+                haptic('light')
+                onDismissSuggestion(suggestedFavorite.id)
+              }}
+              title="Abaikan saran"
+              aria-label="Abaikan saran"
+            >
+              <X size={13} />
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Favorites Rail */}
       <section className="section-block">

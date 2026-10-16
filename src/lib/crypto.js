@@ -13,7 +13,7 @@ const ARGON_OPTIONS = {
   maxmem: 128 * 1024 * 1024
 }
 
-function bytesToBase64(bytes) {
+export function bytesToBase64(bytes) {
   let binary = ''
   const chunk = 0x8000
   for (let i = 0; i < bytes.length; i += chunk) {
@@ -22,7 +22,7 @@ function bytesToBase64(bytes) {
   return btoa(binary)
 }
 
-function base64ToBytes(value) {
+export function base64ToBytes(value) {
   const binary = atob(value)
   const bytes = new Uint8Array(binary.length)
   for (let i = 0; i < binary.length; i += 1) bytes[i] = binary.charCodeAt(i)
@@ -42,7 +42,16 @@ export function deriveVaultKey(masterPassword, saltBase64) {
   return argon2id(utf8ToBytes(masterPassword), salt, ARGON_OPTIONS)
 }
 
+const aesKeyCache = new WeakMap()
+
 async function importAesKey(rawKey) {
+  if (rawKey && typeof rawKey === 'object') {
+    const cached = aesKeyCache.get(rawKey)
+    if (cached) return cached
+    const key = await crypto.subtle.importKey('raw', rawKey, { name: 'AES-GCM' }, false, ['encrypt', 'decrypt'])
+    aesKeyCache.set(rawKey, key)
+    return key
+  }
   return crypto.subtle.importKey('raw', rawKey, { name: 'AES-GCM' }, false, ['encrypt', 'decrypt'])
 }
 
@@ -148,3 +157,65 @@ export async function unwrapMasterKeyWithRecovery(envelope, recoveryKey) {
   return new Uint8Array(plaintext)
 }
 
+export async function deriveCustomBackupKey(password, saltBytes) {
+  const baseKey = await crypto.subtle.importKey(
+    'raw',
+    textEncoder.encode(password),
+    { name: 'PBKDF2' },
+    false,
+    ['deriveKey']
+  )
+  return crypto.subtle.deriveKey(
+    {
+      name: 'PBKDF2',
+      salt: saltBytes,
+      iterations: 100000,
+      hash: 'SHA-256'
+    },
+    baseKey,
+    { name: 'AES-GCM', length: 256 },
+    false,
+    ['encrypt', 'decrypt']
+  )
+}
+
+export async function encryptCustomBackup(data, password) {
+  const salt = crypto.getRandomValues(new Uint8Array(16))
+  const iv = crypto.getRandomValues(new Uint8Array(12))
+  const key = await deriveCustomBackupKey(password, salt)
+  const encoded = textEncoder.encode(JSON.stringify(data))
+  const cipher = await crypto.subtle.encrypt(
+    { name: 'AES-GCM', iv },
+    key,
+    encoded
+  )
+  return {
+    app: 'kept',
+    format: 'KEPT_ENCRYPTED_BACKUP',
+    version: 1,
+    exported_at: new Date().toISOString(),
+    item_count: Array.isArray(data) ? data.length : (data?.items?.length || 1),
+    salt: bytesToBase64(salt),
+    iv: bytesToBase64(iv),
+    ciphertext: bytesToBase64(new Uint8Array(cipher))
+  }
+}
+
+export async function decryptCustomBackup(envelope, password) {
+  if (!envelope?.salt || !envelope?.iv || !envelope?.ciphertext) {
+    throw new Error('Format file cadangan .kept tidak valid.')
+  }
+  const salt = base64ToBytes(envelope.salt)
+  const iv = base64ToBytes(envelope.iv)
+  const key = await deriveCustomBackupKey(password, salt)
+  try {
+    const plaintext = await crypto.subtle.decrypt(
+      { name: 'AES-GCM', iv },
+      key,
+      base64ToBytes(envelope.ciphertext)
+    )
+    return JSON.parse(textDecoder.decode(plaintext))
+  } catch {
+    throw new Error('Kata sandi cadangan salah atau file cadangan rusak.')
+  }
+}

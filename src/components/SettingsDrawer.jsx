@@ -26,11 +26,15 @@ import {
   BadgeCheck,
   Calendar,
   Camera,
-  Image
+  Trash2,
+  Image,
+  Flame
 } from './Icons'
 
 const AvatarCropModal = lazy(() => import('./AvatarCropModal'))
 import AnimatedHamburger, { HAMBURGER_STYLES } from './AnimatedHamburger'
+import PwaInstallCard from './PwaInstallCard'
+import TrashManager from './TrashManager'
 import { haptic } from '../lib/haptics'
 import { getTranslation } from '../lib/i18n'
 
@@ -54,6 +58,15 @@ export default function SettingsDrawer({
   vaultKey,
   items = [],
   documents = [],
+  trashedItems = [],
+  onRestoreItem,
+  onPermanentDelete,
+  onEmptyTrash,
+  privacyMaskEnabled = true,
+  onTogglePrivacyMask,
+  installPrompt,
+  onPromptInstall,
+  onOpenShareSecret,
   isOnline = true,
   pendingSyncCount = 0,
   onTheme,
@@ -427,6 +440,13 @@ export default function SettingsDrawer({
       icon: Bell
     },
     {
+      id: 'trash',
+      label: t('menu_trash'),
+      desc: `${trashedItems.length} ` + (lang === 'id' ? 'item di tempat sampah' : 'items in recycle bin'),
+      icon: Trash2,
+      badge: trashedItems.length > 0 ? trashedItems.length : null
+    },
+    {
       id: 'help',
       label: t('menu_help'),
       desc: t('menu_help_desc'),
@@ -559,7 +579,12 @@ export default function SettingsDrawer({
                         <Icon size={18} strokeWidth={1.8} />
                       </div>
                       <div className="category-row-text">
-                        <strong className="category-row-title">{cat.label}</strong>
+                        <div className="flex items-center gap-xs">
+                          <strong className="category-row-title">{cat.label}</strong>
+                          {cat.badge && (
+                            <span className="category-row-badge">{cat.badge}</span>
+                          )}
+                        </div>
                         <span className="category-row-desc">{cat.desc}</span>
                       </div>
                       <ChevronRight size={16} className="category-row-chevron" />
@@ -567,6 +592,26 @@ export default function SettingsDrawer({
                   )
                 })}
               </div>
+
+              {onOpenShareSecret && (
+                <button
+                  type="button"
+                  className="drawer-action-card secure-share-card mt-sm"
+                  onClick={() => {
+                    onClose()
+                    onOpenShareSecret()
+                  }}
+                >
+                  <div className="drawer-action-icon flame-icon">
+                    <Flame size={17} />
+                  </div>
+                  <div className="drawer-action-text">
+                    <strong>{t('share_secret_menu_title')}</strong>
+                    <span>{t('share_secret_btn')}</span>
+                  </div>
+                  <ChevronRight size={16} className="drawer-arrow" />
+                </button>
+              )}
 
               {/* Sign Out Button */}
               <div className="drawer-signout-wrap">
@@ -702,6 +747,14 @@ export default function SettingsDrawer({
                   ))}
                 </div>
               </div>
+
+              {/* PWA Home Screen Education Card */}
+              <PwaInstallCard
+                t={t}
+                lang={lang}
+                installPrompt={installPrompt}
+                onPromptInstall={onPromptInstall}
+              />
             </div>
           )}
 
@@ -837,6 +890,29 @@ export default function SettingsDrawer({
                     {biometricError && <div className="feedback error">{biometricError}</div>}
                   </div>
                 )}
+              </div>
+
+              {/* App Switcher Privacy Mask */}
+              <div className="subpage-card">
+                <div className="subpage-card-heading">
+                  <strong>{t('sec_privacy_mask_title')}</strong>
+                  <span>{t('sec_privacy_mask_desc')}</span>
+                </div>
+                <label className="toggle-row">
+                  <div>
+                    <strong>{lang === 'id' ? 'Proteksi App Switcher' : 'App Switcher Privacy Mask'}</strong>
+                    <span>
+                      {lang === 'id'
+                        ? 'Samarkan layar brankas saat berpindah aplikasi atau multitasking'
+                        : 'Blur vault screen when switching apps'}
+                    </span>
+                  </div>
+                  <input
+                    type="checkbox"
+                    checked={privacyMaskEnabled}
+                    onChange={(e) => onTogglePrivacyMask && onTogglePrivacyMask(e.target.checked)}
+                  />
+                </label>
               </div>
 
               {/* Perangkat & Sesi */}
@@ -981,6 +1057,25 @@ export default function SettingsDrawer({
                     <span className="stat-mini-label">{t('backup_stored_docs')}</span>
                   </div>
                 </div>
+              </div>
+
+              {/* Export Backup Card */}
+              <div className="subpage-card">
+                <div className="subpage-card-heading">
+                  <strong>{t('backup_export_card_title')}</strong>
+                  <span>{t('backup_export_card_desc')}</span>
+                </div>
+
+                <button
+                  type="button"
+                  className="primary-button pill-button"
+                  onClick={() => {
+                    onClose()
+                    onExport()
+                  }}
+                >
+                  <Download size={14} /> {t('backup_export_btn')}
+                </button>
               </div>
 
               {/* Restore */}
@@ -1187,6 +1282,19 @@ export default function SettingsDrawer({
                   </div>
                 )}
               </div>
+            </div>
+          )}
+
+          {/* SUBPAGE: TRASH & RECYCLE BIN */}
+          {activeSubpage === 'trash' && (
+            <div className="drawer-subpage-view">
+              <TrashManager
+                trashedItems={trashedItems}
+                onRestoreItem={onRestoreItem}
+                onPermanentDelete={onPermanentDelete}
+                onEmptyTrash={onEmptyTrash}
+                lang={lang}
+              />
             </div>
           )}
 

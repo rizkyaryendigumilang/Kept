@@ -103,13 +103,40 @@ export default function AuthScreen({ lang = 'id' }) {
     setMessage('')
 
     try {
-      const { error: oauthError } =
+      const { data, error: oauthError } =
         await supabase.auth.signInWithOAuth({
           provider: 'google',
-          options: { redirectTo: window.location.origin }
+          options: {
+            redirectTo: window.location.origin,
+            skipBrowserRedirect: true
+          }
         })
 
       if (oauthError) throw oauthError
+
+      if (data?.url) {
+        // Pre-check if provider is enabled before doing full-page navigation
+        try {
+          const res = await fetch(data.url)
+          if (!res.ok) {
+            const errData = await res.json().catch(() => ({}))
+            if (errData.msg?.includes('not enabled') || errData.error_code === 'validation_failed') {
+              throw new Error(
+                lang === 'id'
+                  ? 'Login Google belum diaktifkan di Supabase Dashboard (Authentication > Providers > Google). Anda dapat masuk menggunakan Email & Password di atas.'
+                  : 'Google Sign-In is not enabled in your Supabase Dashboard (Authentication > Providers > Google). Please use Email & Password above.'
+              )
+            }
+          }
+        } catch (fetchErr) {
+          if (fetchErr.message?.includes('Google belum diaktifkan') || fetchErr.message?.includes('not enabled in your Supabase')) {
+            throw fetchErr
+          }
+          // Normal CORS redirect exception when provider is active
+        }
+
+        window.location.href = data.url
+      }
     } catch (err) {
       setError(err.message || (lang === 'id' ? 'Gagal masuk dengan Google.' : 'Google sign-in failed.'))
       setBusy(false)

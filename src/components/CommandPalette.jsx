@@ -8,7 +8,8 @@ import {
   X,
   ChevronRight,
   ShieldCheck,
-  Lock
+  Lock,
+  Flame
 } from './Icons'
 import { haptic } from '../lib/haptics'
 import { getTranslation } from '../lib/i18n'
@@ -20,6 +21,7 @@ export default function CommandPalette({
   documents = [],
   banks = [],
   onOpenItem,
+  onShareSecret,
   showToast,
   lang = 'id'
 }) {
@@ -84,6 +86,20 @@ export default function CommandPalette({
       })
     }
 
+    if (!q || 'bagikan share rahasia secret sekali buka'.includes(q)) {
+      all.unshift({
+        id: 'action-share-secret',
+        name: t('share_secret_btn'),
+        type: 'action',
+        subtitle: t('share_secret_modal_desc'),
+        isAction: true,
+        action: () => {
+          onClose()
+          onShareSecret?.()
+        }
+      })
+    }
+
     if (!q) {
       return all.slice(0, 8)
     }
@@ -94,7 +110,7 @@ export default function CommandPalette({
         (entry.subtitle && entry.subtitle.toLowerCase().includes(q))
       )
     }).slice(0, 15)
-  }, [items, documents, banks, query])
+  }, [items, documents, banks, query, onShareSecret, lang])
 
   // Keyboard navigation
   useEffect(() => {
@@ -127,6 +143,10 @@ export default function CommandPalette({
   function handleSelect(item) {
     haptic('medium')
     onClose()
+    if (item.isAction && item.action) {
+      item.action()
+      return
+    }
     if (onOpenItem) {
       onOpenItem(item.raw)
     }
@@ -146,12 +166,14 @@ export default function CommandPalette({
   }
 
   function renderTypeIcon(type) {
+    if (type === 'action') return <Flame size={16} className="text-amber-500" />
     if (type === 'card') return <CreditCard size={16} />
     if (type === 'document') return <FileText size={16} />
     return <KeyRound size={16} />
   }
 
   function renderTypeBadge(type) {
+    if (type === 'action') return <span className="cmd-type-badge badge-action">Share</span>
     if (type === 'card') return <span className="cmd-type-badge badge-card">{t('type_card')}</span>
     if (type === 'document') return <span className="cmd-type-badge badge-doc">{t('type_document')}</span>
     return <span className="cmd-type-badge badge-pass">{t('type_password')}</span>

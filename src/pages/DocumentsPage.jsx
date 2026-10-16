@@ -10,7 +10,8 @@ import {
   QrCode,
   FileText,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  X
 } from '../components/Icons'
 import { DOCUMENT_CATEGORIES } from '../lib/documents'
 import { getTranslation } from '../lib/i18n'
@@ -43,9 +44,9 @@ export default function DocumentsPage({
     localStorage.setItem('kept_doc_view_mode', nextMode)
   }
 
-  // Filter documents by search and category
+  // Filter documents by search and category, pinning favorites to top
   const filtered = useMemo(() => {
-    return documents.filter((doc) => {
+    const list = documents.filter((doc) => {
       if (activeCategory !== 'all' && doc.category !== activeCategory) {
         return false
       }
@@ -59,6 +60,7 @@ export default function DocumentsPage({
 
       return nameMatch || ownerMatch || numMatch || noteMatch || typeMatch
     })
+    return [...list].sort((a, b) => (b.favorite ? 1 : 0) - (a.favorite ? 1 : 0))
   }, [documents, activeCategory, query])
 
   // Reset to page 1 when query or category changes
@@ -153,6 +155,19 @@ export default function DocumentsPage({
               placeholder={t('doc_search_placeholder')}
               onChange={(e) => setQuery(e.target.value)}
             />
+            {query && (
+              <button
+                type="button"
+                className="icon-button-subtle"
+                onClick={() => {
+                  haptic('light')
+                  setQuery('')
+                }}
+                aria-label="Hapus pencarian"
+              >
+                <X size={12} />
+              </button>
+            )}
           </div>
         </div>
       </div>

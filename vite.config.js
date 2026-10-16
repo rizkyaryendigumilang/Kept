@@ -10,7 +10,17 @@ export default defineConfig({
       devOptions: {
         enabled: false
       },
-      includeAssets: ['brand/kept-icon.png', 'brand/kept-logo.png', 'pwa-192.png', 'pwa-512.png'],
+      includeAssets: [
+        'brand/kept-icon.png',
+        'brand/kept-logo.png',
+        'pwa-192.png',
+        'pwa-512.png',
+        'pwa-maskable-512.png',
+        'apple-touch-icon.png',
+        'favicon.png',
+        'favicon-32x32.png',
+        'favicon-16x16.png'
+      ],
       manifest: {
         name: 'Kept',
         short_name: 'Kept',
@@ -21,7 +31,9 @@ export default defineConfig({
         start_url: '/',
         icons: [
           { src: '/pwa-192.png', sizes: '192x192', type: 'image/png' },
-          { src: '/pwa-512.png', sizes: '512x512', type: 'image/png' }
+          { src: '/pwa-512.png', sizes: '512x512', type: 'image/png' },
+          { src: '/pwa-maskable-512.png', sizes: '512x512', type: 'image/png', purpose: 'any maskable' },
+          { src: '/apple-touch-icon.png', sizes: '180x180', type: 'image/png' }
         ]
       }
     })

@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react'
-import { Fingerprint, Lock, ShieldCheck, AlertTriangle, X, Check, KeyRound } from './Icons'
+import { Fingerprint, Lock, ShieldCheck, AlertTriangle, X, Check, KeyRound, Mail } from './Icons'
 import PinKeypad from './PinKeypad'
 import { deriveVaultKey } from '../lib/crypto'
 import { verifyMasterKey, recoverMasterKey } from '../lib/vault'
+import { supabase } from '../lib/supabase'
 import {
   hasBiometricEnrollment,
   isBiometricSupported,
@@ -10,6 +11,7 @@ import {
 } from '../lib/biometric'
 import { isWeakPin, recordSecurityActivity } from '../lib/securityAudit'
 import { getTranslation } from '../lib/i18n'
+import { haptic } from '../lib/haptics'
 
 export default function UnlockScreen({
   profile,
@@ -34,7 +36,7 @@ export default function UnlockScreen({
   const [lockoutSeconds, setLockoutSeconds] = useState(0)
 
   // Recovery modal state
-  // 'choose_method' | 'biometric_recovery' | 'input_key' | 'set_new_pin' | 'emergency_reset'
+  // 'choose_method' | 'email_otp' | 'biometric_recovery' | 'input_key' | 'set_new_pin' | 'emergency_reset'
   const [recoveryStep, setRecoveryStep] = useState('choose_method')
   const [recoveryKey, setRecoveryKey] = useState('')
   const [recoveredMasterKey, setRecoveredMasterKey] = useState(null)
@@ -43,6 +45,12 @@ export default function UnlockScreen({
   const [recoveryBusy, setRecoveryBusy] = useState(false)
   const [recoveryError, setRecoveryError] = useState('')
   const [resetConfirmText, setResetConfirmText] = useState('')
+
+  // Email OTP Recovery state
+  const [otpCode, setOtpCode] = useState('')
+  const [otpSent, setOtpSent] = useState(false)
+  const [otpCooldown, setOtpCooldown] = useState(0)
+  const [showKeyAccordion, setShowKeyAccordion] = useState(false)
 
   const userId = user?.id
   const biometricReady =
@@ -65,6 +73,23 @@ export default function UnlockScreen({
     const timer = setInterval(checkLockout, 1000)
     return () => clearInterval(timer)
   }, [])
+
+  // Email OTP resend timer
+  useEffect(() => {
+    if (otpCooldown <= 0) return
+    const timer = setInterval(() => {
+      setOtpCooldown((prev) => (prev > 0 ? prev - 1 : 0))
+    }, 1000)
+    return () => clearInterval(timer)
+  }, [otpCooldown])
+
+  const maskedEmail = (() => {
+    const email = user?.email || ''
+    if (!email || !email.includes('@')) return email
+    const [name, domain] = email.split('@')
+    if (name.length <= 2) return `${name[0]}***@${domain}`
+    return `${name[0]}***${name[name.length - 1]}@${domain}`
+  })()
 
   useEffect(() => {
     setPin('')
@@ -180,6 +205,131 @@ export default function UnlockScreen({
     }
   }
 
+  // Graceful Supabase Auth error parser
+  function parseAuthError(err, context = 'send') {
+    if (typeof navigator !== 'undefined' && !navigator.onLine) {
+      return t('recovery_otp_network_error')
+    }
+    const msg = String(err?.message || '').toLowerCase()
+    const status = err?.status || err?.code
+
+    if (
+      status === 429 ||
+      msg.includes('rate limit') ||
+      msg.includes('rate_limit') ||
+      msg.includes('security purposes') ||
+      msg.includes('too many requests') ||
+      msg.includes('over_email_send_rate_limit')
+    ) {
+      return t('recovery_otp_rate_limited')
+    }
+
+    if (context === 'verify') {
+      if (
+        msg.includes('invalid') ||
+        msg.includes('expired') ||
+        msg.includes('token') ||
+        msg.includes('otp')
+      ) {
+        return t('recovery_otp_invalid_code')
+      }
+    }
+
+    return err?.message || (context === 'verify' ? t('recovery_otp_invalid_code') : t('recovery_otp_rate_limited'))
+  }
+
+  // Recovery Method: Email OTP
+  async function handleSendOtp() {
+    if (!user?.email) {
+      setRecoveryError('Email akun tidak ditemukan.')
+      return
+    }
+    setRecoveryBusy(true)
+    setRecoveryError('')
+    try {
+      const { error: otpErr } = await supabase.auth.signInWithOtp({
+        email: user.email
+      })
+      if (otpErr) throw otpErr
+      setOtpSent(true)
+      setOtpCooldown(60)
+      setRecoveryStep('email_otp')
+      haptic('medium')
+    } catch (err) {
+      haptic('error')
+      setRecoveryError(parseAuthError(err, 'send'))
+    } finally {
+      setRecoveryBusy(false)
+    }
+  }
+
+  async function handleVerifyOtp(e, codeToVerify) {
+    if (e) e.preventDefault()
+    const targetCode = String(codeToVerify !== undefined ? codeToVerify : otpCode).trim()
+    if (targetCode.length !== 6) {
+      setRecoveryError(t('recovery_otp_invalid_code'))
+      haptic('error')
+      return
+    }
+    setRecoveryBusy(true)
+    setRecoveryError('')
+    try {
+      const { data, error: verifyErr } = await supabase.auth.verifyOtp({
+        email: user.email,
+        token: targetCode,
+        type: 'email'
+      })
+      if (verifyErr) throw verifyErr
+
+      haptic('success')
+
+      // Attempt to silently retrieve biometric key if enrolled on this device
+      if (biometricReady) {
+        try {
+          const rawKey = await unlockWithBiometric(userId)
+          setRecoveredMasterKey(rawKey)
+        } catch {
+          // Device biometric cancelled or unavailable
+        }
+      }
+
+      setRecoveryStep('set_new_pin')
+    } catch (err) {
+      haptic('error')
+      setRecoveryError(parseAuthError(err, 'verify'))
+    } finally {
+      setRecoveryBusy(false)
+    }
+  }
+
+  function handleOtpChange(e) {
+    const rawVal = e.target.value.replace(/\D/g, '').slice(0, 6)
+    setOtpCode(rawVal)
+    if (rawVal.length > 0) {
+      haptic('light')
+    }
+    if (rawVal.length === 6 && !recoveryBusy) {
+      // Auto-submit instantly on 6th digit with 60ms debounce for UI paint
+      setTimeout(() => {
+        handleVerifyOtp(null, rawVal)
+      }, 60)
+    }
+  }
+
+  function handleOtpPaste(e) {
+    e.preventDefault()
+    const pasted = (e.clipboardData.getData('text') || '').replace(/\D/g, '').slice(0, 6)
+    if (pasted) {
+      setOtpCode(pasted)
+      haptic('medium')
+      if (pasted.length === 6 && !recoveryBusy) {
+        setTimeout(() => {
+          handleVerifyOtp(null, pasted)
+        }, 60)
+      }
+    }
+  }
+
   // Recovery Scenario 1: Re-authenticate with Biometric to set new PIN
   async function handleBiometricRecovery() {
     setRecoveryBusy(true)
@@ -230,7 +380,20 @@ export default function UnlockScreen({
 
     setRecoveryBusy(true)
     try {
-      await onRecoverMasterPassword(recoveredMasterKey, newPin, recoveryKey)
+      let keyToPass = recoveredMasterKey
+      // If user entered a recovery key manually and we don't have recoveredMasterKey yet
+      if (!keyToPass && recoveryKey.trim()) {
+        try {
+          keyToPass = await recoverMasterKey(profile, recoveryKey.trim())
+          setRecoveredMasterKey(keyToPass)
+        } catch (keyErr) {
+          setRecoveryError(keyErr.message || 'Recovery key tidak valid.')
+          setRecoveryBusy(false)
+          return
+        }
+      }
+
+      await onRecoverMasterPassword(keyToPass, newPin, recoveryKey.trim())
 
       localStorage.removeItem('kept_pin_failed_attempts')
       localStorage.removeItem('kept_pin_lockout_until')
@@ -240,7 +403,7 @@ export default function UnlockScreen({
       recordSecurityActivity({
         type: 'pin_changed',
         title: 'Security PIN Berhasil Diatur Ulang',
-        desc: 'Security PIN baru telah aktif setelah pemulihan akun.',
+        desc: 'Security PIN baru telah aktif setelah verifikasi akun.',
         level: 'success'
       })
 
@@ -280,8 +443,12 @@ export default function UnlockScreen({
     setRecoveredMasterKey(null)
     setNewPin('')
     setConfirmPin('')
+    setOtpCode('')
+    setOtpSent(false)
+    setOtpCooldown(0)
     setRecoveryError('')
     setResetConfirmText('')
+    setShowKeyAccordion(false)
   }
 
   return (
@@ -363,6 +530,28 @@ export default function UnlockScreen({
                 </p>
 
                 <div className="recovery-options-grid">
+                  {/* Primary Method: Email OTP */}
+                  <button
+                    type="button"
+                    className="recovery-option-card"
+                    onClick={() => {
+                      setRecoveryStep('email_otp')
+                      setRecoveryError('')
+                      if (!otpSent) {
+                        handleSendOtp()
+                      }
+                    }}
+                    disabled={recoveryBusy}
+                  >
+                    <div className="recovery-card-icon tone-purple">
+                      <Mail size={22} />
+                    </div>
+                    <div className="recovery-card-content">
+                      <strong>{t('recovery_email_otp_title')}</strong>
+                      <span>{t('recovery_email_otp_desc')}</span>
+                    </div>
+                  </button>
+
                   {/* Scenario 1: Biometric Access */}
                   {biometricReady ? (
                     <button
@@ -436,6 +625,88 @@ export default function UnlockScreen({
 
                 {recoveryError && <div className="feedback error mt-sm">{recoveryError}</div>}
               </div>
+            )}
+
+            {/* STEP: EMAIL OTP VERIFICATION */}
+            {recoveryStep === 'email_otp' && (
+              <form onSubmit={handleVerifyOtp} className="modal-body-stack">
+                <p className="modal-description">
+                  {t('recovery_email_otp_desc_flow')}
+                </p>
+
+                <div className="otp-registered-email-card">
+                  <div className="flex items-center gap-sm">
+                    <Mail size={16} className="tone-muted" />
+                    <span>{t('recovery_email_registered_label')}</span>
+                  </div>
+                  <span className="email-badge">{maskedEmail}</span>
+                </div>
+
+                {otpSent && (
+                  <div className="feedback info">
+                    {t('recovery_otp_sent_notice').replace('{email}', maskedEmail)}
+                  </div>
+                )}
+
+                <label className="field">
+                  <span>{t('recovery_enter_otp_label')}</span>
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    autoComplete="one-time-code"
+                    pattern="[0-9]*"
+                    maxLength={6}
+                    value={otpCode}
+                    onChange={handleOtpChange}
+                    onPaste={handleOtpPaste}
+                    placeholder={t('recovery_enter_otp_ph')}
+                    className="otp-code-input"
+                    autoFocus
+                    required
+                  />
+                </label>
+
+                {recoveryBusy && otpCode.length === 6 && (
+                  <div className="feedback info text-xs flex items-center justify-center gap-xs">
+                    <span>{t('recovery_otp_verifying_auto')}</span>
+                  </div>
+                )}
+
+                <div className="otp-resend-row">
+                  <span>
+                    {otpCooldown > 0
+                      ? t('recovery_resend_in').replace('{n}', otpCooldown)
+                      : ''}
+                  </span>
+                  <button
+                    type="button"
+                    className="text-button-link font-medium"
+                    onClick={handleSendOtp}
+                    disabled={recoveryBusy || otpCooldown > 0}
+                  >
+                    {t('recovery_resend_btn')}
+                  </button>
+                </div>
+
+                {recoveryError && <div className="feedback error">{recoveryError}</div>}
+
+                <div className="button-row">
+                  <button
+                    type="button"
+                    className="secondary-button"
+                    onClick={() => setRecoveryStep('choose_method')}
+                  >
+                    {t('recovery_back_btn')}
+                  </button>
+                  <button
+                    type="submit"
+                    className="primary-button"
+                    disabled={recoveryBusy || otpCode.trim().length !== 6}
+                  >
+                    {recoveryBusy ? t('recovery_verifying_otp') : t('recovery_verify_otp_btn')}
+                  </button>
+                </div>
+              </form>
             )}
 
             {/* STEP: INPUT EMERGENCY RECOVERY KEY */}
@@ -513,6 +784,32 @@ export default function UnlockScreen({
                     required
                   />
                 </label>
+
+                {!recoveredMasterKey && (
+                  <div className="recovery-optional-key-box mt-xs">
+                    <button
+                      type="button"
+                      className="text-button-link text-xs flex items-center gap-xs"
+                      onClick={() => setShowKeyAccordion(!showKeyAccordion)}
+                    >
+                      <KeyRound size={13} />
+                      <span>{t('recovery_with_key_toggle')}</span>
+                    </button>
+                    {showKeyAccordion && (
+                      <div className="mt-xs">
+                        <input
+                          value={recoveryKey}
+                          onChange={(e) => setRecoveryKey(e.target.value)}
+                          placeholder={t('recovery_key_placeholder')}
+                          className="font-mono text-sm"
+                        />
+                        <div className="field-hint text-xs mt-xs">
+                          {t('recovery_key_optional_hint')}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
 
                 {recoveryError && <div className="feedback error">{recoveryError}</div>}
 

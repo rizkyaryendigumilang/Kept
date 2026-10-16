@@ -1,0 +1,8 @@
+{
+  "appId": "com.kept.app",
+  "appName": "Kept",
+  "webDir": "dist",
+  "server": {
+    "androidScheme": "https"
+  }
+}

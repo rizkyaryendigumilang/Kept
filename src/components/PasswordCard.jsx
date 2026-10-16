@@ -1,8 +1,8 @@
-import { Eye, EyeOff, KeyRound, Copy, Check } from './Icons'
+import { Eye, EyeOff, KeyRound, Copy, Check, Star } from './Icons'
 import SiteLogo from './SiteLogo'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, memo } from 'react'
 
-export default function PasswordCard({ item, password, onOpen, lang = 'id' }) {
+function PasswordCard({ item, password, onOpen, lang = 'id' }) {
   const [revealed, setRevealed] = useState(false)
   const [copied, setCopied] = useState(false)
   useEffect(() => {
@@ -23,7 +23,12 @@ export default function PasswordCard({ item, password, onOpen, lang = 'id' }) {
       <div className="item-icon tone-neutral">{item.url ? <SiteLogo url={item.url} name={item.name} size={20} radius={6} /> : <KeyRound size={18} />}</div>
       <div className="item-copy">
         <div className="item-title-row">
-          <strong>{item.name}</strong>
+          <div className="flex items-center gap-xs">
+            <strong>{item.name}</strong>
+            {item.favorite && (
+              <Star size={12} className="text-amber-400 fill-amber-400" title={lang === 'id' ? 'Item Favorit' : 'Favorite Item'} />
+            )}
+          </div>
           <span className="category-chip">{item.categoryLabel}</span>
         </div>
         <span className="item-secondary">{item.username || (lang === 'id' ? 'Tanpa username' : 'No username')}</span>
@@ -40,3 +45,5 @@ export default function PasswordCard({ item, password, onOpen, lang = 'id' }) {
     </article>
   )
 }
+
+export default memo(PasswordCard)

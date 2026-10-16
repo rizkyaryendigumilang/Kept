@@ -3,16 +3,21 @@ import Modal from '../components/Modal'
 import SiteLogo from '../components/SiteLogo'
 import {
   Copy,
+  Check,
   Eye,
   EyeOff,
   Pencil,
   Trash2,
   Star,
   Plus,
+  History,
+  RotateCcw,
+  Flame,
   X
 } from '../components/Icons'
 import { BANK_PRESETS } from '../lib/banks'
 import ConfirmToast from '../components/ConfirmToast'
+import BreachCheckerBadge from '../components/BreachCheckerBadge'
 import { getTranslation } from '../lib/i18n'
 import { haptic } from '../lib/haptics'
 
@@ -22,6 +27,7 @@ export default function ItemModal({
   onDelete,
   onSave,
   onToggleFavorite,
+  onShareSecret,
   lang = 'id'
 }) {
   const t = (k) => getTranslation(k, lang)
@@ -67,15 +73,33 @@ export default function ItemModal({
         secret: Boolean(secret)
       }))
 
+    let passwordHistory = Array.isArray(form.password_history)
+      ? [...form.password_history]
+      : Array.isArray(item.password_history)
+        ? [...item.password_history]
+        : []
+
+    if (item.password && form.password && form.password !== item.password) {
+      if (!passwordHistory.length || passwordHistory[0].password !== item.password) {
+        passwordHistory.unshift({
+          password: item.password,
+          changed_at: new Date().toISOString()
+        })
+        if (passwordHistory.length > 5) passwordHistory = passwordHistory.slice(0, 5)
+      }
+    }
+
     onSave({
       ...form,
       name: String(form.name).trim(),
-      custom_fields: cleanedCustomFields
+      custom_fields: cleanedCustomFields,
+      password_history: passwordHistory
     })
 
     setForm((current) => ({
       ...current,
-      custom_fields: cleanedCustomFields
+      custom_fields: cleanedCustomFields,
+      password_history: passwordHistory
     }))
 
     setEditing(false)
@@ -203,6 +227,19 @@ export default function ItemModal({
             </button>
           )}
 
+          {onShareSecret && !editing && (
+            <button
+              type="button"
+              className="action-pill-btn share"
+              onClick={() => onShareSecret(item)}
+              title={t('share_secret_btn')}
+              aria-label={t('share_secret_btn')}
+            >
+              <Flame size={14} />
+              <span>{t('share_secret_btn')}</span>
+            </button>
+          )}
+
           <button
             type="button"
             className="action-pill-btn delete"
@@ -221,6 +258,7 @@ export default function ItemModal({
           item={form}
           visibleSecrets={visibleSecrets}
           toggleSecret={toggleSecret}
+          lang={lang}
         />
       ) : (
         <EditForm
@@ -231,6 +269,7 @@ export default function ItemModal({
           addCustomField={addCustomField}
           updateCustomField={updateCustomField}
           removeCustomField={removeCustomField}
+          lang={lang}
         />
       )}
 
@@ -298,6 +337,7 @@ function normalizeItem(item) {
     color: item.color || '',
 
     note: item.note || '',
+    password_history: Array.isArray(item.password_history) ? item.password_history : [],
 
     custom_fields: (item.custom_fields || []).map((field) => ({
       id: field.id || crypto.randomUUID(),
@@ -392,7 +432,8 @@ function Field({
 function ReadOnly({
   item,
   visibleSecrets,
-  toggleSecret
+  toggleSecret,
+  lang = 'id'
 }) {
   if (item.item_type === 'bank_card') {
     return (
@@ -516,16 +557,20 @@ function ReadOnly({
         disabled
       />
 
-      <Field
-        label="Password"
-        value={item.password}
-        secret
-        visible={visibleSecrets.password}
-        onToggle={() =>
-          toggleSecret('password')
-        }
-        disabled
-      />
+      <div className="field-with-breach">
+        <Field
+          label="Password"
+          value={item.password}
+          secret
+          visible={visibleSecrets.password}
+          onToggle={() =>
+            toggleSecret('password')
+          }
+          disabled
+        />
+        <BreachCheckerBadge password={item.password} lang={lang} />
+        <PasswordHistoryViewer history={item.password_history} lang={lang} />
+      </div>
 
       <Field
         label="URL"
@@ -571,7 +616,8 @@ function EditForm({
   toggleSecret,
   addCustomField,
   updateCustomField,
-  removeCustomField
+  removeCustomField,
+  lang = 'id'
 }) {
   if (item.item_type === 'bank_card') {
     return (
@@ -747,20 +793,29 @@ function EditForm({
         }
       />
 
-      <Field
-        label="Password"
-        value={item.password}
-        secret
-        visible={
-          visibleSecrets.edit_password
-        }
-        onToggle={() =>
-          toggleSecret('edit_password')
-        }
-        onChange={(value) =>
-          update('password', value)
-        }
-      />
+      <div className="field-with-breach">
+        <Field
+          label="Password"
+          value={item.password}
+          secret
+          visible={
+            visibleSecrets.edit_password
+          }
+          onToggle={() =>
+            toggleSecret('edit_password')
+          }
+          onChange={(value) =>
+            update('password', value)
+          }
+        />
+        <BreachCheckerBadge password={item.password} lang={lang} />
+        <PasswordHistoryViewer
+          history={item.password_history}
+          onRestorePassword={(val) => update('password', val)}
+          isEditing
+          lang={lang}
+        />
+      </div>
 
       <Field
         label="URL"
@@ -1012,6 +1067,110 @@ function CustomFieldsEditor({
               </div>
             )
           })}
+        </div>
+      )}
+    </div>
+  )
+}
+
+function PasswordHistoryViewer({
+  history = [],
+  onRestorePassword,
+  isEditing = false,
+  lang = 'id'
+}) {
+  const [open, setOpen] = useState(false)
+  const [revealedIndex, setRevealedIndex] = useState(null)
+  const [copiedIndex, setCopiedIndex] = useState(null)
+  const t = (k) => getTranslation(k, lang)
+
+  if (!history || history.length === 0) return null
+
+  function formatHistoryTime(iso) {
+    try {
+      const d = new Date(iso)
+      return d.toLocaleDateString(lang === 'id' ? 'id-ID' : 'en-US', {
+        day: 'numeric',
+        month: 'short',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      })
+    } catch {
+      return iso
+    }
+  }
+
+  function handleCopy(pass, idx) {
+    navigator.clipboard?.writeText(pass)
+    setCopiedIndex(idx)
+    setTimeout(() => setCopiedIndex(null), 1800)
+  }
+
+  return (
+    <div className="password-history-container">
+      <button
+        type="button"
+        className="password-history-toggle-btn"
+        onClick={() => setOpen(!open)}
+      >
+        <History size={12} />
+        <span>{t('pass_history_title')} ({history.length})</span>
+      </button>
+
+      {open && (
+        <div className="password-history-dropdown">
+          <div className="password-history-header">
+            <span>{t('pass_history_desc')}</span>
+          </div>
+          <div className="password-history-list">
+            {history.map((entry, idx) => {
+              const isRevealed = revealedIndex === idx
+              const isCopied = copiedIndex === idx
+              return (
+                <div key={idx} className="password-history-item">
+                  <div className="history-item-left">
+                    <span className="history-item-date">{formatHistoryTime(entry.changed_at)}</span>
+                    <span className="history-item-val font-mono">
+                      {isRevealed ? entry.password : '••••••••••••'}
+                    </span>
+                  </div>
+                  <div className="history-item-actions">
+                    <button
+                      type="button"
+                      className="history-micro-btn"
+                      onClick={() => setRevealedIndex(isRevealed ? null : idx)}
+                      title={isRevealed ? 'Sembunyikan' : 'Lihat'}
+                    >
+                      {isRevealed ? <EyeOff size={11} /> : <Eye size={11} />}
+                    </button>
+                    <button
+                      type="button"
+                      className="history-micro-btn"
+                      onClick={() => handleCopy(entry.password, idx)}
+                      title="Salin"
+                    >
+                      {isCopied ? <Check size={11} className="text-emerald" /> : <Copy size={11} />}
+                    </button>
+                    {isEditing && onRestorePassword && (
+                      <button
+                        type="button"
+                        className="history-restore-pill"
+                        onClick={() => {
+                          haptic('light')
+                          onRestorePassword(entry.password)
+                        }}
+                        title={t('pass_history_restore')}
+                      >
+                        <RotateCcw size={10} />
+                        <span>{t('pass_history_restore')}</span>
+                      </button>
+                    )}
+                  </div>
+                </div>
+              )
+            })}
+          </div>
         </div>
       )}
     </div>

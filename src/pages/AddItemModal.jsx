@@ -3,6 +3,7 @@ import Modal from '../components/Modal'
 import SiteLogo from '../components/SiteLogo'
 import { Eye, EyeOff } from '../components/Icons'
 import { BANK_PRESETS } from '../lib/banks'
+import BreachCheckerBadge from '../components/BreachCheckerBadge'
 import { getTranslation } from '../lib/i18n'
 
 const environmentOptions = [
@@ -237,14 +238,17 @@ export default function AddItemModal({
               }
             />
 
-            <Field
-              label={t('field_password')}
-              value={form.password}
-              onChange={(value) =>
-                set('password', value)
-              }
-              secret
-            />
+            <div className="field-with-breach">
+              <Field
+                label={t('field_password')}
+                value={form.password}
+                onChange={(value) =>
+                  set('password', value)
+                }
+                secret
+              />
+              <BreachCheckerBadge password={form.password} lang={lang} />
+            </div>
 
             <label className="field">
               <span>{t('field_url')}</span>

@@ -6,6 +6,7 @@ import BottomNav from './components/BottomNav'
 import AddSheet from './components/AddSheet'
 import HomePage from './pages/HomePage'
 import Loader from './components/Loader'
+import PrivacyMask from './components/PrivacyMask'
 
 // Code splitting: Lazy-loaded pages & modals for fast initial load
 const ResetPasswordScreen = lazy(() => import('./components/ResetPasswordScreen'))
@@ -18,8 +19,16 @@ const AlertsPanel = lazy(() => import('./pages/AlertsPanel'))
 const ItemModal = lazy(() => import('./pages/ItemModal'))
 const AddItemModal = lazy(() => import('./pages/AddItemModal'))
 const AddDocumentModal = lazy(() => import('./pages/AddDocumentModal'))
+const AddCardModal = lazy(() => import('./components/AddCardModal'))
+const CardDetailModal = lazy(() => import('./components/CardDetailModal'))
+const CardBarcodeModal = lazy(() => import('./components/CardBarcodeModal'))
 const DocumentDetailModal = lazy(() => import('./pages/DocumentDetailModal'))
 const CommandPalette = lazy(() => import('./components/CommandPalette'))
+const ExportModal = lazy(() => import('./components/ExportModal'))
+const ImportKeptModal = lazy(() => import('./components/ImportKeptModal'))
+const ShareSecretModal = lazy(() => import('./components/ShareSecretModal'))
+const ViewSharedSecretScreen = lazy(() => import('./components/ViewSharedSecretScreen'))
+import { parseShareHash } from './lib/secureShare'
 import { checkDocumentExpiry } from './lib/documents'
 import { supabase } from './lib/supabase'
 import {
@@ -56,7 +65,14 @@ const CATEGORY_LABELS = {
   web: 'Web Password',
   project: 'Project Password',
   secure_note: 'Secure Note',
-  bank_card: 'Account',
+  bank_card: 'Kartu',
+  card: 'Kartu (My Cards)',
+  bank: 'Account',
+  access: 'Kartu Akses',
+  membership: 'Membership',
+  health: 'Kesehatan & Asuransi',
+  voucher: 'Voucher & Kupon',
+  other: 'Kartu Lainnya',
   document: 'Dokumen',
   '01_identity': 'Identitas & Kependudukan',
   '02_education': 'Pendidikan & Karir',
@@ -86,6 +102,9 @@ export default function App() {
   const [showAdd, setShowAdd] = useState(false)
   const [addMode, setAddMode] = useState(null)
   const [docAddModalOpen, setDocAddModalOpen] = useState(false)
+  const [cardAddModalOpen, setCardAddModalOpen] = useState(false)
+  const [cardBarcodeModalItem, setCardBarcodeModalItem] = useState(null)
+  const [cardEditModalItem, setCardEditModalItem] = useState(null)
   const [selectedItem, setSelectedItem] = useState(null)
   const [alertsOpen, setAlertsOpen] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
@@ -98,8 +117,96 @@ export default function App() {
   const [activeRecoveryKey, setActiveRecoveryKey] = useState('')
   const [lang, setLang] = useState(() => localStorage.getItem('kept_language') || 'id')
   const [searchOpen, setSearchOpen] = useState(false)
+  const [exportModalOpen, setExportModalOpen] = useState(false)
+  const [importKeptEnvelope, setImportKeptEnvelope] = useState(null)
 
   const bootstrappedUserRef = useRef(null)
+
+  const [privacyMaskEnabled, setPrivacyMaskEnabled] = useState(
+    () => localStorage.getItem('kept_privacy_mask') !== 'false'
+  )
+  const [installPrompt, setInstallPrompt] = useState(null)
+  const [dismissedFavSuggestions, setDismissedFavSuggestions] = useState(() => {
+    try {
+      return new Set(JSON.parse(localStorage.getItem('kept_dismissed_fav_suggestions') || '[]'))
+    } catch {
+      return new Set()
+    }
+  })
+
+  // Self-Destructing Secure Share States
+  const [shareParams, setShareParams] = useState(() => parseShareHash(window.location.hash))
+  const [shareModalData, setShareModalData] = useState(null)
+
+  useEffect(() => {
+    const handleHashChange = () => {
+      const parsed = parseShareHash(window.location.hash)
+      if (parsed) {
+        setShareParams(parsed)
+      }
+    }
+    window.addEventListener('hashchange', handleHashChange)
+    return () => window.removeEventListener('hashchange', handleHashChange)
+  }, [])
+
+  function handleOpenShareSecret(item = null) {
+    if (item) {
+      let secretText = item.password || item.card_number || item.notes || item.pin || ''
+      let title = item.name || item.bank_name || 'Rahasia'
+      if (item.username && item.password) {
+        secretText = `Username: ${item.username}\nPassword: ${item.password}${item.url ? `\nURL: ${item.url}` : ''}${item.notes ? `\nCatatan: ${item.notes}` : ''}`
+      } else if (item.item_type === 'bank_card') {
+        secretText = `Bank: ${item.bank_name || ''}\nNo. Rekening: ${item.account_number || ''}\nNo. Kartu: ${item.card_number || ''}\nPemilik: ${item.account_owner || ''}`
+      }
+      setShareModalData({ isOpen: true, initialTitle: title, initialContent: secretText })
+    } else {
+      setShareModalData({ isOpen: true, initialTitle: '', initialContent: '' })
+    }
+  }
+
+  function handleTogglePrivacyMask() {
+    setPrivacyMaskEnabled((prev) => {
+      const next = !prev
+      localStorage.setItem('kept_privacy_mask', String(next))
+      return next
+    })
+  }
+
+  function handleDismissFavSuggestion(itemId) {
+    setDismissedFavSuggestions((prev) => {
+      const next = new Set(prev)
+      next.add(itemId)
+      localStorage.setItem('kept_dismissed_fav_suggestions', JSON.stringify([...next]))
+      return next
+    })
+  }
+
+  useEffect(() => {
+    const handleBeforeInstallPrompt = (e) => {
+      e.preventDefault()
+      setInstallPrompt(e)
+    }
+    const handleAppInstalled = () => {
+      setInstallPrompt(null)
+      showToast(lang === 'id' ? 'Kept berhasil dipasang ke Layar Utama!' : 'Kept successfully installed to Home Screen!')
+    }
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt)
+    window.addEventListener('appinstalled', handleAppInstalled)
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt)
+      window.removeEventListener('appinstalled', handleAppInstalled)
+    }
+  }, [lang])
+
+  async function handlePromptInstall() {
+    if (!installPrompt) return
+    installPrompt.prompt()
+    const { outcome } = await installPrompt.userChoice
+    if (outcome === 'accepted') {
+      showToast(lang === 'id' ? 'Memasang Kept...' : 'Installing Kept...')
+    }
+    setInstallPrompt(null)
+  }
 
   function handleLanguageChange(newLang) {
     setLang(newLang)
@@ -264,23 +371,43 @@ export default function App() {
 
   const hydratedItems = useMemo(
     () =>
-      items.map((item) => ({
-        ...item,
-        categoryLabel: CATEGORY_LABELS[item.category] || CATEGORY_LABELS[item.item_type] || item.category
-      })),
+      items
+        .filter((item) => !item.deleted_at)
+        .map((item) => ({
+          ...item,
+          categoryLabel: CATEGORY_LABELS[item.category] || CATEGORY_LABELS[item.item_type] || item.category
+        })),
+    [items]
+  )
+
+  const trashedItems = useMemo(
+    () =>
+      items
+        .filter((item) => Boolean(item.deleted_at))
+        .map((item) => ({
+          ...item,
+          categoryLabel: CATEGORY_LABELS[item.category] || CATEGORY_LABELS[item.item_type] || item.category
+        })),
     [items]
   )
 
   const stats = useMemo(
     () => ({
       passwords: hydratedItems.filter((i) => i.item_type === 'password').length,
-      banks: hydratedItems.filter((i) => i.item_type === 'bank_card').length,
+      banks: hydratedItems.filter((i) => i.item_type === 'bank_card' || i.item_type === 'card').length,
       documents: hydratedItems.filter((i) => i.item_type === 'document').length
     }),
     [hydratedItems]
   )
 
   const favorites = useMemo(() => hydratedItems.filter((i) => i.favorite).slice(0, 4), [hydratedItems])
+  const suggestedFavorite = useMemo(() => {
+    return (
+      hydratedItems.find(
+        (item) => (item.access_count || 0) >= 3 && !item.favorite && !dismissedFavSuggestions.has(item.id)
+      ) || null
+    )
+  }, [hydratedItems, dismissedFavSuggestions])
   const recent = useMemo(
     () =>
       [...hydratedItems]
@@ -294,7 +421,10 @@ export default function App() {
     [alerts]
   )
   const banks = useMemo(
-    () => hydratedItems.filter((i) => i.item_type === 'bank_card').map((b, i) => ({ ...b, _renderIndex: i })),
+    () =>
+      hydratedItems
+        .filter((i) => i.item_type === 'bank_card' || i.item_type === 'card')
+        .map((b, i) => ({ ...b, _renderIndex: i })),
     [hydratedItems]
   )
   const documents = useMemo(
@@ -313,14 +443,17 @@ export default function App() {
         if (!rows.length) throw networkError
       }
 
-      const decrypted = []
-      for (const row of rows) {
-        try {
-          decrypted.push({ ...row, ...(await decryptItemRow(row, rawKey)) })
-        } catch {
-          // ignore corrupted items
-        }
-      }
+      const decryptedResults = await Promise.all(
+        rows.map(async (row) => {
+          try {
+            const payload = await decryptItemRow(row, rawKey)
+            return { ...row, ...payload }
+          } catch {
+            return null
+          }
+        })
+      )
+      const decrypted = decryptedResults.filter(Boolean)
       setItems(decrypted)
       showToast(`Kept terbuka · ${keyFingerprint(rawKey)}`, 1600)
 
@@ -340,15 +473,18 @@ export default function App() {
       if (result.resolvedConflicts > 0) {
         showToast(`Sinkronisasi selesai: ${result.resolvedConflicts} konflik berhasil dipulihkan secara aman.`, 3500)
       }
-      // Re-hydrate decrypted items
-      const decrypted = []
-      for (const row of result.rows) {
-        try {
-          decrypted.push({ ...row, ...(await decryptItemRow(row, currentKey)) })
-        } catch {
-          // ignore
-        }
-      }
+      // Re-hydrate decrypted items in parallel
+      const decryptedResults = await Promise.all(
+        result.rows.map(async (row) => {
+          try {
+            const payload = await decryptItemRow(row, currentKey)
+            return { ...row, ...payload }
+          } catch {
+            return null
+          }
+        })
+      )
+      const decrypted = decryptedResults.filter(Boolean)
       setItems(decrypted)
     } catch (err) {
       console.warn('Sync warning:', err)
@@ -407,6 +543,8 @@ export default function App() {
       setShowAdd(false)
       setAddMode(null)
       setDocAddModalOpen(false)
+      setCardAddModalOpen(false)
+      setCardEditModalItem(null)
       setSelectedItem(null)
       checkPendingQueue(session.user.id)
       showToast('Disimpan secara aman', 1400)
@@ -419,15 +557,35 @@ export default function App() {
     setShowAdd(false)
     if (mode === 'document') {
       setDocAddModalOpen(true)
+    } else if (mode === 'bank-card' || mode === 'card') {
+      setCardAddModalOpen(true)
     } else {
       setAddMode(mode)
     }
   }
 
   function openItem(item) {
-    const touched = { ...item, last_used_at: new Date().toISOString() }
-    setItems((current) => current.map((i) => (i.id === item.id ? { ...i, last_used_at: touched.last_used_at } : i)))
+    const currentCount = item.access_count || 0
+    const touched = {
+      ...item,
+      last_used_at: new Date().toISOString(),
+      access_count: currentCount + 1
+    }
+    setItems((current) => current.map((i) => (i.id === item.id ? { ...i, ...touched } : i)))
     setSelectedItem(touched)
+    if (vaultKey && session?.user?.id) {
+      encryptJson(touched, vaultKey)
+        .then((payload) =>
+          upsertEncryptedItem(
+            session.user.id,
+            touched.item_type,
+            touched.item_type === 'bank_card' ? 'bank_card' : touched.category,
+            payload,
+            touched.id
+          )
+        )
+        .catch(() => {})
+    }
   }
 
   async function updateItem(updated) {
@@ -455,14 +613,101 @@ export default function App() {
   }
 
   async function removeItem(id) {
+    if (!vaultKey) return
+    const item = items.find((i) => i.id === id)
+    if (!item) return
+    try {
+      const trashed = {
+        ...item,
+        deleted_at: new Date().toISOString()
+      }
+      const payload = await encryptJson(trashed, vaultKey)
+      const row = await upsertEncryptedItem(
+        session.user.id,
+        trashed.item_type,
+        trashed.item_type === 'bank_card' ? 'bank_card' : trashed.category,
+        payload,
+        id
+      )
+      setItems((current) => current.map((i) => (i.id === id ? { ...row, ...trashed, payload } : i)))
+      setSelectedItem(null)
+      checkPendingQueue(session.user.id)
+      recordSecurityActivity({
+        type: 'vault_item_trashed',
+        title: lang === 'id' ? 'Item Dipindahkan ke Sampah' : 'Item Moved to Trash',
+        desc: `${trashed.name || 'Item'} ${lang === 'id' ? 'dipindahkan ke Tempat Sampah.' : 'moved to Recycle Bin.'}`,
+        level: 'info'
+      })
+      showToast(lang === 'id' ? 'Dipindahkan ke Tempat Sampah' : 'Moved to Recycle Bin', 1800)
+    } catch (err) {
+      setError(err.message || 'Gagal memindahkan item ke tempat sampah.')
+    }
+  }
+
+  async function restoreItem(id) {
+    if (!vaultKey) return
+    const item = items.find((i) => i.id === id)
+    if (!item) return
+    try {
+      const restored = { ...item }
+      delete restored.deleted_at
+      const payload = await encryptJson(restored, vaultKey)
+      const row = await upsertEncryptedItem(
+        session.user.id,
+        restored.item_type,
+        restored.item_type === 'bank_card' ? 'bank_card' : restored.category,
+        payload,
+        id
+      )
+      setItems((current) => current.map((i) => (i.id === id ? { ...row, ...restored, payload } : i)))
+      checkPendingQueue(session.user.id)
+      recordSecurityActivity({
+        type: 'vault_item_restored',
+        title: lang === 'id' ? 'Item Dipulihkan' : 'Item Restored',
+        desc: `${restored.name || 'Item'} ${lang === 'id' ? 'dipulihkan dari Tempat Sampah.' : 'restored from Recycle Bin.'}`,
+        level: 'info'
+      })
+      showToast(lang === 'id' ? 'Item berhasil dipulihkan' : 'Item restored successfully', 1800)
+    } catch (err) {
+      setError(err.message || 'Gagal memulihkan item.')
+    }
+  }
+
+  async function permanentDeleteItem(id) {
     try {
       await deleteEncryptedItem(session.user.id, id)
       setItems((current) => current.filter((i) => i.id !== id))
-      setSelectedItem(null)
       checkPendingQueue(session.user.id)
-      showToast('Item dihapus', 1200)
+      recordSecurityActivity({
+        type: 'vault_item_deleted',
+        title: lang === 'id' ? 'Item Dihapus Permanen' : 'Item Permanently Deleted',
+        desc: lang === 'id' ? 'Item telah dihapus secara permanen dari vault.' : 'Item permanently removed from vault.',
+        level: 'warning'
+      })
+      showToast(lang === 'id' ? 'Item dihapus permanen' : 'Item permanently deleted', 1500)
     } catch (err) {
-      setError(err.message || 'Gagal menghapus item.')
+      setError(err.message || 'Gagal menghapus item permanen.')
+    }
+  }
+
+  async function emptyTrash() {
+    const toDelete = trashedItems
+    if (!toDelete.length) return
+    try {
+      for (const item of toDelete) {
+        await deleteEncryptedItem(session.user.id, item.id)
+      }
+      setItems((current) => current.filter((i) => !i.deleted_at))
+      checkPendingQueue(session.user.id)
+      recordSecurityActivity({
+        type: 'trash_emptied',
+        title: lang === 'id' ? 'Tempat Sampah Dikosongkan' : 'Trash Emptied',
+        desc: lang === 'id' ? `${toDelete.length} item dihapus secara permanen.` : `${toDelete.length} items permanently deleted.`,
+        level: 'warning'
+      })
+      showToast(lang === 'id' ? 'Tempat Sampah berhasil dikosongkan' : 'Recycle bin emptied', 1800)
+    } catch (err) {
+      setError(err.message || 'Gagal mengosongkan tempat sampah.')
     }
   }
 
@@ -500,13 +745,19 @@ export default function App() {
       rows = await loadCachedItems(session.user.id)
     }
 
-    const decrypted = []
-    for (const row of rows) {
-      try {
-        decrypted.push({ ...row, ...(await decryptItemRow(row, recoveredKey)) })
-      } catch {
-        // ignore
-      }
+    let decrypted = []
+    if (recoveredKey) {
+      const decryptedResults = await Promise.all(
+        rows.map(async (row) => {
+          try {
+            const payload = await decryptItemRow(row, recoveredKey)
+            return { ...row, ...payload }
+          } catch {
+            return null
+          }
+        })
+      )
+      decrypted = decryptedResults.filter(Boolean)
     }
 
     // 2. Re-encrypt all items with newMasterPassword
@@ -677,11 +928,42 @@ Jangan pernah membagikan kode ini kepada siapapun!
     setRoute('home')
   }
 
-  async function importCsv(event) {
+  async function handleImportFile(event) {
     const file = event.target.files?.[0]
     if (!file) return
     try {
       const text = await file.text()
+
+      // Check if .kept or encrypted JSON backup
+      if (file.name.endsWith('.kept') || text.includes('KEPT_ENCRYPTED_BACKUP')) {
+        try {
+          const envelope = JSON.parse(text)
+          if (envelope.format === 'KEPT_ENCRYPTED_BACKUP' && envelope.salt && envelope.iv && envelope.ciphertext) {
+            setImportKeptEnvelope(envelope)
+            return
+          }
+        } catch {
+          // not JSON, continue
+        }
+      }
+
+      // Check if unencrypted Kept JSON backup
+      if (file.name.endsWith('.json')) {
+        try {
+          const parsed = JSON.parse(text)
+          if (Array.isArray(parsed.items)) {
+            for (const row of parsed.items) {
+              await saveItem(row)
+            }
+            showToast(lang === 'id' ? `Berhasil mengimpor ${parsed.items.length} item` : `Successfully imported ${parsed.items.length} items`, 1600)
+            return
+          }
+        } catch {
+          // continue to CSV
+        }
+      }
+
+      // Regular CSV fallback
       const rows = parseCsv(text)
       const imported = rows.map((r) => ({
         item_type: 'password',
@@ -695,53 +977,56 @@ Jangan pernah membagikan kode ini kepada siapapun!
         last_used_at: new Date().toISOString()
       }))
       for (const row of imported) await saveItem(row)
-      showToast(`Berhasil mengimpor ${imported.length} item`, 1600)
+      showToast(lang === 'id' ? `Berhasil mengimpor ${imported.length} item` : `Successfully imported ${imported.length} items`, 1600)
     } catch (err) {
-      setError(`Impor gagal: ${err.message}`)
+      setError(lang === 'id' ? `Impor gagal: ${err.message}` : `Import failed: ${err.message}`)
     } finally {
       event.target.value = ''
     }
   }
 
-  async function exportEncrypted() {
-    const blob = new Blob(
-      [
-        JSON.stringify(
-          {
-            app: 'kept',
-            version: 1,
-            exported_at: new Date().toISOString(),
-            items: items.map((i) => ({
-              id: i.id,
-              user_id: i.user_id,
-              item_type: i.item_type,
-              category: i.category,
-              payload: i.payload,
-              created_at: i.created_at,
-              updated_at: i.updated_at
-            }))
-          },
-          null,
-          2
-        )
-      ],
-      { type: 'application/json' }
-    )
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `kept-backup-${new Date().toISOString().slice(0, 10)}.json`
-    a.click()
-    URL.revokeObjectURL(url)
-    recordSecurityActivity({
-      type: 'export_sensitive',
-      title: 'Ekspor Cadangan Terenkripsi',
-      desc: `Pencadangan data vault diekspor (${items.length} item).`,
-      level: 'warning'
-    })
+  async function handleRestoreKeptItems(restoredItems) {
+    try {
+      for (const item of restoredItems) {
+        await saveItem(item)
+      }
+      showToast(
+        lang === 'id'
+          ? `Berhasil memulihkan ${restoredItems.length} item dari cadangan .kept!`
+          : `Successfully restored ${restoredItems.length} items from .kept backup!`,
+        2500
+      )
+      recordSecurityActivity({
+        type: 'import_sensitive',
+        title: 'Pemulihan Cadangan .kept Selesai',
+        desc: `Dipulihkan ${restoredItems.length} item dari file cadangan terenkripsi.`,
+        level: 'info'
+      })
+    } catch (err) {
+      setError(err.message || 'Gagal memulihkan item cadangan.')
+    }
+  }
+
+  function openExportModal() {
+    setExportModalOpen(true)
   }
 
   if (authLoading) return <Splash />
+  if (shareParams) {
+    return (
+      <Suspense fallback={<Splash />}>
+        <ViewSharedSecretScreen
+          shareParams={shareParams}
+          onExit={() => {
+            window.location.hash = ''
+            setShareParams(null)
+          }}
+          lang={lang}
+        />
+      </Suspense>
+    )
+  }
+
   if (recovery) {
     return (
       <Suspense fallback={<Splash />}>
@@ -769,6 +1054,7 @@ Jangan pernah membagikan kode ini kepada siapapun!
 
   return (
     <div className="app-shell">
+      <PrivacyMask enabled={privacyMaskEnabled} lang={lang} />
       <TopBar
         user={session.user}
         profile={profile}
@@ -795,8 +1081,12 @@ Jangan pernah membagikan kode ini kepada siapapun!
             favorites={favorites}
             recent={recent}
             expiryAlerts={expiryAlerts}
+            suggestedFavorite={suggestedFavorite}
+            onToggleFavorite={toggleFavorite}
+            onDismissSuggestion={handleDismissFavSuggestion}
             onNavigate={setRoute}
             onOpenItem={openItem}
+            onOpenAlerts={() => setAlertsOpen(true)}
             onAdd={() => setShowAdd(true)}
             lang={lang}
           />
@@ -843,6 +1133,9 @@ Jangan pernah membagikan kode ini kepada siapapun!
               styleMode={profile.card_style || 'realistic'}
               onAdd={() => openAdd('bank-card')}
               onOpen={openItem}
+              onSave={(cardData, id) => saveItem(id ? { ...cardData, id } : cardData)}
+              onDelete={removeItem}
+              onToggleFavorite={toggleFavorite}
               lang={lang}
             />
           )}
@@ -853,6 +1146,15 @@ Jangan pernah membagikan kode ini kepada siapapun!
               vaultKey={vaultKey}
               items={hydratedItems}
               documents={documents}
+              trashedItems={trashedItems}
+              onRestoreItem={restoreItem}
+              onPermanentDelete={permanentDeleteItem}
+              onEmptyTrash={emptyTrash}
+              privacyMaskEnabled={privacyMaskEnabled}
+              onTogglePrivacyMask={handleTogglePrivacyMask}
+              installPrompt={installPrompt}
+              onPromptInstall={handlePromptInstall}
+              onOpenShareSecret={handleOpenShareSecret}
               isOnline={isOnline}
               pendingSyncCount={pendingSyncCount}
               onTheme={updateTheme}
@@ -862,7 +1164,7 @@ Jangan pernah membagikan kode ini kepada siapapun!
               onRemoveAvatar={handleRemoveAvatar}
               onSignOut={signOut}
               onImport={() => document.getElementById('csv-import').click()}
-              onExport={exportEncrypted}
+              onExport={openExportModal}
               onChangeAccountPassword={handleChangeAccountPassword}
               onChangeMasterPassword={handleChangeMasterPassword}
               recoveryKey={activeRecoveryKey}
@@ -881,7 +1183,7 @@ Jangan pernah membagikan kode ini kepada siapapun!
         </Suspense>
       </main>
 
-      <input id="csv-import" type="file" accept=".csv,text/csv" hidden onChange={importCsv} />
+      <input id="csv-import" type="file" accept=".kept,.csv,text/csv,.json,application/json" hidden onChange={handleImportFile} />
       <BottomNav
         active={route}
         menuOpen={menuOpen}
@@ -908,6 +1210,35 @@ Jangan pernah membagikan kode ini kepada siapapun!
             lang={lang}
           />
         )}
+        {cardAddModalOpen && vaultKey && (
+          <AddCardModal
+            onClose={() => setCardAddModalOpen(false)}
+            onSubmit={(cardData) => {
+              setCardAddModalOpen(false)
+              saveItem(cardData)
+            }}
+            lang={lang}
+          />
+        )}
+        {cardEditModalItem && vaultKey && (
+          <AddCardModal
+            initialCard={cardEditModalItem}
+            onClose={() => setCardEditModalItem(null)}
+            onSubmit={(cardData) => {
+              const id = cardEditModalItem.id
+              setCardEditModalItem(null)
+              saveItem({ ...cardData, id })
+            }}
+            lang={lang}
+          />
+        )}
+        {cardBarcodeModalItem && (
+          <CardBarcodeModal
+            card={cardBarcodeModalItem}
+            onClose={() => setCardBarcodeModalItem(null)}
+            lang={lang}
+          />
+        )}
         {selectedItem && selectedItem.item_type === 'document' ? (
           <DocumentDetailModal
             item={selectedItem}
@@ -919,6 +1250,22 @@ Jangan pernah membagikan kode ini kepada siapapun!
             onToggleFavorite={toggleFavorite}
             lang={lang}
           />
+        ) : selectedItem && (selectedItem.item_type === 'bank_card' || selectedItem.item_type === 'card') ? (
+          <CardDetailModal
+            card={selectedItem}
+            onClose={() => setSelectedItem(null)}
+            onDelete={removeItem}
+            onEdit={(card) => {
+              setSelectedItem(null)
+              setCardEditModalItem(card)
+            }}
+            onShowBarcode={(card) => {
+              setSelectedItem(null)
+              setCardBarcodeModalItem(card)
+            }}
+            onToggleFavorite={toggleFavorite}
+            lang={lang}
+          />
         ) : selectedItem ? (
           <ItemModal
             item={selectedItem}
@@ -926,12 +1273,14 @@ Jangan pernah membagikan kode ini kepada siapapun!
             onDelete={removeItem}
             onSave={updateItem}
             onToggleFavorite={toggleFavorite}
+            onShareSecret={handleOpenShareSecret}
             lang={lang}
           />
         ) : null}
         {alertsOpen && (
           <AlertsPanel
             alerts={alerts}
+            items={hydratedItems}
             onClose={() => setAlertsOpen(false)}
             onOpenItem={openItem}
             lang={lang}
@@ -950,6 +1299,15 @@ Jangan pernah membagikan kode ini kepada siapapun!
           vaultKey={vaultKey}
           items={hydratedItems}
           documents={documents}
+          trashedItems={trashedItems}
+          onRestoreItem={restoreItem}
+          onPermanentDelete={permanentDeleteItem}
+          onEmptyTrash={emptyTrash}
+          privacyMaskEnabled={privacyMaskEnabled}
+          onTogglePrivacyMask={handleTogglePrivacyMask}
+          installPrompt={installPrompt}
+          onPromptInstall={handlePromptInstall}
+          onOpenShareSecret={handleOpenShareSecret}
           isOnline={isOnline}
           pendingSyncCount={pendingSyncCount}
           onTheme={updateTheme}
@@ -959,7 +1317,7 @@ Jangan pernah membagikan kode ini kepada siapapun!
           onRemoveAvatar={handleRemoveAvatar}
           onSignOut={signOut}
           onImport={() => document.getElementById('csv-import').click()}
-          onExport={exportEncrypted}
+          onExport={openExportModal}
           onChangeAccountPassword={handleChangeAccountPassword}
           onChangeMasterPassword={handleChangeMasterPassword}
           recoveryKey={activeRecoveryKey}
@@ -981,9 +1339,42 @@ Jangan pernah membagikan kode ini kepada siapapun!
           documents={documents}
           banks={banks}
           onOpenItem={openItem}
+          onShareSecret={handleOpenShareSecret}
           showToast={showToast}
           lang={lang}
         />
+        {exportModalOpen && (
+          <ExportModal
+            isOpen={exportModalOpen}
+            onClose={() => setExportModalOpen(false)}
+            user={session?.user}
+            profile={profile}
+            items={hydratedItems}
+            lang={lang}
+            showToast={showToast}
+            recordSecurityActivity={recordSecurityActivity}
+          />
+        )}
+        {importKeptEnvelope && (
+          <ImportKeptModal
+            isOpen={Boolean(importKeptEnvelope)}
+            onClose={() => setImportKeptEnvelope(null)}
+            fileEnvelope={importKeptEnvelope}
+            onDecrypted={handleRestoreKeptItems}
+            lang={lang}
+          />
+        )}
+        {shareModalData?.isOpen && (
+          <ShareSecretModal
+            isOpen={shareModalData.isOpen}
+            onClose={() => setShareModalData(null)}
+            initialTitle={shareModalData.initialTitle}
+            initialContent={shareModalData.initialContent}
+            user={session?.user}
+            lang={lang}
+            showToast={showToast}
+          />
+        )}
       </Suspense>
       {toast && <div className="toast">{toast}</div>}
       {error && (
