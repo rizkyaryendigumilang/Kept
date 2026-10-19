@@ -64,6 +64,7 @@ jobs:
           retention-days: 14
 
       - name: Deploy APK to VPS via SCP
+        if: false
         env:
           VPS_HOST: ${{ secrets.VPS_HOST }}
           VPS_USERNAME: ${{ secrets.VPS_USERNAME }}
@@ -156,6 +157,7 @@ jobs:
           retention-days: 14
 
       - name: Deploy IPA to VPS via SCP
+        if: false
         env:
           VPS_HOST: ${{ secrets.VPS_HOST }}
           VPS_USERNAME: ${{ secrets.VPS_USERNAME }}
