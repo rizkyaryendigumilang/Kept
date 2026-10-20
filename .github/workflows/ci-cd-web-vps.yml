@@ -26,12 +26,12 @@ on:
   workflow_dispatch:
     inputs:
       deploy:
-        description: 'Deploy to VPS after validation; leave false for build-only checks'
+        description: 'Deploy to VPS after validation; set false for validation-only checks'
         required: true
         type: boolean
-        default: false
+        default: true
       base_path:
-        description: 'Base path for Vite build (e.g. /kept/ or /)'
+        description: 'Base path for Vite build (default: /kept/)'
         required: false
         type: string
         default: '/kept/'
@@ -40,23 +40,29 @@ permissions:
   contents: read
 
 concurrency:
-  group: kept-web-production
-  cancel-in-progress: false
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 jobs:
   build:
     name: Validate and build web app
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - name: Checkout source code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 22
+        uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
+
       - name: Install locked dependencies
         run: npm ci
-      - name: Run verification & health check
+
+      - name: Run verification & cryptographic tests
         run: npm test
+
       - name: Build production web bundle
         env:
           CI: true
@@ -64,16 +70,20 @@ jobs:
           VITE_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.VITE_SUPABASE_PUBLISHABLE_KEY || 'sb_publishable_qCuupKOCNn2hL10SEEu58A_CpvnwnCw' }}
           BASE_PATH: ${{ github.event.inputs.base_path || '/kept/' }}
         run: npm run build -- --base="$BASE_PATH"
-      - name: Validate build output
+
+      - name: Validate build output integrity
         run: |
           set -euo pipefail
           test -s dist/index.html
           test -s dist/manifest.webmanifest
           grep -q 'assets/' dist/index.html
           grep -q '"start_url":"./"' dist/manifest.webmanifest
+
       - name: Package web artifact
         run: tar -czf web-dist.tar.gz -C dist .
-      - uses: actions/upload-artifact@v4
+
+      - name: Upload web artifact
+        uses: actions/upload-artifact@v4
         with:
           name: kept-web-dist
           path: web-dist.tar.gz
@@ -82,68 +92,264 @@ jobs:
 
   deploy-production:
     name: Deploy web to production VPS
-    if: ${{ github.ref == 'refs/heads/main' && github.event_name == 'workflow_dispatch' && inputs.deploy == true }}
+    if: >-
+      github.ref == 'refs/heads/main' &&
+      (
+        github.event_name == 'push' ||
+        (github.event_name == 'workflow_dispatch' && (inputs.deploy == true || inputs.deploy == 'true'))
+      )
     needs: build
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/download-artifact@v4
+      - name: Download web artifact
+        uses: actions/download-artifact@v4
         with:
           name: kept-web-dist
           path: ./artifact
-      - name: Configure verified SSH
-        env:
-          VPS_HOST: ${{ secrets.VPS_HOST || '43.156.236.102' }}
-          VPS_USER: ${{ secrets.VPS_USERNAME || 'ubuntu' }}
-          VPS_KEY: ${{ secrets.VPS_SSH_KEY }}
-          VPS_PORT: ${{ secrets.VPS_PORT || '22' }}
-          VPS_SSH_KNOWN_HOSTS: ${{ secrets.VPS_SSH_KNOWN_HOSTS || '43.156.236.102 ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIPLV8FZsqrUwsNv4dydkY/O6XSpH5a/dMxCg0yHZHRkl' }}
+
+      - name: Validate artifact integrity before deployment
         run: |
           set -euo pipefail
-          test -n "$VPS_HOST" || { echo "Missing secret VPS_HOST"; exit 1; }
-          test -n "$VPS_USER" || { echo "Missing secret VPS_USERNAME"; exit 1; }
-          test -n "$VPS_KEY" || { echo "Missing secret VPS_SSH_KEY (Add to GitHub Secrets)"; exit 1; }
-          test -n "$VPS_SSH_KNOWN_HOSTS" || { echo "Missing secret VPS_SSH_KNOWN_HOSTS (verified host key required)"; exit 1; }
-          [[ "$VPS_PORT" =~ ^[0-9]+$ ]] && ((VPS_PORT > 0 && VPS_PORT < 65536)) || { echo "Invalid VPS_PORT"; exit 1; }
+          test -s ./artifact/web-dist.tar.gz || { echo "::error::Downloaded artifact web-dist.tar.gz is missing or empty"; exit 1; }
+          tar -tzf ./artifact/web-dist.tar.gz > /dev/null || { echo "::error::Artifact web-dist.tar.gz is not a valid gzip tar archive"; exit 1; }
+          tar -tzf ./artifact/web-dist.tar.gz | grep -q 'index.html' || { echo "::error::Artifact archive missing index.html"; exit 1; }
+          tar -tzf ./artifact/web-dist.tar.gz | grep -q 'manifest.webmanifest' || { echo "::error::Artifact archive missing manifest.webmanifest"; exit 1; }
+          sha256sum ./artifact/web-dist.tar.gz > ./artifact/web-dist.tar.gz.sha256
+          echo "Artifact validated. SHA256: $(cat ./artifact/web-dist.tar.gz.sha256)"
+
+      - name: Validate secrets and configure SSH
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_USER: ${{ secrets.VPS_USERNAME }}
+          VPS_KEY: ${{ secrets.VPS_SSH_KEY }}
+          VPS_SSH_KNOWN_HOSTS: ${{ secrets.VPS_SSH_KNOWN_HOSTS }}
+          VPS_PORT: ${{ secrets.VPS_SSH_PORT || secrets.VPS_PORT || '22' }}
+        run: |
+          set -euo pipefail
+          test -n "${VPS_HOST:-}" || { echo "::error::Missing required repository secret: VPS_HOST"; exit 1; }
+          test -n "${VPS_USER:-}" || { echo "::error::Missing required repository secret: VPS_USERNAME"; exit 1; }
+          test -n "${VPS_KEY:-}" || { echo "::error::Missing required repository secret: VPS_SSH_KEY"; exit 1; }
+          test -n "${VPS_SSH_KNOWN_HOSTS:-}" || { echo "::error::Missing required repository secret: VPS_SSH_KNOWN_HOSTS"; exit 1; }
+          [[ "$VPS_PORT" =~ ^[0-9]+$ ]] && ((VPS_PORT > 0 && VPS_PORT < 65536)) || { echo "::error::Invalid VPS SSH Port: $VPS_PORT"; exit 1; }
+
           install -d -m 700 "$HOME/.ssh"
           printf '%s\n' "$VPS_KEY" | tr -d '\r' > "$HOME/.ssh/id_ed25519"
           chmod 600 "$HOME/.ssh/id_ed25519"
           printf '%s\n' "$VPS_SSH_KNOWN_HOSTS" > "$HOME/.ssh/known_hosts"
           chmod 600 "$HOME/.ssh/known_hosts"
-      - name: Upload validated bundle
+
+      - name: Upload release bundle and checksum to VPS
         env:
           VPS_HOST: ${{ secrets.VPS_HOST }}
           VPS_USER: ${{ secrets.VPS_USERNAME }}
-          VPS_PORT: ${{ secrets.VPS_PORT || '22' }}
+          VPS_PORT: ${{ secrets.VPS_SSH_PORT || secrets.VPS_PORT || '22' }}
         run: |
-          scp -o BatchMode=yes -o StrictHostKeyChecking=yes -i "$HOME/.ssh/id_ed25519" -P "$VPS_PORT" ./artifact/web-dist.tar.gz "$VPS_USER@$VPS_HOST:web-dist-${GITHUB_SHA}.tar.gz"
-      - name: Deploy with backup and rollback
+          scp -o BatchMode=yes -o StrictHostKeyChecking=yes -i "$HOME/.ssh/id_ed25519" -P "$VPS_PORT" \
+            ./artifact/web-dist.tar.gz \
+            ./artifact/web-dist.tar.gz.sha256 \
+            "$VPS_USER@$VPS_HOST:~/"
+
+      - name: Atomic deployment with verified backup and rollback
+        id: deploy
         env:
           VPS_HOST: ${{ secrets.VPS_HOST }}
           VPS_USER: ${{ secrets.VPS_USERNAME }}
-          VPS_PORT: ${{ secrets.VPS_PORT || '22' }}
+          VPS_PORT: ${{ secrets.VPS_SSH_PORT || secrets.VPS_PORT || '22' }}
+          RELEASE_SHA: ${{ github.sha }}
         run: |
           set -euo pipefail
-          ssh -o BatchMode=yes -o StrictHostKeyChecking=yes -i "$HOME/.ssh/id_ed25519" -p "$VPS_PORT" "$VPS_USER@$VPS_HOST" "bash -s -- '/srv/www/kept' 'kept' '${GITHUB_SHA}'" <<'REMOTE'
+          ssh -o BatchMode=yes -o StrictHostKeyChecking=yes -i "$HOME/.ssh/id_ed25519" -p "$VPS_PORT" "$VPS_USER@$VPS_HOST" "bash -s -- '/srv/www/kept' 'kept' '${RELEASE_SHA}'" <<'REMOTE'
           set -Eeuo pipefail
           live="$1"
           slug="$2"
           release="$3"
-          [[ "$release" =~ ^[0-9a-f]{40}$ ]] || exit 1
-          test -d "$live" && test ! -L "$live" || { echo "Target must be an existing real directory: $live"; exit 1; }
+
+          [[ "$release" =~ ^[0-9a-f]{40}$ ]] || { echo "::error::Invalid release commit hash format"; exit 1; }
+
           parent="$HOME/.deploy-$slug"
           stage="$parent/stage-$release"
           backup="$parent/backup-$release.tar.gz"
+          bundle="$HOME/web-dist.tar.gz"
+          checksum="$HOME/web-dist.tar.gz.sha256"
+
+          # Verify transferred archive integrity using checksum
+          test -s "$bundle" || { echo "::error::Uploaded bundle is missing on VPS"; exit 1; }
+          test -s "$checksum" || { echo "::error::Checksum file is missing on VPS"; exit 1; }
+          cd "$HOME"
+          sha256sum -c "$checksum" || { echo "::error::Bundle SHA256 checksum verification failed on VPS"; exit 1; }
+
+          # Ensure deployment directories exist
           mkdir -p "$parent"
-          test ! -e "$stage" && test ! -e "$backup"
-          mkdir "$stage"
-          trap 'status=$?; if [ "$status" -ne 0 ] && [ -s "$backup" ]; then mkdir -p "$stage/restore"; tar -xzf "$backup" -C "$stage/restore"; rsync -a --delete "$stage/restore/" "$live/"; fi; rm -rf "$stage"; exit "$status"' ERR
-          tar -xzf "$HOME/web-dist-$release.tar.gz" -C "$stage"
-          test -s "$stage/index.html"
-          tar -czf "$backup" -C "$live" .
-          rsync -a --delete "$stage/" "$live/"
-          test -s "$live/index.html"
-          rm -f "$HOME/web-dist-$release.tar.gz"
+          mkdir -p "$live"
+
+          # Clean up any leftover stage from interrupted runs
           rm -rf "$stage"
-          trap - ERR
-          echo "Deployment successful to $live; rollback archive: $backup"
+          mkdir -p "$stage"
+
+          deploy_success=0
+          rollback() {
+            local exit_code=$?
+            if [ "$deploy_success" -eq 1 ]; then
+              return 0
+            fi
+            echo "::error::Deployment failure detected (exit code: $exit_code). Initiating rollback..."
+            if [ -f "$backup" ] && [ -s "$backup" ]; then
+              echo "Restoring previous live version from verified backup: $backup ..."
+              if [ "$live" = "/srv/www/kept" ]; then
+                find "$live" -mindepth 1 -delete 2>/dev/null || rm -rf "$live"/*
+              fi
+              if tar -xzf "$backup" -C "$live"; then
+                chmod -R u+rwX,go+rX "$live" 2>/dev/null || true
+                echo "Rollback restored successfully."
+              else
+                echo "::error::CRITICAL: Rollback extraction failed! Target may require manual intervention."
+              fi
+            else
+              echo "Notice: No previous backup found to restore (clean or initial deployment)."
+            fi
+            rm -rf "$stage"
+            rm -f "$bundle" "$checksum"
+            exit "$exit_code"
+          }
+          trap rollback EXIT
+
+          # Extract bundle to staging directory
+          tar -xzf "$bundle" -C "$stage"
+
+          # Verify integrity of staged files before modifying live directory
+          test -s "$stage/index.html" || { echo "::error::Staged index.html is missing or empty"; exit 1; }
+          grep -q 'id="root"' "$stage/index.html" || { echo "::error::Staged index.html missing root container"; exit 1; }
+          grep -q '<title>Kept' "$stage/index.html" || { echo "::error::Staged index.html missing Kept title"; exit 1; }
+          test -s "$stage/manifest.webmanifest" || { echo "::error::Staged manifest.webmanifest is missing"; exit 1; }
+          test -d "$stage/assets" && [ "$(ls -A "$stage/assets")" ] || { echo "::error::Staged assets directory is missing or empty"; exit 1; }
+
+          # Create verified snapshot backup of active live version before replacing
+          if [ "$(ls -A "$live" 2>/dev/null)" ]; then
+            echo "Creating snapshot backup of current live release..."
+            tar -czf "$backup" -C "$live" .
+            test -s "$backup" || { echo "::error::Backup creation failed or resulted in 0 bytes"; exit 1; }
+            tar -tzf "$backup" > /dev/null || { echo "::error::Backup archive verification failed"; exit 1; }
+            echo "Snapshot backup verified successfully: $(ls -lh "$backup")"
+          fi
+
+          # Synchronize staged release to live directory (scoped strictly to $live)
+          rsync -a --delete "$stage/" "$live/"
+
+          # Enforce safe readable permissions for web server
+          chmod -R u+rwX,go+rX "$live" 2>/dev/null || true
+
+          # Health check: verify live filesystem integrity
+          test -s "$live/index.html" || { echo "::error::Live index.html is missing"; exit 1; }
+          grep -q 'id="root"' "$live/index.html" || { echo "::error::Live index.html is corrupt"; exit 1; }
+          grep -q '<title>Kept' "$live/index.html" || { echo "::error::Live index.html missing Kept title"; exit 1; }
+          test -s "$live/manifest.webmanifest" || { echo "::error::Live manifest.webmanifest is missing"; exit 1; }
+          test -d "$live/assets" && [ "$(ls -A "$live/assets")" ] || { echo "::error::Live assets directory missing or empty"; exit 1; }
+
+          # Clean up temporary archive and staging directory
+          rm -f "$bundle" "$checksum"
+          rm -rf "$stage"
+
+          deploy_success=1
+          echo "Deployment successfully applied to $live (Release: $release)"
           REMOTE
+
+      - name: Strict TLS production health check
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          KEPT_PUBLIC_URL: ${{ secrets.KEPT_PUBLIC_URL || secrets.PRODUCTION_URL }}
+          BASE_PATH: ${{ github.event.inputs.base_path || '/kept/' }}
+        run: |
+          set -euo pipefail
+
+          # Determine target URL
+          TARGET_URL="${KEPT_PUBLIC_URL:-https://${VPS_HOST}${BASE_PATH}}"
+          echo "Running strict TLS health check against $TARGET_URL ..."
+          TMP_HEADER=$(mktemp)
+          TMP_BODY=$(mktemp)
+
+          # Strictly enforce valid TLS certificate, follow redirects, timeout 15s (NO -k flag!)
+          if ! curl -s -S -L \
+            --max-time 15 \
+            --dump-header "$TMP_HEADER" \
+            -o "$TMP_BODY" \
+            "$TARGET_URL"; then
+            echo "::error::Health check failed: Network connection, DNS, or TLS certificate validation failed for $TARGET_URL"
+            rm -f "$TMP_HEADER" "$TMP_BODY"
+            exit 1
+          fi
+
+          # Extract final HTTP status code after any redirects
+          FINAL_STATUS=$(awk '/^HTTP/{status=$2} END{print status}' "$TMP_HEADER")
+          echo "Final HTTP response status: $FINAL_STATUS"
+
+          if [ "$FINAL_STATUS" -ne 200 ]; then
+            echo "::error::Health check failed: Expected final HTTP 200, got $FINAL_STATUS from $TARGET_URL"
+            cat "$TMP_HEADER"
+            rm -f "$TMP_HEADER" "$TMP_BODY"
+            exit 1
+          fi
+
+          # Verify that the response body genuinely belongs to Kept
+          if ! grep -q 'id="root"' "$TMP_BODY"; then
+            echo "::error::Health check failed: Response body from $TARGET_URL does not contain root container"
+            rm -f "$TMP_HEADER" "$TMP_BODY"
+            exit 1
+          fi
+
+          if ! grep -q '<title>Kept' "$TMP_BODY"; then
+            echo "::error::Health check failed: Response body from $TARGET_URL does not contain Kept title"
+            rm -f "$TMP_HEADER" "$TMP_BODY"
+            exit 1
+          fi
+
+          echo "Strict TLS health check PASSED: Kept application is actively serving HTTP 200 with valid content at $TARGET_URL"
+          rm -f "$TMP_HEADER" "$TMP_BODY"
+
+      - name: Rollback if health check fails
+        if: failure() && steps.deploy.outcome == 'success'
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_USER: ${{ secrets.VPS_USERNAME }}
+          VPS_PORT: ${{ secrets.VPS_SSH_PORT || secrets.VPS_PORT || '22' }}
+          RELEASE_SHA: ${{ github.sha }}
+        run: |
+          echo "Health check failed after deployment. Executing remote rollback on VPS..."
+          ssh -o BatchMode=yes -o StrictHostKeyChecking=yes -i "$HOME/.ssh/id_ed25519" -p "$VPS_PORT" "$VPS_USER@$VPS_HOST" "bash -s -- '/srv/www/kept' 'kept' '${RELEASE_SHA}'" <<'REMOTE'
+          set -Eeuo pipefail
+          live="$1"
+          slug="$2"
+          release="$3"
+          backup="$HOME/.deploy-$slug/backup-$release.tar.gz"
+          if [ -s "$backup" ]; then
+            echo "Restoring previous verified backup: $backup to $live ..."
+            if [ "$live" = "/srv/www/kept" ]; then
+              find "$live" -mindepth 1 -delete 2>/dev/null || rm -rf "$live"/*
+            fi
+            tar -xzf "$backup" -C "$live"
+            chmod -R u+rwX,go+rX "$live" 2>/dev/null || true
+            echo "Rollback restored successfully."
+          else
+            echo "::error::No backup archive found at $backup to restore."
+            exit 1
+          fi
+          REMOTE
+
+      - name: Output deployment summary
+        if: always()
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          BASE_PATH: ${{ github.event.inputs.base_path || '/kept/' }}
+          KEPT_PUBLIC_URL: ${{ secrets.KEPT_PUBLIC_URL || secrets.PRODUCTION_URL }}
+        run: |
+          TARGET_ENDPOINT="${KEPT_PUBLIC_URL:-https://${VPS_HOST}${BASE_PATH}}"
+          cat <<EOF >> $GITHUB_STEP_SUMMARY
+          ### 🚀 Kept Web Deployment Report
+          - **Commit SHA**: \`${{ github.sha }}\`
+          - **Trigger Event**: \`${{ github.event_name }}\`
+          - **Target Host**: \`${VPS_HOST}\`
+          - **Target Directory**: \`/srv/www/kept\`
+          - **Base Path**: \`${BASE_PATH}\`
+          - **Endpoint Verified**: \`${TARGET_ENDPOINT}\`
+          - **Deployment Status**: ${{ steps.deploy.outcome == 'success' && '✅ Deployed & Synced' || '❌ Failed' }}
+          - **Overall Job Status**: ${{ job.status == 'success' && '✅ Verified Healthy' || '❌ Failed (Rolled Back)' }}
+          EOF
