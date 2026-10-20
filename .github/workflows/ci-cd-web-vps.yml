@@ -30,6 +30,11 @@ on:
         required: true
         type: boolean
         default: false
+      base_path:
+        description: 'Base path for Vite build (e.g. /kept/ or /)'
+        required: false
+        type: string
+        default: '/kept/'
 
 permissions:
   contents: read
@@ -57,13 +62,14 @@ jobs:
           CI: true
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL || 'https://bhldonheosindyolgeom.supabase.co' }}
           VITE_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.VITE_SUPABASE_PUBLISHABLE_KEY || 'sb_publishable_qCuupKOCNn2hL10SEEu58A_CpvnwnCw' }}
-        run: npm run build -- --base=/kept/
+          BASE_PATH: ${{ github.event.inputs.base_path || '/kept/' }}
+        run: npm run build -- --base="$BASE_PATH"
       - name: Validate build output
         run: |
           set -euo pipefail
           test -s dist/index.html
           test -s dist/manifest.webmanifest
-          grep -q '/kept/assets/' dist/index.html
+          grep -q 'assets/' dist/index.html
           grep -q '"start_url":"./"' dist/manifest.webmanifest
       - name: Package web artifact
         run: tar -czf web-dist.tar.gz -C dist .
@@ -76,7 +82,7 @@ jobs:
 
   deploy-production:
     name: Deploy web to production VPS
-    if: ${{ github.ref == 'refs/heads/main' && (github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.deploy == true)) }}
+    if: ${{ github.ref == 'refs/heads/main' && github.event_name == 'workflow_dispatch' && inputs.deploy == true }}
     needs: build
     runs-on: ubuntu-latest
     steps:
@@ -86,16 +92,16 @@ jobs:
           path: ./artifact
       - name: Configure verified SSH
         env:
-          VPS_HOST: ${{ secrets.VPS_HOST }}
-          VPS_USER: ${{ secrets.VPS_USERNAME }}
+          VPS_HOST: ${{ secrets.VPS_HOST || '43.156.236.102' }}
+          VPS_USER: ${{ secrets.VPS_USERNAME || 'ubuntu' }}
           VPS_KEY: ${{ secrets.VPS_SSH_KEY }}
           VPS_PORT: ${{ secrets.VPS_PORT || '22' }}
-          VPS_SSH_KNOWN_HOSTS: ${{ secrets.VPS_SSH_KNOWN_HOSTS }}
+          VPS_SSH_KNOWN_HOSTS: ${{ secrets.VPS_SSH_KNOWN_HOSTS || '43.156.236.102 ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIPLV8FZsqrUwsNv4dydkY/O6XSpH5a/dMxCg0yHZHRkl' }}
         run: |
           set -euo pipefail
           test -n "$VPS_HOST" || { echo "Missing secret VPS_HOST"; exit 1; }
           test -n "$VPS_USER" || { echo "Missing secret VPS_USERNAME"; exit 1; }
-          test -n "$VPS_KEY" || { echo "Missing secret VPS_SSH_KEY"; exit 1; }
+          test -n "$VPS_KEY" || { echo "Missing secret VPS_SSH_KEY (Add to GitHub Secrets)"; exit 1; }
           test -n "$VPS_SSH_KNOWN_HOSTS" || { echo "Missing secret VPS_SSH_KNOWN_HOSTS (verified host key required)"; exit 1; }
           [[ "$VPS_PORT" =~ ^[0-9]+$ ]] && ((VPS_PORT > 0 && VPS_PORT < 65536)) || { echo "Invalid VPS_PORT"; exit 1; }
           install -d -m 700 "$HOME/.ssh"
