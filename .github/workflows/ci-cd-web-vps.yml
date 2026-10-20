@@ -50,9 +50,13 @@ jobs:
           cache: npm
       - name: Install locked dependencies
         run: npm ci
+      - name: Run verification & health check
+        run: npm test
       - name: Build production web bundle
         env:
           CI: true
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL || 'https://bhldonheosindyolgeom.supabase.co' }}
+          VITE_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.VITE_SUPABASE_PUBLISHABLE_KEY || 'sb_publishable_qCuupKOCNn2hL10SEEu58A_CpvnwnCw' }}
         run: npm run build -- --base=/kept/
       - name: Validate build output
         run: |

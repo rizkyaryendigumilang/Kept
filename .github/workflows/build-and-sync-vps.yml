@@ -40,7 +40,13 @@ jobs:
       - name: Install Dependencies
         run: npm ci
 
+      - name: Run verification & health check
+        run: npm test
+
       - name: Build Web App & Sync Android
+        env:
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL || 'https://bhldonheosindyolgeom.supabase.co' }}
+          VITE_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.VITE_SUPABASE_PUBLISHABLE_KEY || 'sb_publishable_qCuupKOCNn2hL10SEEu58A_CpvnwnCw' }}
         run: |
           npm run build
           npx cap sync android
@@ -86,7 +92,13 @@ jobs:
       - name: Install Dependencies
         run: npm ci
 
+      - name: Run verification & health check
+        run: npm test
+
       - name: Build Web App & Sync iOS
+        env:
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL || 'https://bhldonheosindyolgeom.supabase.co' }}
+          VITE_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.VITE_SUPABASE_PUBLISHABLE_KEY || 'sb_publishable_qCuupKOCNn2hL10SEEu58A_CpvnwnCw' }}
         run: |
           npm run build
           npx cap sync ios
