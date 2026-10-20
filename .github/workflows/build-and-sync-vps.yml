@@ -63,34 +63,9 @@ jobs:
           path: app-latest.apk
           retention-days: 14
 
-      - name: Deploy APK to VPS via SCP
-        if: false
-        env:
-          VPS_HOST: ${{ secrets.VPS_HOST }}
-          VPS_USERNAME: ${{ secrets.VPS_USERNAME }}
-          VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
-          VPS_TARGET_DIR: ${{ secrets.VPS_TARGET_DIR }}
-          VPS_PORT: ${{ secrets.VPS_PORT }}
+      - name: Mobile Artifact Ready Notice
         run: |
-          if [ -z "$VPS_HOST" ] || [ -z "$VPS_SSH_KEY" ]; then
-            echo "ℹ️ VPS secrets (VPS_HOST / VPS_SSH_KEY) are not configured."
-            echo "Skipping SCP transfer. Download APK directly from GitHub Actions Artifacts!"
-            exit 0
-          fi
-
-          echo "🚀 Deploying app-latest.apk to VPS ($VPS_HOST)..."
-          mkdir -p ~/.ssh
-          echo "$VPS_SSH_KEY" | tr -d '\r' > ~/.ssh/id_rsa
-          chmod 600 ~/.ssh/id_rsa
-
-          PORT="${VPS_PORT:-22}"
-          ssh-keyscan -p "$PORT" -H "$VPS_HOST" >> ~/.ssh/known_hosts 2>/dev/null
-
-          TARGET_DIR="${VPS_TARGET_DIR:-/var/www/downloads}"
-          ssh -p "$PORT" -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no "$VPS_USERNAME@$VPS_HOST" "mkdir -p $TARGET_DIR"
-          scp -P "$PORT" -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no app-latest.apk "$VPS_USERNAME@$VPS_HOST:$TARGET_DIR/app-latest.apk"
-
-          echo "✅ Android APK successfully deployed to $TARGET_DIR/app-latest.apk on $VPS_HOST!"
+          echo "Android APK compiled successfully. The APK artifact is ready for download in GitHub Actions Artifacts."
 
   # ========================================================
   # Job 2: Build iOS IPA
@@ -156,31 +131,6 @@ jobs:
           path: app-latest.ipa
           retention-days: 14
 
-      - name: Deploy IPA to VPS via SCP
-        if: false
-        env:
-          VPS_HOST: ${{ secrets.VPS_HOST }}
-          VPS_USERNAME: ${{ secrets.VPS_USERNAME }}
-          VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
-          VPS_TARGET_DIR: ${{ secrets.VPS_TARGET_DIR }}
-          VPS_PORT: ${{ secrets.VPS_PORT }}
+      - name: Mobile Artifact Ready Notice
         run: |
-          if [ -z "$VPS_HOST" ] || [ -z "$VPS_SSH_KEY" ]; then
-            echo "ℹ️ VPS secrets (VPS_HOST / VPS_SSH_KEY) are not configured."
-            echo "Skipping SCP transfer. Download IPA directly from GitHub Actions Artifacts!"
-            exit 0
-          fi
-
-          echo "🚀 Deploying app-latest.ipa to VPS ($VPS_HOST)..."
-          mkdir -p ~/.ssh
-          echo "$VPS_SSH_KEY" | tr -d '\r' > ~/.ssh/id_rsa
-          chmod 600 ~/.ssh/id_rsa
-
-          PORT="${VPS_PORT:-22}"
-          ssh-keyscan -p "$PORT" -H "$VPS_HOST" >> ~/.ssh/known_hosts 2>/dev/null
-
-          TARGET_DIR="${VPS_TARGET_DIR:-/var/www/downloads}"
-          ssh -p "$PORT" -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no "$VPS_USERNAME@$VPS_HOST" "mkdir -p $TARGET_DIR"
-          scp -P "$PORT" -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no app-latest.ipa "$VPS_USERNAME@$VPS_HOST:$TARGET_DIR/app-latest.ipa"
-
-          echo "✅ iOS IPA successfully deployed to $TARGET_DIR/app-latest.ipa on $VPS_HOST!"
+          echo "iOS IPA archive created successfully. The IPA artifact is ready for download in GitHub Actions Artifacts."
