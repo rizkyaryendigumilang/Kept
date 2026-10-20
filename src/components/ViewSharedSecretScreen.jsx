@@ -14,6 +14,7 @@ import {
 import { fetchAndDecryptShare } from '../lib/secureShare'
 import { getTranslation } from '../lib/i18n'
 import { haptic } from '../lib/haptics'
+import { KEPT_ICON } from '../lib/brand'
 
 export default function ViewSharedSecretScreen({ shareParams, onExit, lang = 'id' }) {
   const t = (k) => getTranslation(k, lang)
@@ -99,7 +100,7 @@ export default function ViewSharedSecretScreen({ shareParams, onExit, lang = 'id
         {/* Brand header */}
         <div className="shared-secret-header">
           <div className="brand-logo-small">
-            <img src="/brand/kept-icon.png" alt="Kept" className="kept-header-icon" />
+            <img src={KEPT_ICON} alt="Kept" className="kept-header-icon" />
             <span className="kept-header-title">Kept</span>
           </div>
           <span className="shared-secret-badge">

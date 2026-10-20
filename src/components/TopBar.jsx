@@ -2,6 +2,7 @@ import { Bell, Home, KeyRound, WalletCards, FileText, Menu, X, ArrowLeft, Search
 import AnimatedHamburger from './AnimatedHamburger'
 import { haptic } from '../lib/haptics'
 import { getTranslation } from '../lib/i18n'
+import { KEPT_ICON } from '../lib/brand'
 
 export default function TopBar({
   user,
@@ -41,7 +42,7 @@ export default function TopBar({
         title="Kembali ke Overview"
         aria-label="Kembali ke Overview"
       >
-        <img src="/brand/kept-icon.png" alt="Kept" className="kept-topbar-icon" />
+        <img src={KEPT_ICON} alt="Kept" className="kept-topbar-icon" />
         <div className="brand-text">
           <div className="brand-name">Kept</div>
           <div className="brand-caption">

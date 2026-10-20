@@ -12,6 +12,7 @@ import {
 import { isWeakPin, recordSecurityActivity } from '../lib/securityAudit'
 import { getTranslation } from '../lib/i18n'
 import { haptic } from '../lib/haptics'
+import { KEPT_LOGO } from '../lib/brand'
 
 export default function UnlockScreen({
   profile,
@@ -454,7 +455,7 @@ export default function UnlockScreen({
   return (
     <main className="unlock-screen pin-unlock-screen">
       <div className="brand-logo-hero">
-        <img src="/brand/kept-logo.png" alt="Kept" className="kept-hero-logo" />
+        <img src={KEPT_LOGO} alt="Kept" className="kept-hero-logo" />
       </div>
 
       {/* 6-Digit PIN Keypad matching User Mockup */}

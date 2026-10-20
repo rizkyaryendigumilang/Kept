@@ -59,6 +59,7 @@ import {
 import { idbClearUser, idbGetPendingQueue } from './lib/idb'
 import { Copy, Check, Download, ShieldCheck, Lock } from './components/Icons'
 import { isWeakPin, recordSecurityActivity, registerCurrentDevice } from './lib/securityAudit'
+import { KEPT_ICON, KEPT_LOGO } from './lib/brand'
 
 const CATEGORY_LABELS = {
   social: 'Social Media',
@@ -1389,7 +1390,7 @@ Jangan pernah membagikan kode ini kepada siapapun!
 function Splash() {
   return (
     <div className="splash">
-      <img src="/brand/kept-icon.png" alt="Kept" className="kept-splash-icon" />
+      <img src={KEPT_ICON} alt="Kept" className="kept-splash-icon" />
       <span className="kept-splash-text">Kept</span>
       <div style={{ marginTop: 20 }}>
         <Loader />
@@ -1455,7 +1456,7 @@ Simpan dokumen ini dengan aman dan jangan berikan ke siapapun!
   return (
     <main className="unlock-screen setup-screen">
       <div className="brand-logo-hero">
-        <img src="/brand/kept-logo.png" alt="Kept" className="kept-hero-logo" />
+        <img src={KEPT_LOGO} alt="Kept" className="kept-hero-logo" />
       </div>
 
       <div className="unlock-copy">

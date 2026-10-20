@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { getTranslation } from '../lib/i18n'
+import { KEPT_LOGO } from '../lib/brand'
 
 function GoogleMark() {
   return (
@@ -159,7 +160,7 @@ export default function AuthScreen({ lang = 'id' }) {
     <main className="auth-screen">
       <div className="auth-card">
         <div className="auth-brand">
-          <img src="/brand/kept-logo.png" alt="Kept" className="kept-auth-logo" />
+          <img src={KEPT_LOGO} alt="Kept" className="kept-auth-logo" />
         </div>
 
         <div className="auth-copy">
