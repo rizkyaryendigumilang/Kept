@@ -111,9 +111,9 @@ jobs:
         run: |
           set -euo pipefail
           test -s ./artifact/web-dist.tar.gz || { echo "::error::Downloaded artifact web-dist.tar.gz is missing or empty"; exit 1; }
-          tar -tzf ./artifact/web-dist.tar.gz > /dev/null || { echo "::error::Artifact web-dist.tar.gz is not a valid gzip tar archive"; exit 1; }
-          tar -tzf ./artifact/web-dist.tar.gz | grep -q 'index.html' || { echo "::error::Artifact archive missing index.html"; exit 1; }
-          tar -tzf ./artifact/web-dist.tar.gz | grep -q 'manifest.webmanifest' || { echo "::error::Artifact archive missing manifest.webmanifest"; exit 1; }
+          ARCHIVE_FILES=$(tar -tzf ./artifact/web-dist.tar.gz) || { echo "::error::Artifact web-dist.tar.gz is not a valid gzip tar archive"; exit 1; }
+          echo "$ARCHIVE_FILES" | grep 'index.html' > /dev/null || { echo "::error::Artifact archive missing index.html"; exit 1; }
+          echo "$ARCHIVE_FILES" | grep 'manifest.webmanifest' > /dev/null || { echo "::error::Artifact archive missing manifest.webmanifest"; exit 1; }
           sha256sum ./artifact/web-dist.tar.gz > ./artifact/web-dist.tar.gz.sha256
           echo "Artifact validated. SHA256: $(cat ./artifact/web-dist.tar.gz.sha256)"
 
