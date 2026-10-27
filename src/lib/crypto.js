@@ -42,6 +42,21 @@ export function deriveVaultKey(masterPassword, saltBase64) {
   return argon2id(utf8ToBytes(masterPassword), salt, ARGON_OPTIONS)
 }
 
+/**
+ * Zeroes out a raw cryptographic key in memory to prevent memory dump remnants.
+ *
+ * @param {Uint8Array|null} rawKey
+ */
+export function zeroKey(rawKey) {
+  if (rawKey && rawKey instanceof Uint8Array) {
+    try {
+      rawKey.fill(0)
+    } catch {
+      // ignore
+    }
+  }
+}
+
 const aesKeyCache = new WeakMap()
 
 async function importAesKey(rawKey) {

@@ -2,6 +2,7 @@ import { readFileSync, existsSync } from 'node:fs'
 import {
   generateSalt,
   deriveVaultKey,
+  zeroKey,
   encryptJson,
   decryptJson,
   generateRecoveryKey,
@@ -27,6 +28,14 @@ if (!testMasterKey || testMasterKey.length !== 32) {
   throw new Error('Argon2id master key derivation failed')
 }
 console.log(`[PASS] Argon2id Key Derivation (32 bytes derived, fingerprint: ${keyFingerprint(testMasterKey)})`)
+
+// 2b. Memory Sanitization (zeroKey) test
+const dummyBuffer = new Uint8Array([1, 2, 3, 4, 5, 6, 7, 8])
+zeroKey(dummyBuffer)
+if (dummyBuffer.some((b) => b !== 0)) {
+  throw new Error('zeroKey memory sanitization failed')
+}
+console.log('[PASS] Memory Sanitization (zeroKey zero-fill)')
 
 // 3. Vault item payload encrypt / decrypt roundtrip
 const sampleVaultItem = {

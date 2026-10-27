@@ -18,8 +18,11 @@ import {
 import { BANK_PRESETS } from '../lib/banks'
 import ConfirmToast from '../components/ConfirmToast'
 import BreachCheckerBadge from '../components/BreachCheckerBadge'
+import PasswordStrengthGauge from '../components/PasswordStrengthGauge'
 import { getTranslation } from '../lib/i18n'
 import { haptic } from '../lib/haptics'
+import { copyToClipboardSecure } from '../lib/clipboard'
+import { useVault } from '../context/VaultContext'
 
 export default function ItemModal({
   item,
@@ -167,11 +170,11 @@ export default function ItemModal({
     >
       <div className="detail-header">
         <div className="detail-identity">
-          {form.url && (
+          {(form.url || form.name) && (
             <SiteLogo
               url={form.url}
               name={form.name}
-              size={34}
+              size={36}
               radius={10}
             />
           )}
@@ -415,7 +418,10 @@ function Field({
               type="button"
               className="mini-icon"
               onClick={() =>
-                navigator.clipboard?.writeText(displayValue)
+                copyToClipboardSecure(displayValue, {
+                  label: label || 'Data',
+                  lang: 'id'
+                })
               }
               title="Copy"
               aria-label="Copy"
@@ -808,6 +814,7 @@ function EditForm({
             update('password', value)
           }
         />
+        <PasswordStrengthGauge password={item.password} lang={lang} />
         <BreachCheckerBadge password={item.password} lang={lang} />
         <PasswordHistoryViewer
           history={item.password_history}
@@ -1023,9 +1030,10 @@ function CustomFieldsEditor({
                             type="button"
                             className="mini-icon"
                             onClick={() =>
-                              navigator.clipboard?.writeText(
-                                field.value
-                              )
+                              copyToClipboardSecure(field.value, {
+                                label: field.label || 'Data',
+                                lang
+                              })
                             }
                             title="Copy"
                           >
@@ -1102,7 +1110,10 @@ function PasswordHistoryViewer({
   }
 
   function handleCopy(pass, idx) {
-    navigator.clipboard?.writeText(pass)
+    copyToClipboardSecure(pass, {
+      label: 'Password Riwayat',
+      lang
+    })
     setCopiedIndex(idx)
     setTimeout(() => setCopiedIndex(null), 1800)
   }

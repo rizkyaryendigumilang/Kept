@@ -445,3 +445,94 @@ export function checkDocumentExpiry(expiryDateStr) {
 
   return { status: 'active', label: 'Berlaku', daysRemaining: diffDays }
 }
+
+/**
+ * Compresses and resizes document photos (KTP, SIM, Paspor, etc.) before AES-GCM encryption.
+ * Scales down high-resolution camera images to a max dimension (default 1600px)
+ * and applies JPEG compression to prevent bloated payloads in IndexedDB and Supabase.
+ *
+ * @param {File|Blob|string} imageFileOrDataUrl
+ * @param {number} [maxDimension=1600]
+ * @param {number} [quality=0.82]
+ * @returns {Promise<{ dataUrl: string, sizeBytes: number, sizeFormatted: string, width: number, height: number }>}
+ */
+export async function compressDocumentImage(imageFileOrDataUrl, maxDimension = 1600, quality = 0.82) {
+  return new Promise((resolve, reject) => {
+    let srcUrl = ''
+    let isCreatedUrl = false
+
+    if (typeof imageFileOrDataUrl === 'string') {
+      srcUrl = imageFileOrDataUrl
+    } else if (imageFileOrDataUrl instanceof Blob || imageFileOrDataUrl instanceof File) {
+      if (imageFileOrDataUrl.type && !imageFileOrDataUrl.type.startsWith('image/')) {
+        return reject(new Error('File is not an image'))
+      }
+      srcUrl = URL.createObjectURL(imageFileOrDataUrl)
+      isCreatedUrl = true
+    } else {
+      return reject(new Error('Invalid image source'))
+    }
+
+    const img = new Image()
+    img.crossOrigin = 'anonymous'
+
+    img.onload = () => {
+      try {
+        let width = img.naturalWidth || img.width
+        let height = img.naturalHeight || img.height
+
+        if (width > maxDimension || height > maxDimension) {
+          if (width > height) {
+            height = Math.round((height * maxDimension) / width)
+            width = maxDimension
+          } else {
+            width = Math.round((width * maxDimension) / height)
+            height = maxDimension
+          }
+        }
+
+        const canvas = document.createElement('canvas')
+        canvas.width = width
+        canvas.height = height
+        const ctx = canvas.getContext('2d')
+
+        if (!ctx) {
+          throw new Error('Canvas 2D context not available')
+        }
+
+        // Fill white background to prevent transparent PNGs from turning black in JPEG
+        ctx.fillStyle = '#ffffff'
+        ctx.fillRect(0, 0, width, height)
+
+        ctx.drawImage(img, 0, 0, width, height)
+
+        const compressedDataUrl = canvas.toDataURL('image/jpeg', quality)
+        const head = compressedDataUrl.indexOf(',')
+        const base64Len = compressedDataUrl.length - (head + 1)
+        const sizeBytes = Math.round((base64Len * 3) / 4)
+        const sizeFormatted = (sizeBytes / 1024).toFixed(1) + ' KB'
+
+        if (isCreatedUrl) URL.revokeObjectURL(srcUrl)
+
+        resolve({
+          dataUrl: compressedDataUrl,
+          sizeBytes,
+          sizeFormatted,
+          width,
+          height
+        })
+      } catch (err) {
+        if (isCreatedUrl) URL.revokeObjectURL(srcUrl)
+        reject(err)
+      }
+    }
+
+    img.onerror = () => {
+      if (isCreatedUrl) URL.revokeObjectURL(srcUrl)
+      reject(new Error('Failed to load image for compression'))
+    }
+
+    img.src = srcUrl
+  })
+}
+

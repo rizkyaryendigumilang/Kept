@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, lazy, Suspense } from 'react'
+import { useEffect, useMemo, useRef, useState, useCallback, lazy, Suspense } from 'react'
 import AuthScreen from './components/AuthScreen'
 import UnlockScreen from './components/UnlockScreen'
 import TopBar from './components/TopBar'
@@ -30,9 +30,14 @@ const ShareSecretModal = lazy(() => import('./components/ShareSecretModal'))
 const ViewSharedSecretScreen = lazy(() => import('./components/ViewSharedSecretScreen'))
 import { parseShareHash } from './lib/secureShare'
 import { checkDocumentExpiry } from './lib/documents'
+import { useAutoLock } from './hooks/useAutoLock'
+import { usePwaInstall } from './hooks/usePwaInstall'
+import { useVaultSync } from './hooks/useVaultSync'
+import { VaultContext } from './context/VaultContext'
 import { supabase } from './lib/supabase'
 import {
   deriveVaultKey,
+  zeroKey,
   encryptJson,
   decryptJson,
   generateSalt,
@@ -82,15 +87,8 @@ const CATEGORY_LABELS = {
   '05_other': 'Dokumen Lainnya'
 }
 
-function applyTheme(theme) {
-  if (['light', 'dark', 'tokyo-night', 'catppuccin'].includes(theme)) {
-    document.documentElement.dataset.theme = theme
-  } else {
-    // system theme
-    document.documentElement.dataset.theme = window.matchMedia('(prefers-color-scheme: dark)').matches
-      ? 'dark'
-      : 'light'
-  }
+function applyTheme() {
+  document.documentElement.dataset.theme = 'dark'
 }
 
 export default function App() {
@@ -113,8 +111,6 @@ export default function App() {
   const [recovery, setRecovery] = useState(false)
   const [toast, setToast] = useState('')
   const [error, setError] = useState('')
-  const [isOnline, setIsOnline] = useState(navigator.onLine)
-  const [pendingSyncCount, setPendingSyncCount] = useState(0)
   const [activeRecoveryKey, setActiveRecoveryKey] = useState('')
   const [lang, setLang] = useState(() => localStorage.getItem('kept_language') || 'id')
   const [searchOpen, setSearchOpen] = useState(false)
@@ -126,7 +122,6 @@ export default function App() {
   const [privacyMaskEnabled, setPrivacyMaskEnabled] = useState(
     () => localStorage.getItem('kept_privacy_mask') !== 'false'
   )
-  const [installPrompt, setInstallPrompt] = useState(null)
   const [dismissedFavSuggestions, setDismissedFavSuggestions] = useState(() => {
     try {
       return new Set(JSON.parse(localStorage.getItem('kept_dismissed_fav_suggestions') || '[]'))
@@ -182,32 +177,45 @@ export default function App() {
     })
   }
 
-  useEffect(() => {
-    const handleBeforeInstallPrompt = (e) => {
-      e.preventDefault()
-      setInstallPrompt(e)
-    }
-    const handleAppInstalled = () => {
-      setInstallPrompt(null)
-      showToast(lang === 'id' ? 'Kept berhasil dipasang ke Layar Utama!' : 'Kept successfully installed to Home Screen!')
-    }
-    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt)
-    window.addEventListener('appinstalled', handleAppInstalled)
-    return () => {
-      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt)
-      window.removeEventListener('appinstalled', handleAppInstalled)
-    }
-  }, [lang])
+  const showToast = useCallback((msg, duration = 2000) => {
+    setToast(msg)
+    setTimeout(() => setToast(''), duration)
+  }, [])
 
-  async function handlePromptInstall() {
-    if (!installPrompt) return
-    installPrompt.prompt()
-    const { outcome } = await installPrompt.userChoice
-    if (outcome === 'accepted') {
-      showToast(lang === 'id' ? 'Memasang Kept...' : 'Installing Kept...')
-    }
-    setInstallPrompt(null)
-  }
+  const lockVault = useCallback(() => {
+    setVaultKey((prevKey) => {
+      if (prevKey) {
+        zeroKey(prevKey)
+      }
+      return null
+    })
+  }, [])
+
+  const { installPrompt, promptInstall: handlePromptInstall } = usePwaInstall({
+    lang,
+    showToast
+  })
+
+  useAutoLock({
+    vaultKey,
+    onLock: lockVault,
+    showToast
+  })
+
+  const {
+    isOnline,
+    pendingSyncCount,
+    isSyncing,
+    runSync,
+    checkPendingQueue
+  } = useVaultSync({
+    session,
+    vaultKey,
+    items,
+    setItems,
+    showToast,
+    lang
+  })
 
   function handleLanguageChange(newLang) {
     setLang(newLang)
@@ -237,59 +245,6 @@ export default function App() {
     }
   }
 
-  // Auto-lock idle timer
-  useEffect(() => {
-    if (!vaultKey) return
-
-    const getTimeoutMs = () => {
-      const minutes = parseInt(localStorage.getItem('kept_autolock_minutes') || '15', 10)
-      if (minutes <= 0) return null
-      return minutes * 60 * 1000
-    }
-
-    let timer = null
-    const resetTimer = () => {
-      if (timer) clearTimeout(timer)
-      const timeoutMs = getTimeoutMs()
-      if (!timeoutMs) return
-      timer = setTimeout(() => {
-        setVaultKey(null)
-        showToast('Vault otomatis terkunci karena tidak ada aktivitas.')
-      }, timeoutMs)
-    }
-
-    const events = ['mousedown', 'keydown', 'touchstart', 'scroll']
-    events.forEach((ev) => window.addEventListener(ev, resetTimer, { passive: true }))
-    resetTimer()
-
-    return () => {
-      if (timer) clearTimeout(timer)
-      events.forEach((ev) => window.removeEventListener(ev, resetTimer))
-    }
-  }, [vaultKey])
-
-  // Online / offline listeners
-  useEffect(() => {
-    const handleOnline = () => {
-      setIsOnline(true)
-      showToast('Koneksi pulih. Memulai sinkronisasi…')
-      if (session?.user && vaultKey) {
-        runSync(session.user.id, vaultKey)
-      }
-    }
-    const handleOffline = () => {
-      setIsOnline(false)
-      showToast('Anda sedang offline. Perubahan disimpan lokal.')
-    }
-
-    window.addEventListener('online', handleOnline)
-    window.addEventListener('offline', handleOffline)
-    return () => {
-      window.removeEventListener('online', handleOnline)
-      window.removeEventListener('offline', handleOffline)
-    }
-  }, [session?.user, vaultKey])
-
   useEffect(() => {
     let mounted = true
     registerCurrentDevice()
@@ -306,7 +261,7 @@ export default function App() {
       if (currentSession?.user) await bootstrapUser(currentSession.user)
       else {
         setProfile(null)
-        setVaultKey(null)
+        lockVault()
         setItems([])
       }
     })
@@ -331,7 +286,7 @@ export default function App() {
       bootstrappedUserRef.current = p.id
 
       if (accountChanged) {
-        setVaultKey(null)
+        lockVault()
         setItems([])
         setSelectedItem(null)
         setAddMode(null)
@@ -348,20 +303,6 @@ export default function App() {
     } catch (err) {
       setError(err.message || 'Gagal memuat profil pengguna.')
     }
-  }
-
-  async function checkPendingQueue(userId) {
-    try {
-      const pending = await idbGetPendingQueue(userId)
-      setPendingSyncCount(pending.length)
-    } catch {
-      // ignore
-    }
-  }
-
-  function showToast(msg, duration = 2000) {
-    setToast(msg)
-    setTimeout(() => setToast(''), duration)
   }
 
   useEffect(() => {
@@ -464,31 +405,6 @@ export default function App() {
       }
     } catch (err) {
       setError(err.message || 'Gagal membuka vault.')
-    }
-  }
-
-  async function runSync(userId, currentKey) {
-    try {
-      const result = await syncVaultWithConflictResolution(userId, currentKey)
-      checkPendingQueue(userId)
-      if (result.resolvedConflicts > 0) {
-        showToast(`Sinkronisasi selesai: ${result.resolvedConflicts} konflik berhasil dipulihkan secara aman.`, 3500)
-      }
-      // Re-hydrate decrypted items in parallel
-      const decryptedResults = await Promise.all(
-        result.rows.map(async (row) => {
-          try {
-            const payload = await decryptItemRow(row, currentKey)
-            return { ...row, ...payload }
-          } catch {
-            return null
-          }
-        })
-      )
-      const decrypted = decryptedResults.filter(Boolean)
-      setItems(decrypted)
-    } catch (err) {
-      console.warn('Sync warning:', err)
     }
   }
 
@@ -781,7 +697,7 @@ export default function App() {
   async function handleResetVault() {
     const updatedProfile = await resetVault(session.user.id)
     setProfile(updatedProfile)
-    setVaultKey(null)
+    lockVault()
     setItems([])
     showToast('Vault telah di-reset. Silakan inisialisasi vault baru.', 3000)
   }
@@ -921,7 +837,7 @@ Jangan pernah membagikan kode ini kepada siapapun!
       }
     }
     setProfile(null)
-    setVaultKey(null)
+    lockVault()
     setItems([])
     setSelectedItem(null)
     setAddMode(null)
@@ -1053,8 +969,41 @@ Jangan pernah membagikan kode ini kepada siapapun!
     )
   }
 
+  const vaultContextValue = {
+    items,
+    setItems,
+    hydratedItems,
+    trashedItems,
+    stats,
+    favorites,
+    suggestedFavorite,
+    recent,
+    alerts,
+    expiryAlerts,
+    banks,
+    documents,
+    vaultKey,
+    setVaultKey,
+    lockVault,
+    isOnline,
+    pendingSyncCount,
+    isSyncing,
+    runSync,
+    saveItem,
+    removeItem,
+    restoreItem,
+    permanentDeleteItem,
+    emptyTrash,
+    toggleFavorite,
+    openItem,
+    onOpenShareSecret: handleOpenShareSecret,
+    showToast,
+    lang
+  }
+
   return (
-    <div className="app-shell">
+    <VaultContext.Provider value={vaultContextValue}>
+      <div className="app-shell">
       <PrivacyMask enabled={privacyMaskEnabled} lang={lang} />
       <TopBar
         user={session.user}
@@ -1171,7 +1120,7 @@ Jangan pernah membagikan kode ini kepada siapapun!
               recoveryKey={activeRecoveryKey}
               onDownloadEmergencySheet={handleDownloadEmergencySheet}
               onLockVault={() => {
-                setVaultKey(null)
+                lockVault()
                 showToast('Vault telah dikunci.')
               }}
               showToast={showToast}
@@ -1324,7 +1273,7 @@ Jangan pernah membagikan kode ini kepada siapapun!
           recoveryKey={activeRecoveryKey}
           onDownloadEmergencySheet={handleDownloadEmergencySheet}
           onLockVault={() => {
-            setVaultKey(null)
+            lockVault()
             showToast('Vault telah dikunci.')
           }}
           showToast={showToast}
@@ -1383,7 +1332,8 @@ Jangan pernah membagikan kode ini kepada siapapun!
           {error}
         </div>
       )}
-    </div>
+      </div>
+    </VaultContext.Provider>
   )
 }
 

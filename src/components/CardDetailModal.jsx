@@ -28,6 +28,8 @@ import {
   CARD_CATEGORIES,
   evaluateCardCapability
 } from '../lib/cards'
+import { copyToClipboardSecure } from '../lib/clipboard'
+import { useVault } from '../context/VaultContext'
 import { getTranslation } from '../lib/i18n'
 import { haptic } from '../lib/haptics'
 import ConfirmToast from './ConfirmToast'
@@ -100,15 +102,20 @@ export default function CardDetailModal({
 
   const cardBackground = card.color || categoryConfig?.color || '#0056b3'
 
+  const vault = useVault()
+  const showToast = vault?.showToast
+
   const copyToClipboard = async (text, key) => {
     if (!text) return
-    try {
-      await navigator.clipboard.writeText(text)
+    const label = key === 'cvv' ? 'CVV' : key === 'pin' ? 'PIN' : 'Nomor Kartu'
+    const success = await copyToClipboardSecure(text, {
+      label,
+      lang,
+      onNotify: showToast
+    })
+    if (success) {
       setCopiedKey(key)
-      haptic('success')
       setTimeout(() => setCopiedKey(null), 1400)
-    } catch {
-      // ignore
     }
   }
 

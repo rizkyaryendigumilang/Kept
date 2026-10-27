@@ -197,6 +197,9 @@ export default function AuthScreen({ lang = 'id' }) {
                 }
                 placeholder={t('auth_name_ph')}
                 autoComplete="name"
+                autoCapitalize="words"
+                autoCorrect="off"
+                enterKeyHint="next"
               />
             </label>
           )}
@@ -208,7 +211,11 @@ export default function AuthScreen({ lang = 'id' }) {
               onChange={(e) => setEmail(e.target.value)}
               placeholder="you@example.com"
               type="email"
+              inputMode="email"
               autoComplete="email"
+              autoCapitalize="none"
+              autoCorrect="off"
+              enterKeyHint={mode === 'reset' ? 'done' : 'next'}
               required
             />
           </label>
@@ -228,6 +235,9 @@ export default function AuthScreen({ lang = 'id' }) {
                     ? 'current-password'
                     : 'new-password'
                 }
+                autoCapitalize="none"
+                autoCorrect="off"
+                enterKeyHint="done"
                 minLength={8}
                 required
               />

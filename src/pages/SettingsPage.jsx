@@ -520,23 +520,6 @@ export default function SettingsPage({
             })}
           </div>
 
-          {onOpenShareSecret && (
-            <button
-              type="button"
-              className="drawer-action-card secure-share-card mt-sm"
-              onClick={onOpenShareSecret}
-            >
-              <div className="drawer-action-icon flame-icon">
-                <Flame size={17} />
-              </div>
-              <div className="drawer-action-text">
-                <strong>{t('share_secret_menu_title')}</strong>
-                <span>{t('share_secret_btn')}</span>
-              </div>
-              <ChevronRight size={16} className="drawer-arrow" />
-            </button>
-          )}
-
           {/* Sign Out Button */}
           <div className="drawer-signout-wrap">
             <button
@@ -583,36 +566,6 @@ export default function SettingsPage({
               >
                 <span>🇬🇧</span>
                 <span>{t('lang_en')}</span>
-              </button>
-            </div>
-          </div>
-
-          <div className="subpage-card">
-            <div className="subpage-card-heading">
-              <strong>{t('pref_theme')}</strong>
-              <span>{t('pref_theme_desc')}</span>
-            </div>
-            <div className="segmented-grid">
-              <button
-                type="button"
-                className={profile?.theme === 'light' ? 'selected' : ''}
-                onClick={() => onTheme('light')}
-              >
-                <Sun size={15} /> Light
-              </button>
-              <button
-                type="button"
-                className={profile?.theme === 'dark' ? 'selected' : ''}
-                onClick={() => onTheme('dark')}
-              >
-                <Moon size={15} /> Dark
-              </button>
-              <button
-                type="button"
-                className={profile?.theme === 'system' ? 'selected' : ''}
-                onClick={() => onTheme('system')}
-              >
-                <Laptop size={15} /> System
               </button>
             </div>
           </div>
@@ -813,6 +766,24 @@ export default function SettingsPage({
               />
             </label>
           </div>
+
+          {/* Tautan Berbagi Rahasia */}
+          {onOpenShareSecret && (
+            <button
+              type="button"
+              className="drawer-action-card secure-share-card"
+              onClick={onOpenShareSecret}
+            >
+              <div className="drawer-action-icon flame-icon">
+                <Flame size={17} />
+              </div>
+              <div className="drawer-action-text">
+                <strong>{t('share_secret_menu_title')}</strong>
+                <span>{t('share_secret_btn')}</span>
+              </div>
+              <ChevronRight size={16} className="drawer-arrow" />
+            </button>
+          )}
 
           <div className="subpage-card">
             <div className="subpage-card-heading">

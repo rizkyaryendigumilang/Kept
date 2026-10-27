@@ -593,26 +593,6 @@ export default function SettingsDrawer({
                 })}
               </div>
 
-              {onOpenShareSecret && (
-                <button
-                  type="button"
-                  className="drawer-action-card secure-share-card mt-sm"
-                  onClick={() => {
-                    onClose()
-                    onOpenShareSecret()
-                  }}
-                >
-                  <div className="drawer-action-icon flame-icon">
-                    <Flame size={17} />
-                  </div>
-                  <div className="drawer-action-text">
-                    <strong>{t('share_secret_menu_title')}</strong>
-                    <span>{t('share_secret_btn')}</span>
-                  </div>
-                  <ChevronRight size={16} className="drawer-arrow" />
-                </button>
-              )}
-
               {/* Sign Out Button */}
               <div className="drawer-signout-wrap">
                 <button
@@ -666,38 +646,6 @@ export default function SettingsDrawer({
                   >
                     <span>🇬🇧</span>
                     <span>{t('lang_en')}</span>
-                  </button>
-                </div>
-              </div>
-
-              {/* Theme Selector */}
-              <div className="subpage-card">
-                <div className="subpage-card-heading">
-                  <strong>{t('pref_theme')}</strong>
-                  <span>{t('pref_theme_desc')}</span>
-                </div>
-
-                <div className="segmented-grid">
-                  <button
-                    type="button"
-                    className={profile?.theme === 'light' ? 'selected' : ''}
-                    onClick={() => onTheme('light')}
-                  >
-                    <Sun size={15} /> {t('theme_light')}
-                  </button>
-                  <button
-                    type="button"
-                    className={profile?.theme === 'dark' ? 'selected' : ''}
-                    onClick={() => onTheme('dark')}
-                  >
-                    <Moon size={15} /> {t('theme_dark')}
-                  </button>
-                  <button
-                    type="button"
-                    className={profile?.theme === 'system' ? 'selected' : ''}
-                    onClick={() => onTheme('system')}
-                  >
-                    <Laptop size={15} /> {t('theme_system')}
                   </button>
                 </div>
               </div>
@@ -914,6 +862,27 @@ export default function SettingsDrawer({
                   />
                 </label>
               </div>
+
+              {/* Tautan Berbagi Rahasia */}
+              {onOpenShareSecret && (
+                <button
+                  type="button"
+                  className="drawer-action-card secure-share-card"
+                  onClick={() => {
+                    onClose()
+                    onOpenShareSecret()
+                  }}
+                >
+                  <div className="drawer-action-icon flame-icon">
+                    <Flame size={17} />
+                  </div>
+                  <div className="drawer-action-text">
+                    <strong>{t('share_secret_menu_title')}</strong>
+                    <span>{t('share_secret_btn')}</span>
+                  </div>
+                  <ChevronRight size={16} className="drawer-arrow" />
+                </button>
+              )}
 
               {/* Perangkat & Sesi */}
               <div className="subpage-card">

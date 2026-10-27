@@ -1,10 +1,16 @@
 import { Eye, EyeOff, KeyRound, Copy, Check, Star } from './Icons'
 import SiteLogo from './SiteLogo'
 import { useEffect, useState, memo } from 'react'
+import { copyToClipboardSecure } from '../lib/clipboard'
+import { haptic } from '../lib/haptics'
+import { useVault } from '../context/VaultContext'
 
 function PasswordCard({ item, password, onOpen, lang = 'id' }) {
   const [revealed, setRevealed] = useState(false)
   const [copied, setCopied] = useState(false)
+  const vault = useVault()
+  const showToast = vault?.showToast
+
   useEffect(() => {
     if (!revealed) return undefined
     const timer = setTimeout(() => setRevealed(false), 7000)
@@ -13,9 +19,15 @@ function PasswordCard({ item, password, onOpen, lang = 'id' }) {
 
   async function copyPassword(event) {
     event.stopPropagation()
-    await navigator.clipboard.writeText(password)
-    setCopied(true)
-    setTimeout(() => setCopied(false), 1400)
+    const success = await copyToClipboardSecure(password, {
+      label: item.name || 'Password',
+      lang,
+      onNotify: showToast
+    })
+    if (success) {
+      setCopied(true)
+      setTimeout(() => setCopied(false), 1400)
+    }
   }
 
   return (
@@ -33,10 +45,10 @@ function PasswordCard({ item, password, onOpen, lang = 'id' }) {
         </div>
         <span className="item-secondary">{item.username || (lang === 'id' ? 'Tanpa username' : 'No username')}</span>
         <div className="secret-row">
-          <span className={revealed ? 'secret-value revealed' : 'secret-value'}>{revealed ? password : '••••••••••••'}</span>
+          <span className={revealed ? 'secret-value revealed font-mono' : 'secret-value font-mono'}>{revealed ? password : '••••••••••••'}</span>
           <div className="secret-actions">
             <button className="mini-icon" title={lang === 'id' ? 'Salin password' : 'Copy password'} onClick={copyPassword}>{copied ? <Check size={15} /> : <Copy size={15} />}</button>
-            <button className="mini-icon" title={revealed ? (lang === 'id' ? 'Sembunyikan password' : 'Hide password') : (lang === 'id' ? 'Tampilkan password' : 'Reveal password')} onClick={(event) => { event.stopPropagation(); setRevealed((v) => !v) }}>
+            <button className="mini-icon" title={revealed ? (lang === 'id' ? 'Sembunyikan password' : 'Hide password') : (lang === 'id' ? 'Tampilkan password' : 'Reveal password')} onClick={(event) => { event.stopPropagation(); haptic('light'); setRevealed((v) => !v) }}>
               {revealed ? <EyeOff size={15} /> : <Eye size={15} />}
             </button>
           </div>

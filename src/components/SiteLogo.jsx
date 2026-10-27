@@ -34,17 +34,31 @@ export default function SiteLogo({
   const box = {
     width: `${size}px`,
     height: `${size}px`,
-    borderRadius: `${radius}px`
+    minWidth: `${size}px`,
+    minHeight: `${size}px`,
+    borderRadius: `${radius}px`,
+    display: 'inline-flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0
   }
 
   if (!hasCandidate) {
+    const fontSize = Math.max(9, Math.round(size * 0.46))
     return (
       <span
         className={`${className} site-logo-fallback`}
         style={{
           ...box,
           background: siteTint(url || name),
-          fontSize: `${Math.max(8, Math.round(size * 0.46))}px`
+          color: '#ffffff',
+          fontWeight: 700,
+          fontSize: `${fontSize}px`,
+          lineHeight: 1,
+          textAlign: 'center',
+          userSelect: 'none',
+          boxShadow: 'inset 0 0 0 1px rgba(255, 255, 255, 0.22), 0 2px 5px rgba(0, 0, 0, 0.15)',
+          textShadow: '0 1px 2px rgba(0, 0, 0, 0.35)'
         }}
         aria-hidden="true"
       >
@@ -56,7 +70,11 @@ export default function SiteLogo({
   return (
     <img
       className={className}
-      style={box}
+      style={{
+        ...box,
+        objectFit: 'contain',
+        display: 'block'
+      }}
       src={candidates[index]}
       alt=""
       loading="lazy"

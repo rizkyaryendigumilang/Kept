@@ -3,7 +3,8 @@ import Modal from '../components/Modal'
 import {
   DOCUMENT_CATEGORIES,
   DOCUMENT_TEMPLATES,
-  getTemplateById
+  getTemplateById,
+  compressDocumentImage
 } from '../lib/documents'
 import {
   ScanLine,
@@ -67,16 +68,52 @@ export default function AddDocumentModal({ onClose, onSubmit, lang = 'id' }) {
     }))
   }
 
-  // Handle file uploads (converts file to base64 for encrypted zero-knowledge storage)
-  function handleFileUpload(slot, file) {
+  // Handle file uploads (converts file to compressed base64 for encrypted zero-knowledge storage)
+  async function handleFileUpload(slot, file) {
     if (!file) return
 
-    // Limit to 5MB for indexedDB + sync safety
-    if (file.size > 5 * 1024 * 1024) {
-      alert('Ukuran file maksimal 5MB demi kecepatan enkripsi.')
+    const isImage = file.type?.startsWith('image/')
+    const maxAllowedSize = isImage ? 15 * 1024 * 1024 : 8 * 1024 * 1024
+
+    if (file.size > maxAllowedSize) {
+      alert(
+        isImage
+          ? (lang === 'id' ? 'Ukuran foto maksimal 15MB.' : 'Maximum photo size is 15MB.')
+          : (lang === 'id' ? 'Ukuran file PDF maksimal 8MB demi performa enkripsi.' : 'Maximum PDF size is 8MB for encryption performance.')
+      )
       return
     }
 
+    if (isImage) {
+      try {
+        const compressed = await compressDocumentImage(file, 1600, 0.82)
+        setForm((prev) => ({
+          ...prev,
+          attachments: {
+            ...prev.attachments,
+            [slot]: {
+              name: file.name.replace(/\.[^/.]+$/, '') + '.jpg',
+              size: compressed.sizeFormatted,
+              type: 'image/jpeg',
+              data: compressed.dataUrl
+            }
+          }
+        }))
+
+        // Simulated client-side smart OCR recognition for Indonesian documents
+        if (slot === 'front') {
+          runClientOcrExtraction(file.name)
+        }
+      } catch (err) {
+        console.warn('Canvas compression failed, falling back to direct upload:', err)
+        readFileDirectly(slot, file)
+      }
+    } else {
+      readFileDirectly(slot, file)
+    }
+  }
+
+  function readFileDirectly(slot, file) {
     const reader = new FileReader()
     reader.onload = (e) => {
       const dataUrl = e.target.result
@@ -92,11 +129,6 @@ export default function AddDocumentModal({ onClose, onSubmit, lang = 'id' }) {
           }
         }
       }))
-
-      // Simulated client-side smart OCR recognition for Indonesian documents
-      if (slot === 'front' && (file.type.startsWith('image/'))) {
-        runClientOcrExtraction(file.name)
-      }
     }
     reader.readAsDataURL(file)
   }

@@ -1,138 +1,4 @@
-/* ==========================================================================
-   OMARCHY DESIGN SYSTEM — KEPT PRIVATE VAULT
-   Light-first minimalist interface with Geist Variable typography,
-   4px grid density, and multi-theme support (light, dark, tokyo-night, catppuccin).
-   ========================================================================== */
-
-:root {
-  color-scheme: light;
-
-  /* Typography */
-  --font-sans: "Geist", "Geist Variable", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  --font-mono: "JetBrains Mono", "JetBrains Mono Variable", ui-monospace, SFMono-Regular, monospace;
-
-  /* 4px Grid Spacing Scale */
-  --space-xxs: 2px;
-  --space-xs: 4px;
-  --space-sm: 8px;
-  --space-md: 16px;
-  --space-lg: 24px;
-  --space-xl: 32px;
-
-  /* Shapes / Border Radius (Modern Rounded Minimalist) */
-  --radius-pill: 999px;
-  --radius-xs: 8px;
-  --radius-sm: 10px;
-  --radius-md: 16px;
-  --radius-lg: 20px;
-  --radius-inherit: inherit;
-
-  /* Omarchy Brand Tokens */
-  --brand-primary: #6e6e6e;
-  --brand-alt: #9ece6a;
-  --brand-ink: #0c0e10;
-
-  /* Semantic Light Mode (Default Light-First) */
-  --bg: #ffffff;
-  --surface: #f5f5f5;
-  --surface-alt: #ffffff;
-  --surface-hover: #ebebeb;
-  --text-primary: #000000;
-  --text-secondary: #383838;
-  --text-muted: #4a4a4a;
-  --border: #1a1b26;
-  --border-subtle: #e8e8e8;
-  --border-strong: #585b70;
-
-  --accent: #1a1b26;
-  --accent-contrast: #ffffff;
-  --danger: #b42318;
-  --danger-bg: #fef3f2;
-  --danger-border: #fecdca;
-  --success: #15803d;
-  --success-bg: #f0fdf4;
-  --success-border: #bbf7d0;
-
-  /* Omarchy Elevation */
-  --shadow-flat: inset 0 -1px 0 var(--border-subtle);
-  --shadow-raised: 0 1px 3px rgba(0, 0, 0, 0.05), 0 1px 2px rgba(0, 0, 0, 0.03);
-  --shadow-floating: 0 4px 12px rgba(0, 0, 0, 0.08), 0 1px 3px rgba(0, 0, 0, 0.05);
-
-  --transition-fast: 150ms ease-out;
-  --transition-normal: 220ms ease-out;
-}
-
-:root[data-theme="dark"] {
-  color-scheme: dark;
-  --bg: #0f1115;
-  --surface: #1a1d24;
-  --surface-alt: #222630;
-  --surface-hover: #282c37;
-  --text-primary: #ffffff;
-  --text-secondary: #c0c4cc;
-  --text-muted: #7e8590;
-  --border: #2e333d;
-  --border-subtle: #222630;
-  --border-strong: #414856;
-  --accent: #ffffff;
-  --accent-contrast: #0f1115;
-  --danger: #ef4444;
-  --danger-bg: #291415;
-  --danger-border: #561e20;
-  --success: #22c55e;
-  --success-bg: #142a1a;
-  --success-border: #1a4224;
-  --shadow-raised: 0 1px 3px rgba(0, 0, 0, 0.35);
-  --shadow-floating: 0 4px 16px rgba(0, 0, 0, 0.45);
-}
-
-:root[data-theme="tokyo-night"] {
-  color-scheme: dark;
-  --bg: #1a1b26;
-  --surface: #24283b;
-  --surface-alt: #1f2335;
-  --surface-hover: #292e42;
-  --text-primary: #c0caf5;
-  --text-secondary: #a9b1d6;
-  --text-muted: #8b93b8;
-  --border: #414868;
-  --border-subtle: #292e42;
-  --border-strong: #565f89;
-  --accent: #7aa2f7;
-  --accent-contrast: #1a1b26;
-  --danger: #f7768e;
-  --danger-bg: #2f1e2e;
-  --danger-border: #542938;
-  --success: #9ece6a;
-  --success-bg: #1e2e28;
-  --success-border: #2e4a36;
-  --shadow-raised: 0 1px 3px rgba(0, 0, 0, 0.4);
-  --shadow-floating: 0 4px 16px rgba(0, 0, 0, 0.55);
-}
-
-:root[data-theme="catppuccin"] {
-  color-scheme: dark;
-  --bg: #1e1e2e;
-  --surface: #181825;
-  --surface-alt: #313244;
-  --surface-hover: #29293a;
-  --text-primary: #cdd6f4;
-  --text-secondary: #bac2de;
-  --text-muted: #a6adc8;
-  --border: #45475a;
-  --border-subtle: #313244;
-  --border-strong: #585b70;
-  --accent: #b4befe;
-  --accent-contrast: #1e1e2e;
-  --danger: #f38ba8;
-  --danger-bg: #311c26;
-  --danger-border: #562734;
-  --success: #a6e3a1;
-  --success-bg: #1d2b23;
-  --success-border: #29422e;
-  --shadow-raised: 0 1px 3px rgba(0, 0, 0, 0.4);
-  --shadow-floating: 0 4px 16px rgba(0, 0, 0, 0.5);
-}
+@import './styles/tokens.css';
 
 /* Base reset */
 * {
@@ -141,6 +7,8 @@
 
 html {
   -webkit-tap-highlight-color: transparent;
+  -webkit-text-size-adjust: 100%;
+  overscroll-behavior: none;
 }
 
 html, body, #root {
@@ -157,7 +25,7 @@ html, body, #root {
 }
 
 body {
-  overscroll-behavior-y: none;
+  overscroll-behavior: none;
 }
 
 button, input, textarea, select {
@@ -165,8 +33,11 @@ button, input, textarea, select {
   font-size: 13px;
 }
 
-button, [role="button"], a {
+button, [role="button"], a, input[type="button"], input[type="submit"] {
   touch-action: manipulation;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
 }
 
 button {
@@ -180,15 +51,47 @@ button:disabled {
   opacity: 0.55;
 }
 
+/* 16px minimum font size on touch devices prevents iOS Safari from zooming into inputs */
 input, textarea, select {
   color: var(--text-primary);
+  font-size: 16px;
+}
+@media (hover: hover) and (pointer: fine) {
+  input, textarea, select {
+    font-size: 13px;
+  }
 }
 
-/* Prevent auto-zooming on iOS when tapping inputs */
-@media (max-width: 768px) {
-  input, textarea, select {
-    font-size: 16px;
-  }
+/* Snappy native touch press feedback (:active) */
+.primary-button:active,
+.secondary-button:active,
+.pill-button:active,
+.oauth-button:active:not(:disabled),
+.category-row-btn:active,
+.drawer-action-card:active,
+.bottom-nav-btn:active,
+.mini-icon:active,
+.item-card:active {
+  transform: scale(0.97);
+  transition: transform 90ms ease-out;
+}
+
+/* Scroll containment for modals, sheets, and drawers */
+.modal,
+.modal-sheet,
+.drawer-body,
+.drawer-subpage-view,
+.alerts-panel,
+.command-palette {
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Swipe card deck gesture isolation */
+.swipe-card,
+.compact-swipe-card,
+.bank-card-deck {
+  touch-action: pan-y;
 }
 
 /* Typography tokens */
@@ -223,8 +126,13 @@ h3 {
   color: var(--text-muted);
 }
 
-.font-mono {
+.font-mono,
+.tabular-nums,
+input[type="password"] {
   font-family: var(--font-mono) !important;
+  font-variant-numeric: tabular-nums;
+  -webkit-font-feature-settings: "tnum" 1;
+  font-feature-settings: "tnum" 1;
 }
 
 /* TopBar */
@@ -421,7 +329,7 @@ h3 {
 
 .main-content {
   min-height: calc(100dvh - 65px);
-  padding-bottom: 96px;
+  padding-bottom: calc(96px + env(safe-area-inset-bottom, 0px));
 }
 
 .page-shell {
@@ -820,37 +728,61 @@ h3 {
 
 .secret-value {
   font-family: var(--font-mono);
-  font-size: 12px;
-  letter-spacing: 0.1em;
+  font-size: 12.5px;
+  letter-spacing: 0.04em;
   font-variant-numeric: tabular-nums;
+  -webkit-font-feature-settings: "tnum" 1;
+  font-feature-settings: "tnum" 1;
   color: var(--text-secondary);
+  display: inline-block;
+  min-width: 108px;
 }
 
 .secret-value.revealed {
-  letter-spacing: 0;
+  letter-spacing: 0.04em;
   color: var(--text-primary);
 }
 
 .secret-actions {
   display: flex;
   align-items: center;
-  gap: var(--space-xxs);
+  gap: var(--space-xs);
+  margin-left: auto;
 }
 
 .mini-icon {
-  width: 26px;
-  height: 26px;
+  position: relative;
+  width: 30px;
+  height: 30px;
   border-radius: var(--radius-xs);
   color: var(--text-muted);
   display: grid;
   place-items: center;
   background: transparent;
-  transition: color var(--transition-fast), background var(--transition-fast);
+  transition: color var(--transition-fast), background var(--transition-fast), transform 90ms ease-out;
+}
+
+/* Touch target expansion: 44x44px invisible tap area for fingers on mobile */
+.mini-icon::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 44px;
+  height: 44px;
+  min-width: 44px;
+  min-height: 44px;
+  pointer-events: auto;
 }
 
 .mini-icon:hover {
   background: var(--surface-alt);
   color: var(--text-primary);
+}
+
+.mini-icon:active {
+  transform: scale(0.92);
 }
 
 /* Bank Stack & Cards (Compact Swipe UI) */
@@ -1203,7 +1135,9 @@ h3 {
   position: fixed;
   inset: 0;
   z-index: 100;
-  background: rgba(12, 14, 16, 0.45);
+  background: rgba(12, 14, 16, 0.6);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
   display: grid;
   align-items: center;
   justify-items: center;
@@ -1229,11 +1163,18 @@ h3 {
 }
 
 .sheet-handle {
-  width: 36px;
+  width: 38px;
   height: 4px;
   border-radius: 999px;
-  background: var(--border-subtle);
+  background: var(--border-strong, #414856);
   margin: var(--space-xxs) auto var(--space-md);
+  cursor: grab;
+  touch-action: none;
+}
+
+.sheet-handle:active {
+  cursor: grabbing;
+  background: var(--text-muted);
 }
 
 .modal {
@@ -1244,6 +1185,101 @@ h3 {
 
 .modal.wide {
   width: min(680px, 100%);
+}
+
+@media (max-width: 640px) {
+  .sheet-backdrop {
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    align-items: center;
+    padding: 0;
+  }
+
+  .modal,
+  .modal.wide,
+  .bottom-sheet {
+    width: 100%;
+    max-width: 100%;
+    margin: 0;
+    border-radius: 24px 24px 0 0;
+    border-bottom: none;
+    border-left: none;
+    border-right: none;
+    max-height: 88dvh;
+    padding: 10px 18px calc(24px + env(safe-area-inset-bottom, 0px));
+    touch-action: pan-y;
+  }
+}
+
+/* Password Strength Gauge (Micro-Interactions) */
+.password-strength-gauge-box {
+  margin-top: 8px;
+  padding: 10px 12px;
+  background: var(--surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.strength-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.strength-bars-track {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 5px;
+  flex: 1;
+  height: 4px;
+}
+
+.strength-bar-segment {
+  height: 100%;
+  border-radius: 999px;
+  transition: background 250ms ease-out, box-shadow 250ms ease-out;
+}
+
+.strength-label-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: var(--radius-pill);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  transition: all 250ms ease-out;
+}
+
+.strength-rules-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.strength-rule-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10.5px;
+  color: var(--text-muted);
+  background: rgba(255, 255, 255, 0.03);
+  padding: 2px 7px;
+  border-radius: 4px;
+  border: 1px solid transparent;
+  transition: all 200ms ease-out;
+}
+
+.strength-rule-pill.met {
+  color: #22c55e;
+  background: rgba(34, 197, 94, 0.1);
+  border-color: rgba(34, 197, 94, 0.2);
 }
 
 .recovery-modal {
@@ -2688,6 +2724,37 @@ h3 {
   align-items: center;
   gap: var(--space-sm);
   min-width: 0;
+}
+
+/* Site Logo & Fallback Letter Badge */
+.site-logo {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  vertical-align: middle;
+  overflow: hidden;
+  user-select: none;
+}
+
+img.site-logo {
+  object-fit: contain;
+  display: block;
+}
+
+.site-logo-fallback {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  text-align: center !important;
+  color: #ffffff !important;
+  font-weight: 700 !important;
+  font-family: var(--font-sans, system-ui, -apple-system, sans-serif);
+  line-height: 1 !important;
+  text-transform: uppercase;
+  flex-shrink: 0;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.22), 0 2px 5px rgba(0, 0, 0, 0.15);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
 }
 
 .detail-meta {
