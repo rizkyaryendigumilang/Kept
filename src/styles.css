@@ -2331,7 +2331,10 @@ input[type="password"] {
 .kept-auth-logo,
 .kept-hero-logo {
   max-height: 44px;
+  width: auto;
   object-fit: contain;
+  border-radius: 10px;
+  background: transparent;
 }
 
 .brand-logo-hero {
@@ -8318,6 +8321,25 @@ img.site-logo {
   display: flex;
   align-items: center;
   justify-content: space-between;
+}
+
+.brand-logo-small {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.kept-header-icon {
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  object-fit: contain;
+  background: transparent;
+}
+
+.kept-header-title {
+  font-weight: 700;
+  font-size: 15px;
 }
 
 .shared-secret-badge {
