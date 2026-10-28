@@ -29,7 +29,17 @@ import ConfirmToast from '../components/ConfirmToast'
 import { getTranslation } from '../lib/i18n'
 import { haptic } from '../lib/haptics'
 
-export default function AlertsPanel({ alerts = [], items = [], onClose, onOpenItem, lang = 'id' }) {
+export default function AlertsPanel({
+  alerts = [],
+  items = [],
+  onClose,
+  onOpenItem,
+  onDismissAlert,
+  onDismissAllAlerts,
+  dismissedCount = 0,
+  onResetDismissedAlerts,
+  lang = 'id'
+}) {
   // Navigation tabs: 'alerts' | 'activity' | 'devices'
   const [activeTab, setActiveTab] = useState('alerts')
   const [filter, setFilter] = useState('all')
@@ -394,46 +404,63 @@ export default function AlertsPanel({ alerts = [], items = [], onClose, onOpenIt
               )}
             </div>
 
-            {/* Filter Tabs */}
+            {/* Filter Tabs & Dismiss All */}
             {alerts.length > 0 && (
-              <div className="alerts-filter-row">
-                <button
-                  className={`filter pill-button ${filter === 'all' ? 'active' : ''}`}
-                  onClick={() => {
-                    haptic('light')
-                    setFilter('all')
-                  }}
-                >
-                  {t('filter_all')} ({alerts.length})
-                </button>
-                <button
-                  className={`filter pill-button ${filter === 'danger' ? 'active' : ''}`}
-                  onClick={() => {
-                    haptic('light')
-                    setFilter('danger')
-                  }}
-                >
-                  {lang === 'id' ? 'Kritis' : 'Critical'} ({alerts.filter((a) => a.level === 'danger').length})
-                </button>
-                <button
-                  className={`filter pill-button ${filter === 'warning' ? 'active' : ''}`}
-                  onClick={() => {
-                    haptic('light')
-                    setFilter('warning')
-                  }}
-                >
-                  {lang === 'id' ? 'Peringatan' : 'Warning'} ({alerts.filter((a) => a.level === 'warning').length})
-                </button>
-                {healthStats.expiryCount > 0 && (
+              <div className="alerts-filter-and-actions">
+                <div className="alerts-filter-row">
                   <button
-                    className={`filter pill-button ${filter === 'expiry' ? 'active' : ''}`}
+                    className={`filter pill-button ${filter === 'all' ? 'active' : ''}`}
                     onClick={() => {
                       haptic('light')
-                      setFilter('expiry')
+                      setFilter('all')
                     }}
                   >
-                    <AlertTriangle size={12} />
-                    <span>{t('filter_expiry')} ({healthStats.expiryCount})</span>
+                    {t('filter_all')} ({alerts.length})
+                  </button>
+                  <button
+                    className={`filter pill-button ${filter === 'danger' ? 'active' : ''}`}
+                    onClick={() => {
+                      haptic('light')
+                      setFilter('danger')
+                    }}
+                  >
+                    {lang === 'id' ? 'Kritis' : 'Critical'} ({alerts.filter((a) => a.level === 'danger').length})
+                  </button>
+                  <button
+                    className={`filter pill-button ${filter === 'warning' ? 'active' : ''}`}
+                    onClick={() => {
+                      haptic('light')
+                      setFilter('warning')
+                    }}
+                  >
+                    {lang === 'id' ? 'Peringatan' : 'Warning'} ({alerts.filter((a) => a.level === 'warning').length})
+                  </button>
+                  {healthStats.expiryCount > 0 && (
+                    <button
+                      className={`filter pill-button ${filter === 'expiry' ? 'active' : ''}`}
+                      onClick={() => {
+                        haptic('light')
+                        setFilter('expiry')
+                      }}
+                    >
+                      <AlertTriangle size={12} />
+                      <span>{t('filter_expiry')} ({healthStats.expiryCount})</span>
+                    </button>
+                  )}
+                </div>
+
+                {onDismissAllAlerts && (
+                  <button
+                    type="button"
+                    className="alerts-clear-all-btn"
+                    onClick={() => {
+                      haptic('medium')
+                      onDismissAllAlerts()
+                    }}
+                    title={t('alerts_dismiss_all_confirm')}
+                  >
+                    <Trash2 size={12} />
+                    <span>{t('alerts_dismiss_all')}</span>
                   </button>
                 )}
               </div>
@@ -444,8 +471,30 @@ export default function AlertsPanel({ alerts = [], items = [], onClose, onOpenIt
               {filteredAlerts.length === 0 ? (
                 <div className="empty-state large" style={{ minHeight: '160px' }}>
                   <ShieldCheck size={28} />
-                  <strong>{lang === 'id' ? 'Semua Aman!' : 'All Secure!'}</strong>
-                  <span>{lang === 'id' ? 'Tidak ada peringatan keamanan yang membutuhkan tindakan saat ini.' : 'No security warnings require action right now.'}</span>
+                  <strong>
+                    {dismissedCount > 0 && alerts.length === 0
+                      ? t('alerts_all_cleared')
+                      : (lang === 'id' ? 'Semua Aman!' : 'All Secure!')}
+                  </strong>
+                  <span>
+                    {dismissedCount > 0 && alerts.length === 0
+                      ? t('alerts_all_cleared_sub')
+                      : (lang === 'id' ? 'Tidak ada peringatan keamanan yang membutuhkan tindakan saat ini.' : 'No security warnings require action right now.')}
+                  </span>
+                  {dismissedCount > 0 && onResetDismissedAlerts && (
+                    <button
+                      type="button"
+                      className="secondary-button pill-button mt-xs"
+                      onClick={() => {
+                        haptic('light')
+                        onResetDismissedAlerts()
+                      }}
+                      style={{ marginTop: '8px' }}
+                    >
+                      <RefreshCw size={13} />
+                      <span>{t('alerts_restore_btn')} ({dismissedCount})</span>
+                    </button>
+                  )}
                 </div>
               ) : (
                 <div className="alerts-list">
@@ -456,10 +505,27 @@ export default function AlertsPanel({ alerts = [], items = [], onClose, onOpenIt
                       </div>
                       <div className="alert-content">
                         <div className="alert-title-row">
-                          <strong>{alert.title}</strong>
-                          <span className={`alert-level-badge ${alert.level}`}>
-                            {alert.level === 'danger' ? (lang === 'id' ? 'KRITIS' : 'CRITICAL') : (lang === 'id' ? 'PERINGATAN' : 'WARNING')}
-                          </span>
+                          <div className="alert-title-left">
+                            <strong>{alert.title}</strong>
+                            <span className={`alert-level-badge ${alert.level}`}>
+                              {alert.level === 'danger' ? (lang === 'id' ? 'KRITIS' : 'CRITICAL') : (lang === 'id' ? 'PERINGATAN' : 'WARNING')}
+                            </span>
+                          </div>
+                          {onDismissAlert && (
+                            <button
+                              type="button"
+                              className="alert-dismiss-btn"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                haptic('light')
+                                onDismissAlert(alert.id)
+                              }}
+                              title={t('alerts_dismiss_single')}
+                              aria-label={t('alerts_dismiss_single')}
+                            >
+                              <X size={14} />
+                            </button>
+                          )}
                         </div>
                         <p className="alert-body-text">{alert.body}</p>
                         {alert.item && onOpenItem && (

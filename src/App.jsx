@@ -375,11 +375,57 @@ export default function App() {
         .slice(0, 4),
     [hydratedItems]
   )
-  const alerts = useMemo(() => buildAlerts(hydratedItems), [hydratedItems])
+  const [dismissedAlerts, setDismissedAlerts] = useState(() => {
+    try {
+      return new Set(JSON.parse(localStorage.getItem('kept_dismissed_alerts') || '[]'))
+    } catch {
+      return new Set()
+    }
+  })
+
+  const rawAlerts = useMemo(() => buildAlerts(hydratedItems), [hydratedItems])
+  const alerts = useMemo(
+    () => rawAlerts.filter((a) => !dismissedAlerts.has(a.id)),
+    [rawAlerts, dismissedAlerts]
+  )
   const expiryAlerts = useMemo(
     () => alerts.filter((a) => a.type.startsWith('card_') || a.type.startsWith('doc_')),
     [alerts]
   )
+
+  function handleDismissAlert(alertId) {
+    setDismissedAlerts((prev) => {
+      const next = new Set(prev)
+      next.add(alertId)
+      try {
+        localStorage.setItem('kept_dismissed_alerts', JSON.stringify([...next]))
+      } catch {}
+      return next
+    })
+    showToast(lang === 'id' ? 'Peringatan dihapus' : 'Alert dismissed', 2000)
+  }
+
+  function handleDismissAllAlerts() {
+    setDismissedAlerts((prev) => {
+      const next = new Set(prev)
+      for (const a of rawAlerts) {
+        next.add(a.id)
+      }
+      try {
+        localStorage.setItem('kept_dismissed_alerts', JSON.stringify([...next]))
+      } catch {}
+      return next
+    })
+    showToast(lang === 'id' ? 'Semua peringatan telah dibersihkan' : 'All alerts cleared', 2500)
+  }
+
+  function handleResetDismissedAlerts() {
+    setDismissedAlerts(new Set())
+    try {
+      localStorage.removeItem('kept_dismissed_alerts')
+    } catch {}
+    showToast(lang === 'id' ? 'Peringatan dipulihkan' : 'Alerts restored', 2000)
+  }
   const banks = useMemo(
     () =>
       hydratedItems
@@ -1253,6 +1299,10 @@ Jangan pernah membagikan kode ini kepada siapapun!
             items={hydratedItems}
             onClose={() => setAlertsOpen(false)}
             onOpenItem={openItem}
+            onDismissAlert={handleDismissAlert}
+            onDismissAllAlerts={handleDismissAllAlerts}
+            dismissedCount={dismissedAlerts.size}
+            onResetDismissedAlerts={handleResetDismissedAlerts}
             lang={lang}
           />
         )}
