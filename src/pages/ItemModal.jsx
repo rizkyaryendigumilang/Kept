@@ -199,12 +199,13 @@ export default function ItemModal({
                 : 'action-pill-btn favorite'
             }
             onClick={() => onToggleFavorite(item.id)}
+            title={isFavorite ? (lang === 'id' ? 'Hapus dari Favorit' : 'Remove from Favorites') : (lang === 'id' ? 'Tambah ke Favorit' : 'Add to Favorites')}
           >
             <Star
               size={14}
               fill={isFavorite ? 'currentColor' : 'none'}
             />
-            <span>{isFavorite ? (lang === 'id' ? 'Favorit' : 'Favorite') : (lang === 'id' ? 'Jadikan Favorit' : 'Add to Favorites')}</span>
+            <span>{lang === 'id' ? 'Favorit' : 'Favorite'}</span>
           </button>
 
           {!editing ? (
@@ -239,7 +240,7 @@ export default function ItemModal({
               aria-label={t('share_secret_btn')}
             >
               <Flame size={14} />
-              <span>{t('share_secret_btn')}</span>
+              <span>{t('share_secret_short')}</span>
             </button>
           )}
 

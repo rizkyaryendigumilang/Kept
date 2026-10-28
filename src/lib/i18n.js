@@ -634,6 +634,7 @@ export const TRANSLATIONS = {
 
     // Secure Share (Tautan Berbagi Rahasia Sekali Buka)
     share_secret_btn: 'Bagikan Sekali Buka',
+    share_secret_short: 'Sekali Buka',
     share_secret_menu_title: 'Tautan Berbagi Rahasia',
     share_secret_modal_title: 'Bagikan Rahasia Sekali Buka',
     share_secret_modal_desc: 'Kirim kata sandi atau catatan penting dengan enkripsi zero-knowledge. Tautan akan otomatis musnah dari server setelah dibuka.',
@@ -1310,6 +1311,7 @@ export const TRANSLATIONS = {
 
     // Secure Share (Self-Destructing Share Link)
     share_secret_btn: 'Share One-Time Secret',
+    share_secret_short: 'One-Time',
     share_secret_menu_title: 'Secure Secret Share',
     share_secret_modal_title: 'Share Self-Destructing Secret',
     share_secret_modal_desc: 'Send a sensitive password or note with zero-knowledge encryption. The link permanently self-destructs after being viewed.',

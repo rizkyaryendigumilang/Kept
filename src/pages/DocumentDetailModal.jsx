@@ -79,9 +79,10 @@ export default function DocumentDetailModal({
             haptic('light')
             onToggleFavorite(item.id)
           }}
+          title={item.favorite ? (lang === 'id' ? 'Hapus dari Favorit' : 'Remove from Favorites') : (lang === 'id' ? 'Tambah ke Favorit' : 'Add to Favorites')}
         >
           <Star size={14} fill={item.favorite ? 'currentColor' : 'none'} />
-          <span>{item.favorite ? (lang === 'id' ? 'Favorit' : 'Favorite') : (lang === 'id' ? 'Jadikan Favorit' : 'Add to Favorites')}</span>
+          <span>{lang === 'id' ? 'Favorit' : 'Favorite'}</span>
         </button>
 
         <button
