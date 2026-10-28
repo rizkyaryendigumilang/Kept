@@ -13,6 +13,25 @@ export default class ErrorBoundary extends React.Component {
 
   componentDidCatch(error, errorInfo) {
     console.error('Kept Vault Uncaught Error:', error, errorInfo)
+
+    // Check if error is due to stale dynamic import (deployment skew)
+    const isChunkLoadError =
+      error?.message?.includes('Failed to fetch dynamically imported module') ||
+      error?.message?.includes('Importing a module script failed') ||
+      error?.message?.includes('error loading dynamically imported module') ||
+      error?.name === 'ChunkLoadError'
+
+    if (isChunkLoadError && typeof window !== 'undefined') {
+      const reloadKey = 'kept_chunk_reload_timestamp'
+      const lastReload = sessionStorage.getItem(reloadKey)
+      const now = Date.now()
+
+      // Automatically reload once to fetch the latest application bundle
+      if (!lastReload || now - Number(lastReload) > 15000) {
+        sessionStorage.setItem(reloadKey, String(now))
+        window.location.reload()
+      }
+    }
   }
 
   handleReload = () => {
@@ -30,6 +49,12 @@ export default class ErrorBoundary extends React.Component {
 
   render() {
     if (this.state.hasError) {
+      const isChunkLoadError =
+        this.state.error?.message?.includes('Failed to fetch dynamically imported module') ||
+        this.state.error?.message?.includes('Importing a module script failed') ||
+        this.state.error?.message?.includes('error loading dynamically imported module') ||
+        this.state.error?.name === 'ChunkLoadError'
+
       return (
         <div
           style={{
@@ -64,18 +89,18 @@ export default class ErrorBoundary extends React.Component {
                 width: '52px',
                 height: '52px',
                 borderRadius: '14px',
-                background: 'rgba(239, 68, 68, 0.15)',
-                color: '#ef4444',
+                background: isChunkLoadError ? 'rgba(59, 130, 246, 0.15)' : 'rgba(239, 68, 68, 0.15)',
+                color: isChunkLoadError ? '#3b82f6' : '#ef4444',
                 display: 'grid',
                 placeItems: 'center'
               }}
             >
-              <ShieldAlert size={28} />
+              {isChunkLoadError ? <RefreshCw size={28} /> : <ShieldAlert size={28} />}
             </div>
 
             <div>
               <h2 style={{ fontSize: '18px', fontWeight: 700, margin: '0 0 6px 0' }}>
-                Kendala Sistem Brankas
+                {isChunkLoadError ? 'Pembaruan Sistem Tersedia' : 'Kendala Sistem Brankas'}
               </h2>
               <p
                 style={{
@@ -85,11 +110,13 @@ export default class ErrorBoundary extends React.Component {
                   margin: 0
                 }}
               >
-                Data terenkripsi Anda tetap aman. Terjadi kendala rendering pada antarmuka brankas.
+                {isChunkLoadError
+                  ? 'Versi terbaru aplikasi Kept telah dirilis. Silakan muat ulang halaman untuk memperbarui modul antarmuka brankas.'
+                  : 'Data terenkripsi Anda tetap aman. Terjadi kendala rendering pada antarmuka brankas.'}
               </p>
             </div>
 
-            {this.state.error?.message && (
+            {this.state.error?.message && !isChunkLoadError && (
               <div
                 style={{
                   width: '100%',
@@ -117,41 +144,63 @@ export default class ErrorBoundary extends React.Component {
                 marginTop: '8px'
               }}
             >
-              <button
-                type="button"
-                className="primary-button pill-button"
-                style={{
-                  width: '100%',
-                  padding: '11px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '8px',
-                  cursor: 'pointer'
-                }}
-                onClick={this.handleLockAndReload}
-              >
-                <Lock size={15} />
-                <span>Kunci & Buka Ulang Brankas</span>
-              </button>
+              {isChunkLoadError ? (
+                <button
+                  type="button"
+                  className="primary-button pill-button"
+                  style={{
+                    width: '100%',
+                    padding: '11px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '8px',
+                    cursor: 'pointer'
+                  }}
+                  onClick={this.handleReload}
+                >
+                  <RefreshCw size={15} />
+                  <span>Muat Ulang Sekarang</span>
+                </button>
+              ) : (
+                <>
+                  <button
+                    type="button"
+                    className="primary-button pill-button"
+                    style={{
+                      width: '100%',
+                      padding: '11px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '8px',
+                      cursor: 'pointer'
+                    }}
+                    onClick={this.handleLockAndReload}
+                  >
+                    <Lock size={15} />
+                    <span>Kunci & Buka Ulang Brankas</span>
+                  </button>
 
-              <button
-                type="button"
-                className="secondary-button pill-button"
-                style={{
-                  width: '100%',
-                  padding: '10px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '8px',
-                  cursor: 'pointer'
-                }}
-                onClick={() => this.setState({ hasError: false, error: null })}
-              >
-                <RefreshCw size={14} />
-                <span>Coba Muat Ulang Tampilan</span>
-              </button>
+                  <button
+                    type="button"
+                    className="secondary-button pill-button"
+                    style={{
+                      width: '100%',
+                      padding: '10px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '8px',
+                      cursor: 'pointer'
+                    }}
+                    onClick={() => this.setState({ hasError: false, error: null })}
+                  >
+                    <RefreshCw size={14} />
+                    <span>Coba Muat Ulang Tampilan</span>
+                  </button>
+                </>
+              )}
             </div>
           </div>
         </div>

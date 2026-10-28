@@ -1,4 +1,5 @@
-import { useEffect, useState, useMemo, useRef, lazy, Suspense } from 'react'
+import { useEffect, useState, useMemo, useRef, Suspense } from 'react'
+import { safeLazy } from '../lib/safeLazy'
 import {
   Menu,
   X,
@@ -31,7 +32,7 @@ import {
   Flame
 } from './Icons'
 
-const AvatarCropModal = lazy(() => import('./AvatarCropModal'))
+const AvatarCropModal = safeLazy(() => import('./AvatarCropModal'))
 import AnimatedHamburger, { HAMBURGER_STYLES } from './AnimatedHamburger'
 import PwaInstallCard from './PwaInstallCard'
 import TrashManager from './TrashManager'

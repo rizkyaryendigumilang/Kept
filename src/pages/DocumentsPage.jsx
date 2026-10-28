@@ -1,7 +1,8 @@
-import { useState, useMemo, useEffect, lazy, Suspense } from 'react'
+import { useState, useMemo, useEffect, Suspense } from 'react'
 import DocumentCard from '../components/DocumentCard'
+import { safeLazy } from '../lib/safeLazy'
 
-const DocumentQrModal = lazy(() => import('../components/DocumentQrModal'))
+const DocumentQrModal = safeLazy(() => import('../components/DocumentQrModal'))
 import {
   Plus,
   Search,

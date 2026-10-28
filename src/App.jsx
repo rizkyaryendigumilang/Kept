@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, useCallback, lazy, Suspense } from 'react'
+import { useEffect, useMemo, useRef, useState, useCallback, Suspense } from 'react'
 import AuthScreen from './components/AuthScreen'
 import UnlockScreen from './components/UnlockScreen'
 import TopBar from './components/TopBar'
@@ -7,27 +7,28 @@ import AddSheet from './components/AddSheet'
 import HomePage from './pages/HomePage'
 import Loader from './components/Loader'
 import PrivacyMask from './components/PrivacyMask'
+import { safeLazy } from './lib/safeLazy'
 
 // Code splitting: Lazy-loaded pages & modals for fast initial load
-const ResetPasswordScreen = lazy(() => import('./components/ResetPasswordScreen'))
-const VaultPage = lazy(() => import('./pages/VaultPage'))
-const BankingPage = lazy(() => import('./pages/BankingPage'))
-const DocumentsPage = lazy(() => import('./pages/DocumentsPage'))
-const SettingsPage = lazy(() => import('./pages/SettingsPage'))
-const SettingsDrawer = lazy(() => import('./components/SettingsDrawer'))
-const AlertsPanel = lazy(() => import('./pages/AlertsPanel'))
-const ItemModal = lazy(() => import('./pages/ItemModal'))
-const AddItemModal = lazy(() => import('./pages/AddItemModal'))
-const AddDocumentModal = lazy(() => import('./pages/AddDocumentModal'))
-const AddCardModal = lazy(() => import('./components/AddCardModal'))
-const CardDetailModal = lazy(() => import('./components/CardDetailModal'))
-const CardBarcodeModal = lazy(() => import('./components/CardBarcodeModal'))
-const DocumentDetailModal = lazy(() => import('./pages/DocumentDetailModal'))
-const CommandPalette = lazy(() => import('./components/CommandPalette'))
-const ExportModal = lazy(() => import('./components/ExportModal'))
-const ImportKeptModal = lazy(() => import('./components/ImportKeptModal'))
-const ShareSecretModal = lazy(() => import('./components/ShareSecretModal'))
-const ViewSharedSecretScreen = lazy(() => import('./components/ViewSharedSecretScreen'))
+const ResetPasswordScreen = safeLazy(() => import('./components/ResetPasswordScreen'))
+const VaultPage = safeLazy(() => import('./pages/VaultPage'))
+const BankingPage = safeLazy(() => import('./pages/BankingPage'))
+const DocumentsPage = safeLazy(() => import('./pages/DocumentsPage'))
+const SettingsPage = safeLazy(() => import('./pages/SettingsPage'))
+const SettingsDrawer = safeLazy(() => import('./components/SettingsDrawer'))
+const AlertsPanel = safeLazy(() => import('./pages/AlertsPanel'))
+const ItemModal = safeLazy(() => import('./pages/ItemModal'))
+const AddItemModal = safeLazy(() => import('./pages/AddItemModal'))
+const AddDocumentModal = safeLazy(() => import('./pages/AddDocumentModal'))
+const AddCardModal = safeLazy(() => import('./components/AddCardModal'))
+const CardDetailModal = safeLazy(() => import('./components/CardDetailModal'))
+const CardBarcodeModal = safeLazy(() => import('./components/CardBarcodeModal'))
+const DocumentDetailModal = safeLazy(() => import('./pages/DocumentDetailModal'))
+const CommandPalette = safeLazy(() => import('./components/CommandPalette'))
+const ExportModal = safeLazy(() => import('./components/ExportModal'))
+const ImportKeptModal = safeLazy(() => import('./components/ImportKeptModal'))
+const ShareSecretModal = safeLazy(() => import('./components/ShareSecretModal'))
+const ViewSharedSecretScreen = safeLazy(() => import('./components/ViewSharedSecretScreen'))
 import { parseShareHash } from './lib/secureShare'
 import { checkDocumentExpiry } from './lib/documents'
 import { useAutoLock } from './hooks/useAutoLock'

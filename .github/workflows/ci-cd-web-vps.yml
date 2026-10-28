@@ -202,7 +202,7 @@ jobs:
             if [ -f "$backup" ] && [ -s "$backup" ]; then
               echo "Restoring previous live version from verified backup: $backup ..."
               if [ "$live" = "/srv/www/kept" ]; then
-                find "$live" -mindepth 1 -delete 2>/dev/null || rm -rf "$live"/*
+                find "$live" -mindepth 1 -maxdepth 1 ! -name 'assets' -delete 2>/dev/null || true
               fi
               if tar -xzf "$backup" -C "$live"; then
                 chmod -R u+rwX,go+rX "$live" 2>/dev/null || true
@@ -238,8 +238,16 @@ jobs:
             echo "Snapshot backup verified successfully: $(ls -lh "$backup")"
           fi
 
-          # Synchronize staged release to live directory (scoped strictly to $live)
-          rsync -a --delete "$stage/" "$live/"
+          # Synchronize root files while preserving hashed assets for zero-downtime client transitions
+          rsync -a --delete --exclude='assets' "$stage/" "$live/"
+
+          # Synchronize new hashed assets alongside existing assets
+          # This guarantees users with active sessions can still fetch lazy chunks after a release
+          mkdir -p "$live/assets"
+          rsync -a "$stage/assets/" "$live/assets/"
+
+          # Prune stale hashed assets older than 14 days to keep storage lean
+          find "$live/assets" -type f -mtime +14 -delete 2>/dev/null || true
 
           # Enforce safe readable permissions for web server
           chmod -R u+rwX,go+rX "$live" 2>/dev/null || true
@@ -329,7 +337,7 @@ jobs:
           if [ -s "$backup" ]; then
             echo "Restoring previous verified backup: $backup to $live ..."
             if [ "$live" = "/srv/www/kept" ]; then
-              find "$live" -mindepth 1 -delete 2>/dev/null || rm -rf "$live"/*
+              find "$live" -mindepth 1 -maxdepth 1 ! -name 'assets' -delete 2>/dev/null || true
             fi
             tar -xzf "$backup" -C "$live"
             chmod -R u+rwX,go+rX "$live" 2>/dev/null || true
