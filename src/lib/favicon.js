@@ -23,10 +23,21 @@ export function siteDomain(input) {
   }
 }
 
+export function isIpOrLocal(host) {
+  if (!host) return true
+  // Matches IPv4 (e.g. 43.156.236.102)
+  if (/^(\d{1,3}\.){3}\d{1,3}$/.test(host)) return true
+  // Matches localhost or local development domain
+  if (host === 'localhost' || host.endsWith('.local') || host.endsWith('.internal')) return true
+  // Matches port or IPv6
+  if (host.includes(':')) return true
+  return false
+}
+
 export function faviconCandidates(input) {
   const domain = siteDomain(input)
 
-  if (!domain || !domain.includes('.')) return []
+  if (!domain || isIpOrLocal(domain) || !domain.includes('.')) return []
 
   return [
     `https://${domain}/favicon.ico`,
@@ -41,11 +52,11 @@ export function siteInitial(name, input) {
 
   const match = source.match(/[a-z0-9]/i)
 
-  return match ? match[0].toUpperCase() : '?'
+  return match ? match[0].toUpperCase() : '★'
 }
 
 export function siteTint(input) {
-  const domain = siteDomain(input) || String(input || '')
+  const domain = siteDomain(input) || String(input || 'kept')
 
   let hash = 0
 

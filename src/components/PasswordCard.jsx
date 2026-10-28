@@ -32,13 +32,25 @@ function PasswordCard({ item, password, onOpen, lang = 'id' }) {
 
   return (
     <article className="vault-list-card" onClick={onOpen}>
-      <div className="item-icon tone-neutral">{item.url ? <SiteLogo url={item.url} name={item.name} size={20} radius={6} /> : <KeyRound size={18} />}</div>
+      <div className="item-icon-tile">
+        {item.url ? (
+          <SiteLogo url={item.url} name={item.name} size={34} radius={8} />
+        ) : (
+          <div className="item-icon-fallback">
+            <KeyRound size={17} />
+          </div>
+        )}
+      </div>
       <div className="item-copy">
         <div className="item-title-row">
-          <div className="flex items-center gap-xs">
+          <div className="item-title-left">
             <strong>{item.name}</strong>
             {item.favorite && (
-              <Star size={12} className="text-amber-400 fill-amber-400" title={lang === 'id' ? 'Item Favorit' : 'Favorite Item'} />
+              <Star
+                size={12}
+                className="item-favorite-star"
+                title={lang === 'id' ? 'Item Favorit' : 'Favorite Item'}
+              />
             )}
           </div>
           <span className="category-chip">{item.categoryLabel}</span>
@@ -47,9 +59,25 @@ function PasswordCard({ item, password, onOpen, lang = 'id' }) {
         <div className="secret-row">
           <span className={revealed ? 'secret-value revealed font-mono' : 'secret-value font-mono'}>{revealed ? password : '••••••••••••'}</span>
           <div className="secret-actions">
-            <button className="mini-icon" title={lang === 'id' ? 'Salin password' : 'Copy password'} onClick={copyPassword}>{copied ? <Check size={15} /> : <Copy size={15} />}</button>
-            <button className="mini-icon" title={revealed ? (lang === 'id' ? 'Sembunyikan password' : 'Hide password') : (lang === 'id' ? 'Tampilkan password' : 'Reveal password')} onClick={(event) => { event.stopPropagation(); haptic('light'); setRevealed((v) => !v) }}>
-              {revealed ? <EyeOff size={15} /> : <Eye size={15} />}
+            <button
+              type="button"
+              className="mini-icon"
+              title={lang === 'id' ? 'Salin password' : 'Copy password'}
+              onClick={copyPassword}
+            >
+              {copied ? <Check size={14} /> : <Copy size={14} />}
+            </button>
+            <button
+              type="button"
+              className="mini-icon"
+              title={revealed ? (lang === 'id' ? 'Sembunyikan password' : 'Hide password') : (lang === 'id' ? 'Tampilkan password' : 'Reveal password')}
+              onClick={(event) => {
+                event.stopPropagation()
+                haptic('light')
+                setRevealed((v) => !v)
+              }}
+            >
+              {revealed ? <EyeOff size={14} /> : <Eye size={14} />}
             </button>
           </div>
         </div>
