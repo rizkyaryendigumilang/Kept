@@ -242,9 +242,9 @@ input[type="password"] {
 }
 
 .desktop-nav-item.active {
-  background: var(--border);
-  color: #ffffff;
-  border-color: var(--border);
+  background: var(--btn-primary-bg);
+  color: var(--btn-primary-text);
+  border-color: var(--btn-primary-border);
   font-weight: 600;
 }
 
@@ -284,8 +284,8 @@ input[type="password"] {
   height: 16px;
   padding: 0 4px;
   border-radius: var(--radius-pill);
-  background: var(--border);
-  color: #ffffff;
+  background: var(--btn-primary-bg);
+  color: var(--btn-primary-text);
   font-size: 9px;
   font-weight: 700;
   display: grid;
@@ -368,9 +368,9 @@ input[type="password"] {
   gap: var(--space-xs);
   height: 36px;
   padding: 0 var(--space-md);
-  background: var(--border);
-  color: #ffffff;
-  border: 1px solid var(--border);
+  background: var(--btn-primary-bg);
+  color: var(--btn-primary-text);
+  border: 1px solid var(--btn-primary-border);
   border-radius: var(--radius-pill);
   font-weight: 600;
   font-size: 13px;
@@ -475,9 +475,9 @@ input[type="password"] {
 }
 
 .feature-card.dark-feature {
-  background: var(--border);
-  color: #ffffff;
-  border-color: var(--border);
+  background: var(--btn-primary-bg);
+  color: var(--btn-primary-text);
+  border-color: var(--btn-primary-border);
 }
 
 .feature-card > div:last-child {
@@ -642,9 +642,9 @@ input[type="password"] {
 }
 
 .filter.active {
-  background: var(--border);
-  color: #ffffff;
-  border-color: var(--border);
+  background: var(--btn-primary-bg);
+  color: var(--btn-primary-text);
+  border-color: var(--btn-primary-border);
 }
 
 .filter small {
@@ -1113,8 +1113,8 @@ input[type="password"] {
   width: 48px;
   height: 48px;
   border-radius: var(--radius-pill);
-  background: var(--border);
-  color: #ffffff;
+  background: var(--btn-primary-bg);
+  color: var(--btn-primary-text);
   font-size: 24px;
   box-shadow: var(--shadow-floating);
   display: grid;
@@ -1402,9 +1402,9 @@ input[type="password"] {
 }
 
 .primary-button {
-  background: var(--border);
-  color: #ffffff;
-  border: 1px solid var(--border);
+  background: var(--btn-primary-bg);
+  color: var(--btn-primary-text);
+  border: 1px solid var(--btn-primary-border);
 }
 
 .primary-button:hover:not(:disabled) {
@@ -1614,8 +1614,8 @@ input[type="password"] {
 }
 
 .bank-chip-btn.active {
-  background: var(--border);
-  color: #ffffff;
+  background: var(--btn-primary-bg);
+  color: var(--btn-primary-text);
   border-color: var(--border);
   font-weight: 600;
 }
@@ -2056,8 +2056,8 @@ input[type="password"] {
   font-size: 10.5px;
   font-weight: 600;
   border-radius: var(--radius-pill);
-  background: var(--border);
-  color: #ffffff;
+  background: var(--btn-primary-bg);
+  color: var(--btn-primary-text);
   border: 1px solid var(--border);
   cursor: pointer;
   height: 24px;
@@ -2408,9 +2408,9 @@ input[type="password"] {
 
 .segmented-grid button.selected,
 .segmented button.selected {
-  background: var(--accent);
-  color: var(--accent-contrast);
-  border-color: var(--accent);
+  background: var(--btn-primary-bg);
+  color: var(--btn-primary-text);
+  border-color: var(--btn-primary-border);
 }
 
 .theme-preview-dot {
@@ -3816,8 +3816,8 @@ img.site-logo {
 }
 
 .slot-pill-btn.attached {
-  background: var(--border);
-  color: #ffffff;
+  background: var(--btn-primary-bg);
+  color: var(--btn-primary-text);
   border-color: var(--border);
 }
 
@@ -3953,8 +3953,8 @@ img.site-logo {
 }
 
 .doc-view-tab.active {
-  background: var(--border);
-  color: #ffffff;
+  background: var(--btn-primary-bg);
+  color: var(--btn-primary-text);
   border-color: var(--border);
 }
 
@@ -4449,8 +4449,8 @@ img.site-logo {
   width: 36px;
   height: 36px;
   border-radius: 50%;
-  background: var(--border);
-  color: #ffffff;
+  background: var(--btn-primary-bg);
+  color: var(--btn-primary-text);
   display: grid;
   place-items: center;
   font-weight: 700;
@@ -6540,9 +6540,9 @@ img.site-logo {
 }
 
 .language-pill-btn.selected {
-  background: var(--border);
-  border-color: var(--border);
-  color: #ffffff;
+  background: var(--btn-primary-bg);
+  border-color: var(--btn-primary-border);
+  color: var(--btn-primary-text);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
 }
 
@@ -8463,9 +8463,9 @@ img.site-logo {
 }
 
 .category-pill-btn.active {
-  background: var(--border);
-  color: #ffffff !important;
-  border-color: var(--border);
+  background: var(--btn-primary-bg);
+  color: var(--btn-primary-text) !important;
+  border-color: var(--btn-primary-border);
   font-weight: 600;
 }
 

@@ -52,6 +52,11 @@
   --success-bg: #142a1a;
   --success-border: #1a4224;
 
+  /* Button Tokens */
+  --btn-primary-bg: #2e333d;
+  --btn-primary-text: #ffffff;
+  --btn-primary-border: #414856;
+
   /* Omarchy Elevation */
   --shadow-flat: inset 0 -1px 0 var(--border-subtle);
   --shadow-raised: 0 1px 3px rgba(0, 0, 0, 0.35);
@@ -83,6 +88,10 @@
   --success-bg: #142a1a;
   --success-border: #1a4224;
 
+  --btn-primary-bg: #2e333d;
+  --btn-primary-text: #ffffff;
+  --btn-primary-border: #414856;
+
   --shadow-flat: inset 0 -1px 0 var(--border-subtle);
   --shadow-raised: 0 1px 3px rgba(0, 0, 0, 0.35);
   --shadow-floating: 0 4px 16px rgba(0, 0, 0, 0.45);
@@ -111,6 +120,11 @@
   --success: #1a7f37;
   --success-bg: #dafbe1;
   --success-border: #4ac26b;
+
+  /* Crisp Black Primary Buttons in Light Mode */
+  --btn-primary-bg: #0c0e10;
+  --btn-primary-text: #ffffff;
+  --btn-primary-border: #0c0e10;
 
   --shadow-flat: inset 0 -1px 0 var(--border-subtle);
   --shadow-raised: 0 1px 3px rgba(0, 0, 0, 0.08);
