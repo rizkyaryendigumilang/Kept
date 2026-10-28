@@ -2408,9 +2408,9 @@ input[type="password"] {
 
 .segmented-grid button.selected,
 .segmented button.selected {
-  background: var(--border);
-  color: #ffffff;
-  border-color: var(--border);
+  background: var(--accent);
+  color: var(--accent-contrast);
+  border-color: var(--accent);
 }
 
 .theme-preview-dot {

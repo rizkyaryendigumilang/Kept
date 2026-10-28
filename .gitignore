@@ -8,3 +8,9 @@ dist
 *.ipa
 *.xcarchive
 Payload/
+
+# Local sensitive imports & credentials
+kept-import-credentials.*
+*-credentials.*
+*.csv
+

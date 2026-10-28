@@ -570,6 +570,38 @@ export default function SettingsPage({
             </div>
           </div>
 
+          {/* Theme Selector (Dark / Light) */}
+          <div className="subpage-card">
+            <div className="subpage-card-heading">
+              <strong>{t('pref_theme')}</strong>
+              <span>{t('pref_theme_desc')}</span>
+            </div>
+            <div className="segmented">
+              <button
+                type="button"
+                className={profile?.theme !== 'light' ? 'selected' : ''}
+                onClick={() => {
+                  haptic('light')
+                  if (onTheme) onTheme('dark')
+                }}
+              >
+                <Moon size={15} />
+                <span>{t('theme_dark')}</span>
+              </button>
+              <button
+                type="button"
+                className={profile?.theme === 'light' ? 'selected' : ''}
+                onClick={() => {
+                  haptic('light')
+                  if (onTheme) onTheme('light')
+                }}
+              >
+                <Sun size={15} />
+                <span>{t('theme_light')}</span>
+              </button>
+            </div>
+          </div>
+
           <div className="subpage-card">
             <div className="subpage-card-heading">
               <strong>{t('pref_card_style_title')}</strong>

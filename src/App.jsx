@@ -87,9 +87,26 @@ const CATEGORY_LABELS = {
   '05_other': 'Dokumen Lainnya'
 }
 
-function applyTheme() {
-  document.documentElement.dataset.theme = 'dark'
+function applyTheme(theme) {
+  const current = theme === 'light' ? 'light' : 'dark'
+  document.documentElement.dataset.theme = current
+  try {
+    localStorage.setItem('kept_theme', current)
+  } catch {}
+  const metaTheme = document.querySelector('meta[name="theme-color"]')
+  if (metaTheme) {
+    metaTheme.setAttribute('content', current === 'light' ? '#ffffff' : '#0f1115')
+  }
 }
+
+const savedInitialTheme = (() => {
+  try {
+    return localStorage.getItem('kept_theme') || 'dark'
+  } catch {
+    return 'dark'
+  }
+})()
+applyTheme(savedInitialTheme)
 
 export default function App() {
   const [session, setSession] = useState(null)
@@ -298,7 +315,7 @@ export default function App() {
         setProfile((current) => (current?.id === p.id && current?.vault_salt) ? current : p)
       }
 
-      applyTheme(p.theme || 'light')
+      applyTheme(p.theme || savedInitialTheme || 'dark')
       checkPendingQueue(user.id)
     } catch (err) {
       setError(err.message || 'Gagal memuat profil pengguna.')
@@ -306,7 +323,7 @@ export default function App() {
   }
 
   useEffect(() => {
-    const onStorage = () => profile && applyTheme(profile.theme || 'light')
+    const onStorage = () => profile && applyTheme(profile.theme || savedInitialTheme || 'dark')
     window.addEventListener('storage', onStorage)
     return () => window.removeEventListener('storage', onStorage)
   }, [profile])
@@ -795,10 +812,12 @@ Jangan pernah membagikan kode ini kepada siapapun!
   }
 
   async function updateTheme(theme) {
+    applyTheme(theme)
+    setProfile((prev) => (prev ? { ...prev, theme } : prev))
+    if (!session?.user?.id) return
     try {
       const p = await setProfilePreference(session.user.id, { theme })
-      setProfile(p)
-      applyTheme(theme)
+      setProfile((current) => (current ? { ...current, theme: p.theme } : p))
     } catch (err) {
       setError(err.message)
     }
@@ -883,8 +902,8 @@ Jangan pernah membagikan kode ini kepada siapapun!
       // Regular CSV fallback
       const rows = parseCsv(text)
       const imported = rows.map((r) => ({
-        item_type: 'password',
-        category: guessCategory(r),
+        item_type: r.item_type || 'password',
+        category: r.category || guessCategory(r),
         name: r.name || r.title || r.url || 'Imported password',
         username: r.username || r.email || '',
         password: r.password || '',
