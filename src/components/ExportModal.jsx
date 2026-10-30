@@ -15,7 +15,7 @@ import {
   RefreshCw
 } from './Icons'
 import { supabase } from '../lib/supabase'
-import { encryptCustomBackup, deriveVaultKey } from '../lib/crypto'
+import { encryptCustomBackup, deriveVaultKey, deriveVaultKeyAsync } from '../lib/crypto'
 import { verifyMasterKey } from '../lib/vault'
 import { TRANSLATIONS } from '../lib/i18n'
 
@@ -190,7 +190,7 @@ export default function ExportModal({
     setPinBusy(true)
     setPinError('')
     try {
-      const derivedKey = deriveVaultKey(pinCode, profile.vault_salt)
+      const derivedKey = await deriveVaultKeyAsync(pinCode, profile.vault_salt)
       const valid = await verifyMasterKey(profile, derivedKey)
       if (!valid) {
         throw new Error(t('export_pin_invalid'))

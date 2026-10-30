@@ -34,10 +34,38 @@ export function isIpOrLocal(host) {
   return false
 }
 
+// In-memory cache for resolved (string URL) or failed (null) domain favicons
+const faviconCache = new Map()
+
+export function getCachedFavicon(domain) {
+  if (!domain) return undefined
+  return faviconCache.get(domain)
+}
+
+export function setCachedFavicon(domain, urlOrNull) {
+  if (!domain) return
+  if (faviconCache.size > 500) {
+    const firstKey = faviconCache.keys().next().value
+    faviconCache.delete(firstKey)
+  }
+  faviconCache.set(domain, urlOrNull)
+}
+
 export function faviconCandidates(input) {
   const domain = siteDomain(input)
 
   if (!domain || isIpOrLocal(domain) || !domain.includes('.')) return []
+
+  // If already known to fail, return empty immediately
+  if (faviconCache.get(domain) === null) {
+    return []
+  }
+
+  // If already known to succeed with a working URL, return only that URL
+  const cachedUrl = faviconCache.get(domain)
+  if (cachedUrl) {
+    return [cachedUrl]
+  }
 
   return [
     `https://${domain}/favicon.ico`,

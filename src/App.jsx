@@ -38,6 +38,7 @@ import { VaultContext } from './context/VaultContext'
 import { supabase } from './lib/supabase'
 import {
   deriveVaultKey,
+  deriveVaultKeyAsync,
   zeroKey,
   encryptJson,
   decryptJson,
@@ -694,7 +695,7 @@ export default function App() {
 
   async function initializeVault(masterPassword, generatedRecoveryKey) {
     const salt = generateSalt()
-    const key = deriveVaultKey(masterPassword, salt)
+    const key = await deriveVaultKeyAsync(masterPassword, salt)
     const checkEnvelope = await createVerifier(key)
     const recoveryEnvelope = await wrapMasterKeyWithRecovery(key, generatedRecoveryKey)
 
@@ -775,7 +776,7 @@ export default function App() {
 
   // Change Vault Master Password (Re-encrypts all items)
   async function handleChangeMasterPassword(currentMasterPassword, newMasterPassword) {
-    const testKey = deriveVaultKey(currentMasterPassword, profile.vault_salt)
+    const testKey = await deriveVaultKeyAsync(currentMasterPassword, profile.vault_salt)
     const valid = await verifyMasterKey(profile, testKey)
     if (!valid) {
       throw new Error('Master password saat ini tidak sesuai.')

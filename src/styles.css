@@ -660,6 +660,8 @@ input[type="password"] {
 }
 
 .vault-list-card {
+  content-visibility: auto;
+  contain-intrinsic-size: 0 74px;
   display: flex;
   align-items: flex-start;
   gap: 12px;
@@ -4213,6 +4215,7 @@ img.site-logo {
     padding-bottom: calc(108px + env(safe-area-inset-bottom, 0px)) !important;
   }
   .vault-list-card {
+    contain-intrinsic-size: 0 68px;
     padding: 11px 12px;
     gap: 10px;
   }

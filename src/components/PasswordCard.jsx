@@ -31,7 +31,7 @@ function PasswordCard({ item, password, onOpen, lang = 'id' }) {
   }
 
   return (
-    <article className="vault-list-card" onClick={onOpen}>
+    <article className="vault-list-card" onClick={() => onOpen?.(item)}>
       <div className="item-icon-tile">
         {item.url ? (
           <SiteLogo url={item.url} name={item.name} size={34} radius={8} />
@@ -86,4 +86,17 @@ function PasswordCard({ item, password, onOpen, lang = 'id' }) {
   )
 }
 
-export default memo(PasswordCard)
+export default memo(PasswordCard, (prev, next) => {
+  return (
+    prev.item?.id === next.item?.id &&
+    prev.item?.updated_at === next.item?.updated_at &&
+    prev.item?.name === next.item?.name &&
+    prev.item?.username === next.item?.username &&
+    prev.item?.favorite === next.item?.favorite &&
+    prev.item?.url === next.item?.url &&
+    prev.item?.category === next.item?.category &&
+    prev.password === next.password &&
+    prev.lang === next.lang &&
+    prev.onOpen === next.onOpen
+  )
+})

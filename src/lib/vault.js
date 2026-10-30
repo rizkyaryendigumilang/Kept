@@ -5,6 +5,7 @@ import {
   generateId,
   generateSalt,
   deriveVaultKey,
+  deriveVaultKeyAsync,
   wrapMasterKeyWithRecovery,
   unwrapMasterKeyWithRecovery
 } from './crypto'
@@ -172,7 +173,7 @@ export async function changeMasterPassword({
   cardStyle
 }) {
   const newSalt = generateSalt()
-  const newMasterKey = deriveVaultKey(newMasterPassword, newSalt)
+  const newMasterKey = await deriveVaultKeyAsync(newMasterPassword, newSalt)
   const checkEnvelope = await createVerifier(newMasterKey)
 
   let recoveryEnvelope = null

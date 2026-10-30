@@ -19,6 +19,11 @@ export default function VaultPage({ items = [], onAdd, onOpen, lang = 'id' }) {
   const [query, setQuery] = React.useState('')
   const t = (k) => getTranslation(k, lang)
 
+  const handleOpenItem = React.useCallback((targetItem) => {
+    haptic('medium')
+    onOpen?.(targetItem)
+  }, [onOpen])
+
   const filters = React.useMemo(() => [
     { id: 'all', label: t('filter_all'), icon: KeyRound },
     { id: 'favorite', label: lang === 'id' ? 'Favorit' : 'Favorites', icon: Star },
@@ -175,10 +180,7 @@ export default function VaultPage({ items = [], onAdd, onOpen, lang = 'id' }) {
                 key={item.id}
                 item={item}
                 password={item.password || ''}
-                onOpen={() => {
-                  haptic('medium')
-                  onOpen(item)
-                }}
+                onOpen={handleOpenItem}
                 lang={lang}
               />
             )

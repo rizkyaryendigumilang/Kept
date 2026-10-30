@@ -2,7 +2,9 @@ import { useEffect, useState } from 'react'
 import {
   faviconCandidates,
   siteInitial,
-  siteTint
+  siteTint,
+  siteDomain,
+  setCachedFavicon
 } from '../lib/favicon'
 
 /**
@@ -67,6 +69,8 @@ export default function SiteLogo({
     )
   }
 
+  const domain = siteDomain(url)
+
   return (
     <img
       className={className}
@@ -80,10 +84,18 @@ export default function SiteLogo({
       loading="lazy"
       decoding="async"
       referrerPolicy="no-referrer"
+      onLoad={() => {
+        if (domain && candidates[index]) {
+          setCachedFavicon(domain, candidates[index])
+        }
+      }}
       onError={() => {
         if (index + 1 < candidates.length) {
           setIndex(index + 1)
         } else {
+          if (domain) {
+            setCachedFavicon(domain, null)
+          }
           setFailed(true)
         }
       }}

@@ -37,9 +37,72 @@ export function generateId() {
   return crypto.randomUUID()
 }
 
+let workerInstance = null
+let workerRequestId = 0
+const pendingRequests = new Map()
+
+function getCryptoWorker() {
+  if (typeof window === 'undefined' || typeof Worker === 'undefined') {
+    return null
+  }
+  if (!workerInstance) {
+    try {
+      workerInstance = new Worker(
+        new URL('./crypto.worker.js', import.meta.url),
+        { type: 'module' }
+      )
+      workerInstance.onmessage = (e) => {
+        const { id, success, key, error } = e.data
+        const resolver = pendingRequests.get(id)
+        if (resolver) {
+          pendingRequests.delete(id)
+          if (success) {
+            resolver.resolve(new Uint8Array(key))
+          } else {
+            resolver.reject(new Error(error || 'Worker key derivation failed'))
+          }
+        }
+      }
+      workerInstance.onerror = (err) => {
+        for (const resolver of pendingRequests.values()) {
+          resolver.reject(err)
+        }
+        pendingRequests.clear()
+        workerInstance = null
+      }
+    } catch {
+      workerInstance = null
+    }
+  }
+  return workerInstance
+}
+
 export function deriveVaultKey(masterPassword, saltBase64) {
   const salt = base64ToBytes(saltBase64)
   return argon2id(utf8ToBytes(masterPassword), salt, ARGON_OPTIONS)
+}
+
+/**
+ * Derives vault key in a dedicated Web Worker off the main thread.
+ * Keeps UI at 60 FPS without freezing the PIN keypad or lock screen.
+ * Falls back to main thread synchronous derivation if Web Workers are unavailable.
+ */
+export async function deriveVaultKeyAsync(masterPassword, saltBase64) {
+  const worker = getCryptoWorker()
+  if (!worker) {
+    return deriveVaultKey(masterPassword, saltBase64)
+  }
+
+  return new Promise((resolve, reject) => {
+    const id = ++workerRequestId
+    pendingRequests.set(id, { resolve, reject })
+    worker.postMessage({
+      id,
+      type: 'deriveVaultKey',
+      masterPassword,
+      saltBase64
+    })
+  })
 }
 
 /**

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Fingerprint, Lock, ShieldCheck, AlertTriangle, X, Check, KeyRound, Mail } from './Icons'
 import PinKeypad from './PinKeypad'
-import { deriveVaultKey } from '../lib/crypto'
+import { deriveVaultKey, deriveVaultKeyAsync } from '../lib/crypto'
 import { verifyMasterKey, recoverMasterKey } from '../lib/vault'
 import { supabase } from '../lib/supabase'
 import {
@@ -105,7 +105,7 @@ export default function UnlockScreen({
     setError('')
 
     try {
-      const key = deriveVaultKey(enteredPin, profile.vault_salt)
+      const key = await deriveVaultKeyAsync(enteredPin, profile.vault_salt)
       const valid = await verifyMasterKey(profile, key)
 
       if (!valid) {
