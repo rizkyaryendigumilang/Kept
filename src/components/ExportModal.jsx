@@ -12,12 +12,56 @@ import {
   FileSpreadsheet,
   Check,
   AlertTriangle,
+  Clock,
   RefreshCw
 } from './Icons'
 import { supabase } from '../lib/supabase'
 import { encryptCustomBackup, deriveVaultKey, deriveVaultKeyAsync } from '../lib/crypto'
 import { verifyMasterKey } from '../lib/vault'
 import { TRANSLATIONS } from '../lib/i18n'
+
+// PIN brute-force guard (M-6). Persisted so closing and reopening the export
+// dialog — or reloading the tab — does not reset the attempt counter.
+const EXPORT_PIN_MAX_ATTEMPTS = 5
+const EXPORT_PIN_LOCKOUT_MS = 60 * 1000
+const EXPORT_PIN_FAILED_KEY = 'kept_export_pin_failed_attempts'
+const EXPORT_PIN_LOCKOUT_KEY = 'kept_export_pin_lockout_until'
+
+function readPinGuard() {
+  try {
+    const failed = Number(localStorage.getItem(EXPORT_PIN_FAILED_KEY) || 0)
+    const until = Number(localStorage.getItem(EXPORT_PIN_LOCKOUT_KEY) || 0)
+    return {
+      failed: Number.isFinite(failed) ? failed : 0,
+      until: Number.isFinite(until) ? until : 0
+    }
+  } catch {
+    return { failed: 0, until: 0 }
+  }
+}
+
+function writePinGuard({ failed, until }) {
+  try {
+    localStorage.setItem(EXPORT_PIN_FAILED_KEY, String(failed))
+    localStorage.setItem(EXPORT_PIN_LOCKOUT_KEY, String(until))
+  } catch {
+    // storage unavailable — the in-memory state still applies
+  }
+}
+
+function clearPinGuard() {
+  try {
+    localStorage.removeItem(EXPORT_PIN_FAILED_KEY)
+    localStorage.removeItem(EXPORT_PIN_LOCKOUT_KEY)
+  } catch {
+    // ignore
+  }
+}
+
+function secondsUntil(timestamp) {
+  const remaining = Math.ceil((timestamp - Date.now()) / 1000)
+  return remaining > 0 ? remaining : 0
+}
 
 export default function ExportModal({
   isOpen,
@@ -46,6 +90,9 @@ export default function ExportModal({
   const [pinCode, setPinCode] = useState('')
   const [pinBusy, setPinBusy] = useState(false)
   const [pinError, setPinError] = useState('')
+  const [pinFailedAttempts, setPinFailedAttempts] = useState(() => readPinGuard().failed)
+  const [pinLockoutUntil, setPinLockoutUntil] = useState(() => readPinGuard().until)
+  const [pinLockoutSeconds, setPinLockoutSeconds] = useState(() => secondsUntil(readPinGuard().until))
 
   // Export options
   const [format, setFormat] = useState('kept') // 'kept' | 'excel'
@@ -69,6 +116,10 @@ export default function ExportModal({
       setPinCode('')
       setPinBusy(false)
       setPinError('')
+      const guard = readPinGuard()
+      setPinFailedAttempts(guard.failed)
+      setPinLockoutUntil(guard.until)
+      setPinLockoutSeconds(secondsUntil(guard.until))
       setFormat('kept')
       setBackupPassword('')
       setConfirmPassword('')
@@ -87,6 +138,25 @@ export default function ExportModal({
     }, 1000)
     return () => clearInterval(timer)
   }, [otpCooldown])
+
+  // PIN lockout countdown
+  useEffect(() => {
+    if (pinLockoutUntil <= Date.now()) {
+      setPinLockoutSeconds(0)
+      return undefined
+    }
+
+    setPinLockoutSeconds(secondsUntil(pinLockoutUntil))
+    const timer = setInterval(() => {
+      const remaining = secondsUntil(pinLockoutUntil)
+      setPinLockoutSeconds(remaining)
+      if (remaining === 0) {
+        clearInterval(timer)
+      }
+    }, 1000)
+
+    return () => clearInterval(timer)
+  }, [pinLockoutUntil])
 
   if (!isOpen) return null
 
@@ -185,7 +255,8 @@ export default function ExportModal({
   // Handle PIN verification (fallback)
   async function handleVerifyPin(e) {
     if (e) e.preventDefault()
-    if (pinCode.length !== 6 || pinBusy) return
+    if (pinBusy || pinLockoutSeconds > 0) return
+    if (pinCode.length < 6) return
 
     setPinBusy(true)
     setPinError('')
@@ -195,10 +266,38 @@ export default function ExportModal({
       if (!valid) {
         throw new Error(t('export_pin_invalid'))
       }
+
+      clearPinGuard()
+      setPinFailedAttempts(0)
+      setPinLockoutUntil(0)
+      setPinLockoutSeconds(0)
+      setPinCode('')
       setIsVerified(true)
       setPinError('')
     } catch (err) {
-      setPinError(err.message || t('export_pin_invalid'))
+      const nextFailed = pinFailedAttempts + 1
+      let message = err.message || t('export_pin_invalid')
+
+      if (nextFailed >= EXPORT_PIN_MAX_ATTEMPTS) {
+        const until = Date.now() + EXPORT_PIN_LOCKOUT_MS
+        setPinLockoutUntil(until)
+        setPinLockoutSeconds(secondsUntil(until))
+        writePinGuard({ failed: nextFailed, until })
+        message = `Terlalu banyak percobaan PIN. Ekspor dikunci selama ${EXPORT_PIN_LOCKOUT_MS / 1000} detik.`
+        recordSecurityActivity?.({
+          type: 'security_alert',
+          title: 'Percobaan PIN Ekspor Diblokir',
+          desc: `${nextFailed} percobaan PIN salah saat membuka ekspor vault.`,
+          level: 'warning'
+        })
+      } else {
+        setPinFailedAttempts(nextFailed)
+        writePinGuard({ failed: nextFailed, until: 0 })
+        message = `${message} (${nextFailed}/${EXPORT_PIN_MAX_ATTEMPTS})`
+      }
+
+      setPinError(message)
+      setPinCode('')
     } finally {
       setPinBusy(false)
     }
@@ -213,7 +312,13 @@ export default function ExportModal({
 
     function escapeCell(val) {
       if (val === null || val === undefined) return '""'
-      const str = String(val)
+      let str = String(val)
+      // Spreadsheet formula injection (M-5): Excel / Google Sheets execute any
+      // cell that starts with = + - @ (and the tab/CR leakers). Prefix with a
+      // single quote so the value is treated as literal text.
+      if (/^[=+\-@\t\r]/.test(str)) {
+        str = `'${str}`
+      }
       return `"${str.replace(/"/g, '""')}"`
     }
 
@@ -269,32 +374,15 @@ export default function ExportModal({
       const dateStr = new Date().toISOString().slice(0, 10)
 
       if (format === 'kept') {
-        // Sanitize items payload for portable encrypted backup
-        const exportPayload = items.map((i) => ({
-          id: i.id,
-          item_type: i.item_type,
-          category: i.category,
-          name: i.name,
-          username: i.username,
-          password: i.password,
-          url: i.url,
-          notes: i.notes,
-          favorite: Boolean(i.favorite),
-          bank_name: i.bank_name,
-          card_holder: i.card_holder,
-          card_number: i.card_number,
-          card_type: i.card_type,
-          expiry: i.expiry,
-          cvv: i.cvv,
-          pin: i.pin,
-          account_number: i.account_number,
-          doc_number: i.doc_number,
-          holder_name: i.holder_name,
-          expiry_date: i.expiry_date,
-          institution: i.institution,
-          created_at: i.created_at,
-          updated_at: i.updated_at
-        }))
+        // Sanitize items payload for portable encrypted backup.
+        // No field whitelist (M-7): a whitelist silently dropped attachments,
+        // template ids, custom fields and document metadata, so a restored
+        // backup came back incomplete. Only the server-side ciphertext is
+        // dropped, since the plaintext fields are what gets re-encrypted.
+        const exportPayload = items.map((i) => {
+          const { payload, ...rest } = i
+          return rest
+        })
 
         const encryptedBackup = await encryptCustomBackup(exportPayload, backupPassword)
         const blob = new Blob([JSON.stringify(encryptedBackup, null, 2)], { type: 'application/octet-stream' })
@@ -445,25 +533,30 @@ export default function ExportModal({
                     type="password"
                     inputMode="numeric"
                     pattern="[0-9]*"
-                    maxLength={6}
+                    maxLength={12}
                     value={pinCode}
                     onChange={(e) => {
-                      const val = e.target.value.replace(/\D/g, '').slice(0, 6)
+                      const val = e.target.value.replace(/\D/g, '').slice(0, 12)
                       setPinCode(val)
                       setPinError('')
                     }}
-                    placeholder="••••••"
+                    placeholder="••••••••"
                     className="export-otp-input font-mono"
                     autoFocus
                   />
                 </div>
 
                 {pinError && <div className="feedback error mt-sm">{pinError}</div>}
+                {pinLockoutSeconds > 0 && (
+                  <div className="feedback error mt-sm">
+                    <Clock size={13} /> Ekspor terkunci. Coba lagi dalam {pinLockoutSeconds} detik.
+                  </div>
+                )}
 
                 <button
                   type="submit"
                   className="primary-button pill-button w-full mt-sm"
-                  disabled={pinCode.length !== 6 || pinBusy}
+                  disabled={pinCode.length < 6 || pinBusy || pinLockoutSeconds > 0}
                 >
                   <KeyRound size={15} />
                   {pinBusy ? t('export_otp_verifying') : t('export_pin_verify_btn')}

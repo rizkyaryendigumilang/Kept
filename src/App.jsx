@@ -31,6 +31,7 @@ const ShareSecretModal = safeLazy(() => import('./components/ShareSecretModal'))
 const ViewSharedSecretScreen = safeLazy(() => import('./components/ViewSharedSecretScreen'))
 import { parseShareHash } from './lib/secureShare'
 import { checkDocumentExpiry } from './lib/documents'
+import { downloadAttachmentSafely } from './lib/safeUrl'
 import { useAutoLock } from './hooks/useAutoLock'
 import { usePwaInstall } from './hooks/usePwaInstall'
 import { useVaultSync } from './hooks/useVaultSync'
@@ -65,7 +66,7 @@ import {
 } from './lib/vault'
 import { idbClearUser, idbGetPendingQueue } from './lib/idb'
 import { Copy, Check, Download, ShieldCheck, Lock } from './components/Icons'
-import { isWeakPin, recordSecurityActivity, registerCurrentDevice } from './lib/securityAudit'
+import { isWeakPin, MIN_PIN_LENGTH, recordSecurityActivity, registerCurrentDevice } from './lib/securityAudit'
 import { KEPT_ICON, KEPT_LOGO } from './lib/brand'
 
 const CATEGORY_LABELS = {
@@ -719,6 +720,13 @@ export default function App() {
 
   // Handle recovery from UnlockScreen
   async function handleRecoverMasterPassword(recoveredKey, newMasterPassword, usedRecoveryKey) {
+    // Guard (C-1): without a working master key we cannot decrypt a single
+    // row. Continuing would rotate the salt/verifier and orphan the whole
+    // vault — fail closed instead.
+    if (!recoveredKey) {
+      throw new Error('Recovery Key tidak valid. Vault tidak diubah.')
+    }
+
     // 1. Decrypt all items using recoveredKey
     let rows = []
     try {
@@ -727,26 +735,24 @@ export default function App() {
       rows = await loadCachedItems(session.user.id)
     }
 
-    let decrypted = []
-    if (recoveredKey) {
-      const decryptedResults = await Promise.all(
-        rows.map(async (row) => {
-          try {
-            const payload = await decryptItemRow(row, recoveredKey)
-            return { ...row, ...payload }
-          } catch {
-            return null
-          }
-        })
-      )
-      decrypted = decryptedResults.filter(Boolean)
-    }
+    const decryptedResults = await Promise.all(
+      rows.map(async (row) => {
+        try {
+          const payload = await decryptItemRow(row, recoveredKey)
+          return { ...row, ...payload }
+        } catch {
+          return null
+        }
+      })
+    )
+    const decrypted = decryptedResults.filter(Boolean)
 
     // 2. Re-encrypt all items with newMasterPassword
     const result = await changeMasterPassword({
       userId: session.user.id,
       newMasterPassword,
       decryptedItems: decrypted,
+      expectedItemCount: rows.length,
       recoveryKey: usedRecoveryKey || activeRecoveryKey || generateRecoveryKey(),
       theme: profile.theme,
       cardStyle: profile.card_style
@@ -788,6 +794,7 @@ export default function App() {
       userId: session.user.id,
       newMasterPassword,
       decryptedItems: items,
+      expectedItemCount: items.length,
       recoveryKey: recoveryKeyToUse,
       theme: profile.theme,
       cardStyle: profile.card_style
@@ -902,6 +909,11 @@ Jangan pernah membagikan kode ini kepada siapapun!
       } catch {
         // best effort
       }
+    }
+    try {
+      localStorage.removeItem('kept_last_breach_scan')
+    } catch {
+      // ignore
     }
     setProfile(null)
     lockVault()
@@ -1118,22 +1130,21 @@ Jangan pernah membagikan kode ini kepada siapapun!
               onAdd={() => openAdd('document')}
               onOpen={openItem}
               onDownload={(doc) => {
-                if (doc.attachments?.pdf?.data) {
-                  const a = document.createElement('a')
-                  a.href = doc.attachments.pdf.data
-                  a.download = doc.attachments.pdf.name || `${doc.name}.pdf`
-                  a.click()
-                } else if (doc.attachments?.front?.data) {
-                  const a = document.createElement('a')
-                  a.href = doc.attachments.front.data
-                  a.download = doc.attachments.front.name || `${doc.name}-depan.jpg`
-                  a.click()
-                } else if (doc.attachments?.back?.data) {
-                  const a = document.createElement('a')
-                  a.href = doc.attachments.back.data
-                  a.download = doc.attachments.back.name || `${doc.name}-belakang.jpg`
-                  a.click()
+                const target = doc.attachments?.pdf?.data
+                  ? { file: doc.attachments.pdf, fallback: `${doc.name}.pdf` }
+                  : doc.attachments?.front?.data
+                    ? { file: doc.attachments.front, fallback: `${doc.name}-depan.jpg` }
+                    : doc.attachments?.back?.data
+                      ? { file: doc.attachments.back, fallback: `${doc.name}-belakang.jpg` }
+                      : null
+
+                if (!target) return
+
+                if (!downloadAttachmentSafely(target.file, target.fallback)) {
+                  showToast('Berkas ditolak: format lampiran tidak valid.', 3000)
+                  return
                 }
+
                 recordSecurityActivity({
                   type: 'export_sensitive',
                   title: 'Ekspor Dokumen Didekripsi',
@@ -1494,10 +1505,10 @@ Simpan dokumen ini dengan aman dan jangan berikan ke siapapun!
           <input
             type="password"
             inputMode="numeric"
-            maxLength={6}
+            maxLength={12}
             value={pin}
-            onChange={(e) => setPin(e.target.value.replace(/\D/g, '').slice(0, 6))}
-            placeholder="Contoh: 739104"
+            onChange={(e) => setPin(e.target.value.replace(/\D/g, '').slice(0, 12))}
+            placeholder="Contoh: 73910428"
             className="font-mono text-center letter-spacing-lg"
             required
             autoFocus
@@ -1512,9 +1523,9 @@ Simpan dokumen ini dengan aman dan jangan berikan ke siapapun!
           <input
             type="password"
             inputMode="numeric"
-            maxLength={6}
+            maxLength={12}
             value={confirmPin}
-            onChange={(e) => setConfirmPin(e.target.value.replace(/\D/g, '').slice(0, 6))}
+            onChange={(e) => setConfirmPin(e.target.value.replace(/\D/g, '').slice(0, 12))}
             placeholder={t('setup_confirm_pin_ph')}
             className="font-mono text-center letter-spacing-lg"
             required
@@ -1558,7 +1569,7 @@ Simpan dokumen ini dengan aman dan jangan berikan ke siapapun!
 
         <button
           className="primary-button pill-button mt-md"
-          disabled={pin.length !== 6 || confirmPin.length !== 6 || !confirmedBackup}
+          disabled={pin.length < MIN_PIN_LENGTH || confirmPin.length < MIN_PIN_LENGTH || !confirmedBackup}
         >
           {t('setup_submit_btn')}
         </button>

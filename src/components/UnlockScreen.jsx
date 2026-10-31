@@ -9,7 +9,7 @@ import {
   isBiometricSupported,
   unlockWithBiometric
 } from '../lib/biometric'
-import { isWeakPin, recordSecurityActivity } from '../lib/securityAudit'
+import { isWeakPin, MIN_PIN_LENGTH, recordSecurityActivity } from '../lib/securityAudit'
 import { getTranslation } from '../lib/i18n'
 import { haptic } from '../lib/haptics'
 import { KEPT_LOGO } from '../lib/brand'
@@ -99,7 +99,7 @@ export default function UnlockScreen({
 
   async function handleUnlockWithPin(enteredPin) {
     if (busy || lockoutSeconds > 0) return
-    if (enteredPin.length !== 6) return
+    if (enteredPin.length < 6) return
 
     setBusy(true)
     setError('')
@@ -121,7 +121,7 @@ export default function UnlockScreen({
       recordSecurityActivity({
         type: 'login_success',
         title: 'Buka Vault Berhasil',
-        desc: 'Vault dibuka menggunakan 6-Digit Security PIN.',
+        desc: 'Vault dibuka menggunakan Security PIN.',
         level: 'success'
       })
 
@@ -164,7 +164,7 @@ export default function UnlockScreen({
           level: 'danger'
         })
       } else {
-        setError(`PIN salah (Percobaan ${nextAttempts} dari 5). Periksa kembali 6 digit PIN Anda.`)
+        setError(`PIN salah (Percobaan ${nextAttempts} dari 5). Periksa kembali PIN Anda.`)
 
         recordSecurityActivity({
           type: 'login_failed',
@@ -285,16 +285,21 @@ export default function UnlockScreen({
       haptic('success')
 
       // Attempt to silently retrieve biometric key if enrolled on this device
+      let keyFromDevice = null
       if (biometricReady) {
         try {
-          const rawKey = await unlockWithBiometric(userId)
-          setRecoveredMasterKey(rawKey)
+          keyFromDevice = await unlockWithBiometric(userId)
+          setRecoveredMasterKey(keyFromDevice)
         } catch {
           // Device biometric cancelled or unavailable
         }
       }
 
-      setRecoveryStep('set_new_pin')
+      // Zero-knowledge check (C-1): the email OTP proves account ownership but
+      // cannot decrypt a single row. Without a device-held key, sending the
+      // user to "set new PIN" would rotate the salt over an empty item set and
+      // orphan the whole vault. Ask for the Recovery Key instead.
+      setRecoveryStep(keyFromDevice ? 'set_new_pin' : 'need_recovery_key')
     } catch (err) {
       haptic('error')
       setRecoveryError(parseAuthError(err, 'verify'))
@@ -363,7 +368,7 @@ export default function UnlockScreen({
     }
   }
 
-  // Set new 6-digit PIN after recovery
+  // Set new Security PIN (min. 8 digits) after recovery
   async function handleSetNewPin(e) {
     e.preventDefault()
     setRecoveryError('')
@@ -374,8 +379,15 @@ export default function UnlockScreen({
       return
     }
 
+    if (!recoveredMasterKey && !recoveryKey.trim()) {
+      setRecoveryError(
+        'Vault tidak dapat dipulihkan tanpa Emergency Recovery Key. Masukkan Recovery Key, atau gunakan Reset Vault (semua data akan terhapus).'
+      )
+      return
+    }
+
     if (newPin !== confirmPin) {
-      setRecoveryError('Konfirmasi 6-digit PIN tidak cocok.')
+      setRecoveryError('Konfirmasi Security PIN baru tidak cocok.')
       return
     }
 
@@ -458,12 +470,13 @@ export default function UnlockScreen({
         <img src={KEPT_LOGO} alt="Kept" className="kept-hero-logo" />
       </div>
 
-      {/* 6-Digit PIN Keypad matching User Mockup */}
+      {/* PIN Keypad — accepts legacy 6-digit PINs and the 8+ digit policy */}
       <PinKeypad
         value={pin}
         onChange={setPin}
         onSubmit={handleUnlockWithPin}
-        length={6}
+        length={12}
+        minLength={6}
         title={t('unlock_pin_title')}
         subtitle={t('unlock_pin_sub')}
         error={error}
@@ -476,7 +489,7 @@ export default function UnlockScreen({
         lockoutSeconds={lockoutSeconds}
         shake={shake}
         busy={busy}
-        autoSubmit={true}
+        autoSubmit={false}
         lang={lang}
       />
 
@@ -746,7 +759,52 @@ export default function UnlockScreen({
               </form>
             )}
 
-            {/* STEP: SET NEW 6-DIGIT PIN */}
+            {/* STEP: OTP VERIFIED BUT NO KEY ON DEVICE (C-1) */}
+            {recoveryStep === 'need_recovery_key' && (
+              <div className="modal-body-stack">
+                <div className="feedback success">
+                  <Check size={14} /> Email terverifikasi
+                </div>
+
+                <p className="modal-description">
+                  Kept bersifat zero-knowledge: email hanya membuktikan akun ini milik Anda,
+                  tetapi tidak dapat membuka isi vault. Untuk mengatur ulang PIN tanpa
+                  kehilangan data, masukkan Emergency Recovery Key yang Anda simpan saat
+                  membuat vault.
+                </p>
+
+                <div className="button-row">
+                  <button
+                    type="button"
+                    className="secondary-button"
+                    onClick={() => {
+                      setRecoveryStep('input_key')
+                      setRecoveryError('')
+                    }}
+                  >
+                    <KeyRound size={14} /> Masukkan Recovery Key
+                  </button>
+                  <button
+                    type="button"
+                    className="secondary-button"
+                    onClick={() => {
+                      setRecoveryStep('emergency_reset')
+                      setRecoveryError('')
+                    }}
+                  >
+                    <AlertTriangle size={14} /> Reset Vault
+                  </button>
+                </div>
+
+                <p className="field-hint text-xs">
+                  Reset Vault menghapus seluruh data secara permanen dan tidak dapat dibatalkan.
+                </p>
+
+                {recoveryError && <div className="feedback error">{recoveryError}</div>}
+              </div>
+            )}
+
+            {/* STEP: SET NEW SECURITY PIN */}
             {recoveryStep === 'set_new_pin' && (
               <form onSubmit={handleSetNewPin} className="modal-body-stack">
                 <div className="feedback success">
@@ -762,10 +820,10 @@ export default function UnlockScreen({
                   <input
                     type="password"
                     inputMode="numeric"
-                    maxLength={6}
+                    maxLength={12}
                     value={newPin}
-                    onChange={(e) => setNewPin(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                    placeholder="Contoh: 849201"
+                    onChange={(e) => setNewPin(e.target.value.replace(/\D/g, '').slice(0, 12))}
+                    placeholder="Contoh: 84920173"
                     className="font-mono text-center letter-spacing-lg"
                     autoFocus
                     required
@@ -777,9 +835,9 @@ export default function UnlockScreen({
                   <input
                     type="password"
                     inputMode="numeric"
-                    maxLength={6}
+                    maxLength={12}
                     value={confirmPin}
-                    onChange={(e) => setConfirmPin(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                    onChange={(e) => setConfirmPin(e.target.value.replace(/\D/g, '').slice(0, 12))}
                     placeholder={t('recovery_confirm_pin_ph')}
                     className="font-mono text-center letter-spacing-lg"
                     required
@@ -817,7 +875,7 @@ export default function UnlockScreen({
                 <div className="button-row justify-end">
                   <button
                     className="primary-button"
-                    disabled={recoveryBusy || newPin.length !== 6 || confirmPin.length !== 6}
+                    disabled={recoveryBusy || newPin.length < MIN_PIN_LENGTH || confirmPin.length < MIN_PIN_LENGTH}
                   >
                     {recoveryBusy ? t('recovery_reencrypting') : t('recovery_set_pin_btn')}
                   </button>

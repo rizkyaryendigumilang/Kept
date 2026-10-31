@@ -56,22 +56,14 @@ export function faviconCandidates(input) {
 
   if (!domain || isIpOrLocal(domain) || !domain.includes('.')) return []
 
-  // If already known to fail, return empty immediately
-  if (faviconCache.get(domain) === null) {
-    return []
-  }
-
-  // If already known to succeed with a working URL, return only that URL
-  const cachedUrl = faviconCache.get(domain)
-  if (cachedUrl) {
-    return [cachedUrl]
-  }
-
-  return [
-    `https://${domain}/favicon.ico`,
-    `https://${domain}/favicon.png`,
-    `https://${domain}/apple-touch-icon.png`
-  ]
+  // Deliberately no network fetch (M-3).
+  //
+  // Requesting `https://<saved-site>/favicon.ico` from the unlocked vault
+  // tells every saved host — and anyone watching the network — exactly when a
+  // user opens Kept and how many sites they have stored. It also bypasses any
+  // CDN/proxy the site uses, exposing the client IP per item. The initial
+  // badge is rendered instead; it costs one request and leaks nothing.
+  return []
 }
 
 export function siteInitial(name, input) {

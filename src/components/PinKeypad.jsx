@@ -7,8 +7,9 @@ export default function PinKeypad({
   onChange,
   onSubmit,
   length = 6,
+  minLength = length,
   title = 'Enter your PIN',
-  subtitle = 'Enter your 6-digit security PIN',
+  subtitle = 'Enter your security PIN',
   error = '',
   hint = '',
   disabled = false,
@@ -19,6 +20,8 @@ export default function PinKeypad({
   customBadgeIcon: CustomIcon,
   lang = 'id'
 }) {
+  const canSubmit = value.length >= minLength && value.length <= length
+
   function handlePressDigit(digit) {
     if (disabled || lockoutSeconds > 0 || busy) return
     if (value.length >= length) return
@@ -42,7 +45,7 @@ export default function PinKeypad({
 
   function handleCheckSubmit() {
     if (disabled || lockoutSeconds > 0 || busy) return
-    if (value.length === length && onSubmit) {
+    if (canSubmit && onSubmit) {
       haptic('medium')
       onSubmit(value)
     }
@@ -71,7 +74,7 @@ export default function PinKeypad({
         }
       } else if (e.key === 'Enter') {
         e.preventDefault()
-        if (value.length === length && onSubmit) {
+        if (canSubmit && onSubmit) {
           onSubmit(value)
         }
       }
@@ -79,7 +82,7 @@ export default function PinKeypad({
 
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [value, disabled, lockoutSeconds, busy, length, onChange, onSubmit, autoSubmit])
+  }, [value, disabled, lockoutSeconds, busy, length, canSubmit, onChange, onSubmit, autoSubmit])
 
   useEffect(() => {
     if (shake || error) {
@@ -96,9 +99,9 @@ export default function PinKeypad({
       <h2 className="pin-keypad-title">{title}</h2>
       <p className="pin-keypad-subtitle">{subtitle}</p>
 
-      {/* 6 Indicator Dots */}
+      {/* Indicator dots — grow past minLength when the PIN is longer */}
       <div className={`pin-dots-row ${shake ? 'pin-dots-shake' : ''}`}>
-        {[...Array(length)].map((_, i) => (
+        {[...Array(Math.max(minLength, Math.min(value.length, length)))].map((_, i) => (
           <span
             key={i}
             className={`pin-dot ${i < value.length ? 'filled' : 'empty'}`}
@@ -165,7 +168,7 @@ export default function PinKeypad({
         <button
           type="button"
           className="pin-key-btn pin-submit-key"
-          disabled={disabled || lockoutSeconds > 0 || busy || value.length !== length}
+          disabled={disabled || lockoutSeconds > 0 || busy || !canSubmit}
           onClick={handleCheckSubmit}
           aria-label={lang === 'id' ? 'Buka vault' : 'Unlock vault'}
         >

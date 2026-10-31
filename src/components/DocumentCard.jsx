@@ -8,6 +8,7 @@ import {
   Check,
   Eye
 } from './Icons'
+import { isSafeImageDataUrl } from '../lib/safeUrl'
 
 function getDisplayFileName(doc) {
   const name = doc?.name || 'Dokumen'
@@ -57,8 +58,8 @@ function DocumentCard({
 
   const fileName = getDisplayFileName(doc)
   const fileSize = getDisplayFileSize(doc)
-  const hasFrontImage = Boolean(doc.attachments?.front?.data)
-  const frontImageSrc = doc.attachments?.front?.data
+  const hasFrontImage = Boolean(doc.attachments?.front?.data) && isSafeImageDataUrl(doc.attachments?.front?.data)
+  const frontImageSrc = hasFrontImage ? doc.attachments.front.data : null
 
   // Close card menu when clicking outside
   useEffect(() => {

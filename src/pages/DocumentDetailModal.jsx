@@ -15,6 +15,7 @@ import {
   FileText
 } from '../components/Icons'
 import { getTemplateById, checkDocumentExpiry } from '../lib/documents'
+import { downloadAttachmentSafely, isSafePdfDataUrl, isSafeImageDataUrl } from '../lib/safeUrl'
 import DocumentCard from '../components/DocumentCard'
 import ConfirmToast from '../components/ConfirmToast'
 import { getTranslation } from '../lib/i18n'
@@ -46,11 +47,7 @@ export default function DocumentDetailModal({
   }
 
   function downloadAttachment(fileObj, defaultName) {
-    if (!fileObj?.data) return
-    const a = document.createElement('a')
-    a.href = fileObj.data
-    a.download = fileObj.name || defaultName
-    a.click()
+    downloadAttachmentSafely(fileObj, defaultName)
   }
 
   function handleSaveEdit(e) {
@@ -258,7 +255,11 @@ export default function DocumentDetailModal({
                   <Download size={14} /> Download File
                 </button>
               </div>
-              <img src={form.attachments.front.data} alt="Scan Depan" className="scan-full-image" />
+              {isSafeImageDataUrl(form.attachments.front.data) ? (
+                <img src={form.attachments.front.data} alt="Scan Depan" className="scan-full-image" />
+              ) : (
+                <p className="text-muted mt-sm">Pratinjau dinonaktifkan: berkas bukan gambar yang valid.</p>
+              )}
             </div>
           )}
 
@@ -274,7 +275,11 @@ export default function DocumentDetailModal({
                   <Download size={14} /> Download File
                 </button>
               </div>
-              <img src={form.attachments.back.data} alt="Scan Belakang" className="scan-full-image" />
+              {isSafeImageDataUrl(form.attachments.back.data) ? (
+                <img src={form.attachments.back.data} alt="Scan Belakang" className="scan-full-image" />
+              ) : (
+                <p className="text-muted mt-sm">Pratinjau dinonaktifkan: berkas bukan gambar yang valid.</p>
+              )}
             </div>
           )}
 
@@ -290,11 +295,19 @@ export default function DocumentDetailModal({
                   <Download size={14} /> Download PDF
                 </button>
               </div>
-              <iframe
-                src={form.attachments.pdf.data}
-                title="PDF Dokumen"
-                className="pdf-preview-frame"
-              />
+              {isSafePdfDataUrl(form.attachments.pdf.data) ? (
+                <iframe
+                  src={form.attachments.pdf.data}
+                  title="PDF Dokumen"
+                  className="pdf-preview-frame"
+                  sandbox=""
+                  referrerPolicy="no-referrer"
+                />
+              ) : (
+                <p className="text-muted mt-sm">
+                  Pratinjau dinonaktifkan: berkas ini bukan PDF yang valid. Gunakan tombol unduh untuk memeriksanya secara lokal.
+                </p>
+              )}
             </div>
           )}
 

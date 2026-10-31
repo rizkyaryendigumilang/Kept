@@ -1,35 +1,63 @@
 // Zero-Knowledge Security Audit & Activity Logging
 // Tracks login history, PIN modifications, sensitive activities, and trusted devices locally.
 
+// PIN length policy (H-1).
+//
+// The vault key is Argon2/PBKDF2-derived from the PIN, so a 6-digit PIN is a
+// ~20-bit secret and can be brute-forced offline against a stolen ciphertext.
+// New PINs must therefore be at least 8 digits. LEGACY_PIN_LENGTH stays
+// accepted for unlocking only: existing vaults already derived their key from
+// 6 digits and cannot be re-keyed without the user's old PIN.
+export const MIN_PIN_LENGTH = 8
+export const MAX_PIN_LENGTH = 12
+export const LEGACY_PIN_LENGTH = 6
+
 const WEAK_PIN_PATTERNS = [
   '000000', '111111', '222222', '333333', '444444',
   '555555', '666666', '777777', '888888', '999999',
   '123456', '654321', '012345', '543210', '234567',
   '765432', '345678', '876543', '456789', '987654',
-  '121212', '123123', '112233', '010101', '696969'
+  '121212', '123123', '112233', '010101', '696969',
+  '00000000', '11111111', '12345678', '87654321',
+  '12341234', '11223344', '01010101', '123456789'
 ]
 
+/**
+ * Validates a NEW PIN. Legacy 6-digit PINs are rejected here on purpose —
+ * use `isUnlockPinLength` for the unlock path instead.
+ */
 export function isWeakPin(pin) {
-  if (!pin || pin.length !== 6 || !/^\d{6}$/.test(pin)) {
-    return { isWeak: true, reason: 'PIN harus terdiri dari tepat 6 digit angka.' }
+  if (!pin || typeof pin !== 'string' || !/^\d+$/.test(pin)) {
+    return { isWeak: true, reason: 'PIN hanya boleh berisi angka.' }
+  }
+
+  if (pin.length < MIN_PIN_LENGTH) {
+    return {
+      isWeak: true,
+      reason: `PIN baru minimal ${MIN_PIN_LENGTH} digit. PIN 6 digit terlalu mudah dibobol secara offline.`
+    }
+  }
+
+  if (pin.length > MAX_PIN_LENGTH) {
+    return { isWeak: true, reason: `PIN maksimal ${MAX_PIN_LENGTH} digit.` }
   }
 
   if (WEAK_PIN_PATTERNS.includes(pin)) {
     return {
       isWeak: true,
-      reason: 'PIN terlalu mudah ditebak. Hindari kombinasi berurutan atau berulang (cth: 123456, 111111).'
+      reason: 'PIN terlalu mudah ditebak. Hindari kombinasi berurutan atau berulang (cth: 12345678, 11111111).'
     }
   }
 
   // Check repeating digits
-  if (/^(\d)\1{5}$/.test(pin)) {
-    return { isWeak: true, reason: 'PIN tidak boleh terdiri dari 6 angka yang sama.' }
+  if (/^(\d)\1+$/.test(pin)) {
+    return { isWeak: true, reason: 'PIN tidak boleh terdiri dari angka yang sama.' }
   }
 
   // Check incremental sequence
   let isAscending = true
   let isDescending = true
-  for (let i = 0; i < 5; i += 1) {
+  for (let i = 0; i < pin.length - 1; i += 1) {
     const curr = parseInt(pin[i], 10)
     const next = parseInt(pin[i + 1], 10)
     if (next !== curr + 1) isAscending = false
@@ -39,7 +67,21 @@ export function isWeakPin(pin) {
     return { isWeak: true, reason: 'PIN tidak boleh berupa urutan angka berurutan.' }
   }
 
+  // Require some variety — 11221122 is not meaningfully better than 11111111.
+  if (new Set(pin).size < 4) {
+    return { isWeak: true, reason: 'PIN harus memakai minimal 4 angka berbeda.' }
+  }
+
   return { isWeak: false, reason: '' }
+}
+
+/**
+ * Length gate for the UNLOCK path: legacy 6-digit vaults must keep working.
+ */
+export function isUnlockPinLength(pin) {
+  if (!pin || typeof pin !== 'string' || !/^\d+$/.test(pin)) return false
+  return (pin.length === LEGACY_PIN_LENGTH || pin.length >= MIN_PIN_LENGTH) &&
+    pin.length <= MAX_PIN_LENGTH
 }
 
 export function detectDeviceInfo() {

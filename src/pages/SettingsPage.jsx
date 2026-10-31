@@ -45,7 +45,8 @@ import {
   removeBiometricRecord
 } from '../lib/biometric'
 import { checkDocumentExpiry } from '../lib/documents'
-import { isWeakPin } from '../lib/securityAudit'
+import { isWeakPin, isUnlockPinLength } from '../lib/securityAudit'
+import { copyToClipboardSecure } from '../lib/clipboard'
 
 export default function SettingsPage({
   profile,
@@ -121,6 +122,31 @@ export default function SettingsPage({
   // Recovery Key
   const [copiedKey, setCopiedKey] = useState(false)
   const [showRecoveryDetails, setShowRecoveryDetails] = useState(false)
+
+  // Never leave the recovery key sitting in the DOM (M-11). Collapse the panel
+  // after 60s and as soon as the tab loses focus, so a screen-share, an
+  // over-the-shoulder look or a DOM dump cannot harvest it later.
+  useEffect(() => {
+    if (!showRecoveryDetails) return undefined
+
+    const timer = setTimeout(() => setShowRecoveryDetails(false), 60000)
+
+    function hide() {
+      setShowRecoveryDetails(false)
+    }
+    function handleVisibility() {
+      if (document.hidden) hide()
+    }
+
+    window.addEventListener('blur', hide)
+    document.addEventListener('visibilitychange', handleVisibility)
+
+    return () => {
+      clearTimeout(timer)
+      window.removeEventListener('blur', hide)
+      document.removeEventListener('visibilitychange', handleVisibility)
+    }
+  }, [showRecoveryDetails])
 
   // Auto-lock setting
   const [autoLockMinutes, setAutoLockMinutes] = useState(() => {
@@ -309,8 +335,8 @@ export default function SettingsPage({
     e.preventDefault()
     setMasterPassErr('')
     setMasterPassMsg('')
-    if (!masterCurrentPass || masterCurrentPass.length !== 6) {
-      const err = 'Masukkan 6 digit Security PIN saat ini.'
+    if (!masterCurrentPass || !isUnlockPinLength(masterCurrentPass)) {
+      const err = 'Masukkan Security PIN saat ini (6 digit lama atau 8 digit ke atas).'
       setMasterPassErr(err)
       if (showToast) showToast(err)
       return
@@ -353,9 +379,17 @@ export default function SettingsPage({
 
   function handleCopyRecoveryKey() {
     if (!recoveryKey) return
-    navigator.clipboard.writeText(recoveryKey)
     setCopiedKey(true)
     setTimeout(() => setCopiedKey(false), 1800)
+    // Clipboard auto-wipes after 45s instead of leaving the master recovery
+    // key (the one secret that can decrypt everything) sitting in the OS
+    // clipboard indefinitely.
+    copyToClipboardSecure(recoveryKey, {
+      label: 'Recovery Key',
+      timeoutSec: 45,
+      lang,
+      onNotify: showToast
+    })
   }
 
   const expiringDocs = useMemo(() => {
@@ -668,9 +702,9 @@ export default function SettingsPage({
                 <input
                   type="password"
                   inputMode="numeric"
-                  maxLength={6}
+                  maxLength={12}
                   value={masterCurrentPass}
-                  onChange={(e) => setMasterCurrentPass(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                  onChange={(e) => setMasterCurrentPass(e.target.value.replace(/\D/g, '').slice(0, 12))}
                   placeholder={t('sec_pin_current_ph')}
                   className="font-mono text-center letter-spacing-lg"
                   required
@@ -681,9 +715,9 @@ export default function SettingsPage({
                 <input
                   type="password"
                   inputMode="numeric"
-                  maxLength={6}
+                  maxLength={12}
                   value={masterNewPass}
-                  onChange={(e) => setMasterNewPass(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                  onChange={(e) => setMasterNewPass(e.target.value.replace(/\D/g, '').slice(0, 12))}
                   placeholder={t('sec_pin_new_ph')}
                   className="font-mono text-center letter-spacing-lg"
                   required
@@ -694,9 +728,9 @@ export default function SettingsPage({
                 <input
                   type="password"
                   inputMode="numeric"
-                  maxLength={6}
+                  maxLength={12}
                   value={masterConfirmPass}
-                  onChange={(e) => setMasterConfirmPass(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                  onChange={(e) => setMasterConfirmPass(e.target.value.replace(/\D/g, '').slice(0, 12))}
                   placeholder={t('sec_pin_confirm_ph')}
                   className="font-mono text-center letter-spacing-lg"
                   required

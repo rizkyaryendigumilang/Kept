@@ -19,6 +19,7 @@ import {
   BadgeCheck
 } from '../components/Icons'
 import { getTranslation } from '../lib/i18n'
+import { validateAttachmentFile } from '../lib/safeUrl'
 
 export default function AddDocumentModal({ onClose, onSubmit, lang = 'id' }) {
   const t = (k) => getTranslation(k, lang)
@@ -114,23 +115,36 @@ export default function AddDocumentModal({ onClose, onSubmit, lang = 'id' }) {
   }
 
   function readFileDirectly(slot, file) {
-    const reader = new FileReader()
-    reader.onload = (e) => {
-      const dataUrl = e.target.result
-      setForm((prev) => ({
-        ...prev,
-        attachments: {
-          ...prev.attachments,
-          [slot]: {
-            name: file.name,
-            size: (file.size / 1024).toFixed(1) + ' KB',
-            type: file.type,
-            data: dataUrl
+    // Verify the bytes, not just the extension/claimed type: this payload is
+    // later rendered in an <img>/<iframe> inside the unlocked vault.
+    validateAttachmentFile(file, { allowPdf: true }).then((result) => {
+      if (!result.ok) {
+        alert(
+          lang === 'id'
+            ? 'Berkas ditolak: isi berkas tidak cocok dengan tipe yang diklaim. Gunakan JPG, PNG, WEBP, atau PDF asli.'
+            : 'File rejected: its contents do not match the declared type. Use a real JPG, PNG, WEBP or PDF.'
+        )
+        return
+      }
+
+      const reader = new FileReader()
+      reader.onload = (e) => {
+        const dataUrl = e.target.result
+        setForm((prev) => ({
+          ...prev,
+          attachments: {
+            ...prev.attachments,
+            [slot]: {
+              name: file.name,
+              size: (file.size / 1024).toFixed(1) + ' KB',
+              type: file.type,
+              data: dataUrl
+            }
           }
-        }
-      }))
-    }
-    reader.readAsDataURL(file)
+        }))
+      }
+      reader.readAsDataURL(file)
+    })
   }
 
   function removeAttachment(slot) {

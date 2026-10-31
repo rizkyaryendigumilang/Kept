@@ -132,7 +132,10 @@ export async function createSecureShare({
     const { error } = await supabase.from('shared_secrets').insert({
       id: secretId,
       sender_id: senderId || null,
-      title: title || 'Pesan Rahasia',
+      // Title is intentionally NOT stored in plaintext (M-10): the subject of
+      // a secret ("BCA - rekening utama") is itself sensitive and belongs only
+      // inside the encrypted payload.
+      title: null,
       ciphertext: finalEnvelope.ct,
       iv: finalEnvelope.iv,
       salt: pinSalt,
@@ -162,7 +165,7 @@ export async function createSecureShare({
     // Payload encoded in hash so server never touches it
     const selfContained = {
       id: secretId,
-      t: title || 'Pesan Rahasia',
+      // No plaintext title here either (M-10) — it lives in the ciphertext.
       ct: finalEnvelope.ct,
       iv: finalEnvelope.iv,
       s: pinSalt,
@@ -187,9 +190,34 @@ export async function createSecureShare({
 /**
  * Fetches and decrypts a shared secret (burns on read if cloud-backed).
  */
-export async function fetchAndDecryptShare({ shareId, shareKeyHex, pin = '', directPayload = null }) {
+export async function fetchAndDecryptShare({ shareId, shareKeyHex, pin = '', directPayload = null, challenge = null }) {
   if (!shareKeyHex) {
     throw new Error('Kunci enkripsi tidak ditemukan pada tautan ini.')
+  }
+
+  // PIN unlock path: the outer layer was already fetched and decrypted on the
+  // first (burning) read. Decrypt it locally from the cached challenge so a
+  // wrong PIN does not consume the single allowed view.
+  if (challenge && challenge.outer && pin) {
+    if (challenge.expiresAt && new Date() > new Date(challenge.expiresAt)) {
+      throw new Error('Tautan rahasia ini telah kedaluwarsa.')
+    }
+
+    try {
+      const pinCryptoKey = await derivePinKey(pin.trim(), challenge.salt)
+      const decryptedInner = await decryptWithKey(challenge.outer, pinCryptoKey)
+      return {
+        requiresPin: false,
+        title: decryptedInner.title || challenge.title,
+        content: decryptedInner.content,
+        createdAt: decryptedInner.created_at,
+        expiresAt: challenge.expiresAt,
+        isBurned: challenge.isBurned,
+        viewsRemaining: challenge.viewsRemaining
+      }
+    } catch {
+      throw new Error('PIN atau kata sandi pengaman salah. Silakan coba lagi.')
+    }
   }
 
   const rawShareKey = hexToBytes(shareKeyHex)
@@ -254,7 +282,18 @@ export async function fetchAndDecryptShare({ shareId, shareKeyHex, pin = '', dir
         title: secretRow.title,
         expiresAt: secretRow.expires_at,
         isBurned,
-        viewsRemaining
+        viewsRemaining,
+        // Hand the already-decrypted outer layer back to the caller. The row
+        // may now be gone (burn-on-read), so this is the only chance to keep
+        // the PIN challenge alive without a second RPC.
+        challenge: {
+          outer: decryptedOuter,
+          salt: secretRow.salt,
+          title: secretRow.title,
+          expiresAt: secretRow.expires_at,
+          isBurned,
+          viewsRemaining
+        }
       }
     }
 

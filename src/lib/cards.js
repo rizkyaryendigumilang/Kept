@@ -417,6 +417,18 @@ const CODE128_PATTERNS = [
   '114131', '311141', '411131', '211412', '211214', '211232', '2331112'
 ]
 
+// Escape untrusted text before it is interpolated into an SVG string.
+// The SVG is injected with dangerouslySetInnerHTML, so an unescaped card
+// number containing markup would execute in the app origin.
+function escapeXml(value) {
+  return String(value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&apos;')
+}
+
 export function generateBarcodeSvg(text) {
   if (!text || typeof text !== 'string') return null
   const clean = text.trim()
@@ -472,7 +484,7 @@ export function generateBarcodeSvg(text) {
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${totalWidth} ${totalHeight}" width="100%" height="auto" style="background:#ffffff; border-radius:8px;">
       <rect width="${totalWidth}" height="${totalHeight}" fill="#ffffff" />
       ${rects.join('')}
-      <text x="${(totalWidth / 2).toFixed(1)}" y="104" text-anchor="middle" font-family="monospace" font-size="12" font-weight="600" fill="#000000" letter-spacing="2">${clean}</text>
+      <text x="${(totalWidth / 2).toFixed(1)}" y="104" text-anchor="middle" font-family="monospace" font-size="12" font-weight="600" fill="#000000" letter-spacing="2">${escapeXml(clean)}</text>
     </svg>
   `
 }

@@ -386,6 +386,7 @@ export default function AlertsPanel({
                   <div className="scanner-breached-chips-row">
                     {scanData.breachedResults.map((b) => {
                       const matchedItem = items.find((i) => i.id === b.itemId)
+                      const label = matchedItem?.name || matchedItem?.username || 'Item'
                       return (
                         <button
                           key={b.itemId}
@@ -394,7 +395,7 @@ export default function AlertsPanel({
                           onClick={() => matchedItem && onOpenItem(matchedItem)}
                           title={lang === 'id' ? 'Buka item untuk mengganti password' : 'Open item to update password'}
                         >
-                          <span className="scanner-chip-name">{b.itemName}</span>
+                          <span className="scanner-chip-name">{label}</span>
                           <span className="scanner-chip-count">{b.count.toLocaleString()}x</span>
                         </button>
                       )

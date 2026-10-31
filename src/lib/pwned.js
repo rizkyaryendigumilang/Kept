@@ -147,11 +147,11 @@ export async function scanVaultPasswordBreaches(items = [], onProgress) {
     const results = await Promise.all(promises)
     for (const r of results) {
       if (r.breached) {
+        // Only opaque identifiers reach storage (M-2). Vault names, usernames
+        // and URLs are resolved from the live, unlocked item list at render
+        // time, so nothing meaningful survives in localStorage.
         breachedResults.push({
           itemId: r.item.id,
-          itemName: r.item.name || r.item.username || 'Password item',
-          username: r.item.username || '',
-          url: r.item.url || '',
           count: r.count,
           checkedAt: new Date().toISOString()
         })

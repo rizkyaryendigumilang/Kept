@@ -168,10 +168,38 @@ export async function changeMasterPassword({
   userId,
   newMasterPassword,
   decryptedItems,
+  expectedItemCount,
   recoveryKey,
   theme,
   cardStyle
 }) {
+  // Guard (C-1): rotating the vault key re-encrypts exactly the item set that
+  // is passed in. Any row that failed to decrypt upstream is missing from that
+  // set, so writing it would leave those rows encrypted under the OLD key and
+  // permanently unreadable. Refuse to proceed unless everything is present.
+  if (typeof expectedItemCount === 'number' && decryptedItems.length !== expectedItemCount) {
+    throw new Error(
+      `Rotasi PIN dibatalkan: hanya ${decryptedItems.length} dari ${expectedItemCount} item yang berhasil didekripsi. Buka ulang vault lalu coba lagi.`
+    )
+  }
+
+  // The local list can itself be stale (pending offline queue, deleted rows),
+  // so cross-check the authoritative count before touching anything.
+  if (navigator.onLine) {
+    const { count, error: countError } = await supabase
+      .from('vault_items')
+      .select('id', { count: 'exact', head: true })
+      .eq('user_id', userId)
+
+    if (countError) throw countError
+
+    if (typeof count === 'number' && count !== decryptedItems.length) {
+      throw new Error(
+        `Rotasi PIN dibatalkan: server menyimpan ${count} item tetapi hanya ${decryptedItems.length} yang siap dienkripsi ulang. Sinkronkan vault terlebih dahulu.`
+      )
+    }
+  }
+
   const newSalt = generateSalt()
   const newMasterKey = await deriveVaultKeyAsync(newMasterPassword, newSalt)
   const checkEnvelope = await createVerifier(newMasterKey)

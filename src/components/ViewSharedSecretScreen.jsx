@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import {
   Flame,
   Lock,
@@ -25,13 +25,24 @@ export default function ViewSharedSecretScreen({ shareParams, onExit, lang = 'id
   const [pinInput, setPinInput] = useState('')
   const [pinError, setPinError] = useState('')
   const [secretData, setSecretData] = useState(null)
+  const [challenge, setChallenge] = useState(null)
   const [revealed, setRevealed] = useState(true)
   const [copied, setCopied] = useState(false)
-  const [clipboardTimer, setClipboardTimer] = useState(null)
+  const clipboardTimerRef = useRef(null)
 
   useEffect(() => {
     loadSecret('')
   }, [shareParams])
+
+  // Never leave the shared secret on the clipboard after leaving the page.
+  useEffect(() => {
+    return () => {
+      if (clipboardTimerRef.current) {
+        clearTimeout(clipboardTimerRef.current)
+        clipboardTimerRef.current = null
+      }
+    }
+  }, [])
 
   async function loadSecret(userPin = '') {
     if (!shareParams) return
@@ -44,14 +55,17 @@ export default function ViewSharedSecretScreen({ shareParams, onExit, lang = 'id
         shareId: shareParams.shareId,
         shareKeyHex: shareParams.shareKeyHex,
         directPayload: shareParams.directPayload,
-        pin: userPin
+        pin: userPin,
+        challenge
       })
 
       if (result.requiresPin) {
         setRequiresPin(true)
+        setChallenge(result.challenge || null)
         setSecretData(result)
       } else {
         setRequiresPin(false)
+        setChallenge(null)
         setSecretData(result)
         haptic('success')
       }
@@ -73,23 +87,24 @@ export default function ViewSharedSecretScreen({ shareParams, onExit, lang = 'id
     loadSecret(pinInput.trim())
   }
 
-  function handleCopySecret() {
+  async function handleCopySecret() {
     if (!secretData?.content) return
-    navigator.clipboard.writeText(secretData.content)
     setCopied(true)
     haptic('success')
 
-    // Optional clipboard auto-clear after 60s
-    if (clipboardTimer) clearTimeout(clipboardTimer)
-    const tid = setTimeout(() => {
-      // Clear clipboard quietly if permitted
-      try {
-        navigator.clipboard.writeText('')
-      } catch {
-        // ignore
-      }
+    try {
+      await navigator.clipboard.writeText(secretData.content)
+    } catch {
+      // clipboard unavailable — nothing is left behind, so no timer needed
+      return
+    }
+
+    // Auto-clear the clipboard after 60s.
+    if (clipboardTimerRef.current) clearTimeout(clipboardTimerRef.current)
+    clipboardTimerRef.current = setTimeout(() => {
+      navigator.clipboard.writeText('').catch(() => {})
+      clipboardTimerRef.current = null
     }, 60000)
-    setClipboardTimer(tid)
 
     setTimeout(() => setCopied(false), 2200)
   }
