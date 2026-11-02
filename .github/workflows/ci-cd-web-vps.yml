@@ -49,10 +49,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout source code
-        uses: actions/checkout@v4
+        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
 
       - name: Setup Node.js 22
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@1e60f620b9541d16bece96c5465dc8ee9832be0b # v4.0.3
         with:
           node-version: 22
           cache: npm
@@ -63,11 +63,20 @@ jobs:
       - name: Run verification & cryptographic tests
         run: npm test
 
+      - name: Validate required build secrets
+        env:
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.VITE_SUPABASE_PUBLISHABLE_KEY }}
+        run: |
+          set -euo pipefail
+          test -n "${VITE_SUPABASE_URL:-}" || { echo "::error::Missing repository secret: VITE_SUPABASE_URL"; exit 1; }
+          test -n "${VITE_SUPABASE_PUBLISHABLE_KEY:-}" || { echo "::error::Missing repository secret: VITE_SUPABASE_PUBLISHABLE_KEY"; exit 1; }
+
       - name: Build production web bundle
         env:
           CI: true
-          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL || 'https://bhldonheosindyolgeom.supabase.co' }}
-          VITE_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.VITE_SUPABASE_PUBLISHABLE_KEY || 'sb_publishable_qCuupKOCNn2hL10SEEu58A_CpvnwnCw' }}
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.VITE_SUPABASE_PUBLISHABLE_KEY }}
           BASE_PATH: ${{ github.event.inputs.base_path || '/kept/' }}
         run: npm run build -- --base="$BASE_PATH"
 
@@ -83,7 +92,7 @@ jobs:
         run: tar -czf web-dist.tar.gz -C dist .
 
       - name: Upload web artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@5d5d22a31266ced268874388b861e4b58bb5c2f3 # v4.3.1
         with:
           name: kept-web-dist
           path: web-dist.tar.gz
@@ -102,7 +111,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Download web artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # v4.1.8
         with:
           name: kept-web-dist
           path: ./artifact
