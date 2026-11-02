@@ -223,6 +223,7 @@ export default function App() {
     setCardAddModalOpen(false)
     setSearchOpen(false)
     setMenuOpen(false)
+    setAlertsOpen(false)
   }, [])
 
   const { installPrompt, promptInstall: handlePromptInstall } = usePwaInstall({
@@ -476,11 +477,15 @@ export default function App() {
         })
       )
       const decrypted = decryptedResults.filter(Boolean)
+      let opened = false
       setVaultKey((currentKey) => {
         if (!currentKey) return null
         setItems(decrypted)
+        opened = true
         return currentKey
       })
+      if (!opened) return
+
       showToast(`Kept terbuka · ${keyFingerprint(rawKey)}`, 1600)
 
       // Run offline sync check if online

@@ -131,6 +131,10 @@ export function useVaultSync({
       userId,
       getVaultKey: () => vaultKeyRef.current,
       onEvent: ({ action, item, id }) => {
+        // If vault is currently locked, IndexedDB is already updated by realtime.js.
+        // Do not alter or populate in-memory state while locked.
+        if (!vaultKeyRef.current) return
+
         if (action === 'delete') {
           setItems((prev) => prev.filter((i) => i.id !== id))
           if (showToast) {
@@ -142,7 +146,6 @@ export function useVaultSync({
             )
           }
         } else if (action === 'upsert' && item) {
-          if (!vaultKeyRef.current) return
           setItems((prev) => {
             const exists = prev.some((i) => i.id === item.id)
             if (exists) {

@@ -57,30 +57,41 @@ export function useAutoLock({ vaultKey, onLock, showToast }) {
     events.forEach((ev) => window.addEventListener(ev, handleActivity, { passive: true }))
     resetTimer()
 
-    // Handle tab visibility change with wall-clock elapsed check
+    // Handle tab visibility change & BFCache pageshow with wall-clock elapsed check
     // Prevents suspended mobile browsers from keeping vault unlocked past timeout
+    const checkElapsedAndResume = () => {
+      const timeoutMs = getTimeoutMs()
+      if (timeoutMs) {
+        const elapsed = Date.now() - lastActiveRef.current
+        if (elapsed >= timeoutMs) {
+          if (onLock) onLock()
+          if (showToast) {
+            showToast('Vault otomatis terkunci karena tidak ada aktivitas.', 2500)
+          }
+          return
+        }
+      }
+      resetTimer()
+    }
+
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible') {
-        const timeoutMs = getTimeoutMs()
-        if (timeoutMs) {
-          const elapsed = Date.now() - lastActiveRef.current
-          if (elapsed >= timeoutMs) {
-            if (onLock) onLock()
-            if (showToast) {
-              showToast('Vault otomatis terkunci karena tidak ada aktivitas.', 2500)
-            }
-            return
-          }
-        }
-        resetTimer()
+        checkElapsedAndResume()
       }
     }
+
+    const handlePageShow = () => {
+      checkElapsedAndResume()
+    }
+
     document.addEventListener('visibilitychange', handleVisibilityChange)
+    window.addEventListener('pageshow', handlePageShow)
 
     return () => {
       if (timerRef.current) clearTimeout(timerRef.current)
       events.forEach((ev) => window.removeEventListener(ev, handleActivity))
       document.removeEventListener('visibilitychange', handleVisibilityChange)
+      window.removeEventListener('pageshow', handlePageShow)
     }
   }, [vaultKey, getTimeoutMs, resetTimer, onLock, showToast])
 
