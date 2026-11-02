@@ -1,0 +1,72 @@
+# =====================================================================
+# Caddyfile untuk Kept (SPA statis hasil Vite)
+# =====================================================================
+# Alur deploy: local -> GitHub -> VPS (workflow ci-cd-web-vps.yml)
+#   * Artefak ditulis ke /srv/www/kept
+#   * Vite dibangun dengan --base=/kept/  => app dilayani di /kept/
+#   * Aset lama di /srv/www/kept/assets sengaja dipertahankan workflow
+#     agar client yang masih memakai versi lama tidak kena chunk 404.
+#
+# Pasang di: /etc/caddy/Caddyfile
+#   sudo nano /etc/caddy/Caddyfile
+#   sudo caddy validate --config /etc/caddy/Caddyfile
+#   sudo systemctl reload caddy
+#
+# PENTING sebelum dipakai:
+#   1. Ganti vault.example.com dengan domain asli (A/AAAA record harus
+#      sudah mengarah ke VPS — Caddy menerbitkan sertifikat otomatis).
+#   2. Jika project Supabase berganti, sesuaikan connect-src di CSP.
+#   3. Caddy harus bisa membaca /srv/www/kept (workflow sudah chmod o+rX).
+# =====================================================================
+
+vault.example.com {
+	encode zstd gzip
+
+	root * /srv/www/kept
+
+	# ---- Header keamanan ---------------------------------------------
+	header {
+		# HSTS tanpa `preload`: cukup memaksa HTTPS, tanpa mengunci
+		# domain selamanya kalau suatu saat pindah host.
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		X-Frame-Options "DENY"
+		Permissions-Policy "camera=(self), microphone=(), geolocation=(), payment=(), usb=(), clipboard-write=(self), fullscreen=(self)"
+		# CSP: hanya izinkan yang benar-benar dipakai aplikasi.
+		#   script-src 'self'         -> bundle Vite + registerSW.js (tanpa inline script)
+		#   style-src 'unsafe-inline' -> React style attribute + CSS Google Fonts
+		#   img/media data: & blob:   -> avatar, barcode SVG, pratinjau kamera
+		#   frame-src blob:           -> pratinjau PDF di DocumentDetailModal
+		#   connect-src               -> Supabase (REST/Realtime) + HIBP k-anonymity
+		Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https:; media-src 'self' data: blob:; connect-src 'self' https://bhldonheosindyolgeom.supabase.co wss://bhldonheosindyolgeom.supabase.co https://api.pwnedpasswords.com; frame-src 'self' blob:; worker-src 'self' blob:; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; upgrade-insecure-requests"
+		-Server
+	}
+
+	# ---- Cache --------------------------------------------------------
+	# Aset ber-hash dari Vite: cache 1 tahun.
+	@hashed path /kept/assets/*
+	header @hashed Cache-Control "public, max-age=31536000, immutable"
+
+	# Service worker & manifest tidak boleh di-cache lama.
+	@nocache path /kept/sw.js /kept/manifest.webmanifest /kept/registerSW.js
+	header @nocache Cache-Control "public, max-age=0, must-revalidate"
+
+	# ---- Routing ------------------------------------------------------
+	# App hidup di /kept/ (sama dengan base path build di workflow).
+	redir / /kept/ 301
+	redir /index.html /kept/ 301
+
+	# Aset: sajikan apa adanya. File hashed yang hilang harus 404,
+	# BUKAN fallback ke index.html (kalau tidak, browser menerima HTML
+	# sebagai JavaScript dan chunk lama gagal dimuat).
+	handle_path /kept/assets/* {
+		file_server
+	}
+
+	# Sisanya: SPA fallback ke index.html.
+	handle_path /kept/* {
+		try_files {path} /index.html
+		file_server
+	}
+}

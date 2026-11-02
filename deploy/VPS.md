@@ -3,10 +3,10 @@
 Alur yang dipakai repo ini:
 
 ```
-laptop  --git push-->  GitHub Actions (ci-cd-web-vps.yml)  --scp/ssh-->  VPS (/srv/www/kept)
+laptop  --git push-->  GitHub Actions (ci-cd-web-vps.yml)  --scp/ssh-->  VPS (/srv/www/kept)  --Caddy-->  browser
 ```
 
-Build **tidak** terjadi di VPS. VPS hanya menerima hasil build yang sudah diverifikasi dan menyimpannya sebagai file statis untuk nginx.
+Build **tidak** terjadi di VPS. VPS hanya menerima hasil build yang sudah diverifikasi, menyimpannya sebagai file statis, dan Caddy yang melayaninya lewat HTTPS otomatis.
 
 ---
 
@@ -15,26 +15,33 @@ Build **tidak** terjadi di VPS. VPS hanya menerima hasil build yang sudah diveri
 ```bash
 ssh user@vps-ip
 
+# Caddy dari repo resmi (versi apt default biasanya ketinggalan)
+sudo apt install -y debian-keyring debian-archive-keyring apt-transport-https curl
+curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/gpg.key' \
+  | sudo gpg --dearmor -o /usr/share/keyrings/caddy-stable-archive-keyring.gpg
+curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/debian.deb.txt' \
+  | sudo tee /etc/apt/sources.list.d/caddy-stable.list
 sudo apt update
-sudo apt install -y nginx rsync
+sudo apt install -y caddy rsync
 
 # Folder tujuan deploy — HARUS sama dengan yang dipakai workflow
 sudo mkdir -p /srv/www/kept
 sudo chown -R $USER:$USER /srv/www/kept
+sudo chmod -R o+rX /srv/www/kept
 
-# Konfigurasi nginx (salin dari repo: deploy/nginx/vault.conf)
-sudo nano /etc/nginx/sites-available/kept.conf
-sudo ln -s /etc/nginx/sites-available/kept.conf /etc/nginx/sites-enabled/
-sudo rm -f /etc/nginx/sites-enabled/default
-sudo nginx -t
-sudo systemctl reload nginx
+# Caddyfile (salin dari repo: deploy/caddy/Caddyfile)
+sudo nano /etc/caddy/Caddyfile
+sudo caddy validate --config /etc/caddy/Caddyfile
+sudo systemctl reload caddy
 ```
 
-`vault.conf` di repo adalah **template**: ganti `vault.example.com` dengan domain kamu. Blok 443 memerlukan sertifikat, jadi jalankan Certbot lebih dulu, atau ubah sementara `listen 443 ssl` menjadi `listen 80` dan hapus baris `ssl_*`.
+Template `deploy/caddy/Caddyfile` memakai `vault.example.com`. Ganti dengan domain kamu dan pastikan **A/AAAA record sudah mengarah ke VPS** sebelum reload — Caddy menerbitkan sertifikat Let's Encrypt otomatis saat request pertama untuk domain itu.
+
+Cek cepat setelah reload:
 
 ```bash
-sudo apt install -y certbot python3-certbot-nginx
-sudo certbot --nginx -d vault.example.com
+curl -I https://vault.example.com/kept/
+systemctl status caddy --no-pager
 ```
 
 ---
@@ -62,16 +69,18 @@ ssh-keyscan -p 22 vault.example.com
 
 | Secret | Wajib | Contoh nilai |
 |---|---|---|
-| `VPS_HOST` | ya | `203.0.113.10` atau `vault.example.com` |
+| `VPS_HOST` | ya | `vault.example.com` (pakai domain, bukan IP — lihat catatan health check) |
 | `VPS_USERNAME` | ya | `rizky` |
 | `VPS_SSH_KEY` | ya | isi `~/.ssh/id_github_actions` (private key) |
 | `VPS_SSH_KNOWN_HOSTS` | ya | output `ssh-keyscan` |
-| `VITE_SUPABASE_URL` | ya | `https://bhldonheosindyolgeom.supabase.co` |
+| `VITE_SUPABASE_URL` | ya | `https://<project-ref>.supabase.co` |
 | `VITE_SUPABASE_PUBLISHABLE_KEY` | ya | `sb_publishable_...` |
 | `VPS_SSH_PORT` | tidak | `22` |
 | `KEPT_PUBLIC_URL` | tidak | `https://vault.example.com/kept/` |
 
-Catatan: workflow **tidak lagi** punya fallback untuk dua secret Supabase. Kalau salah satunya kosong, build berhenti dengan pesan `Missing repository secret`, bukan menghasilkan bundle yang rusak.
+Workflow **tidak** punya fallback untuk dua secret Supabase. Kalau salah satunya kosong, build berhenti dengan `Missing repository secret`, bukan menghasilkan bundle rusak.
+
+Nilai `VITE_SUPABASE_PUBLISHABLE_KEY` aman disimpan sebagai secret meski bersifat publik (memang ikut terkirim ke browser), karena yang dilindungi tetap RLS + enkripsi client-side.
 
 ---
 
@@ -89,10 +98,13 @@ Catatan: workflow **tidak lagi** punya fallback untuk dua secret Supabase. Kalau
 
 ---
 
-## 5. Yang perlu diingat
+## 5. Catatan Caddy & health check
 
-- **Jangan commit `.env.local`**; sudah ada di `.gitignore`. VPS tidak butuh file `.env` karena env di-inject saat build.
-- Hanya **satu** workflow deploy web. Kalau suatu saat menambah workflow deploy lain, pastikan tidak menulis ke `/srv/www/kept` dengan base path berbeda — dua deploy yang berlomba akan membuat app blank.
-- Base path build (`/kept/`) dan `root /srv/www/kept` di nginx harus selalu cocok. Kalau mau pindah ke root domain (`/`), ubah `--base` di workflow **dan** blok `location` di nginx sekaligus.
-- Pin action ke commit SHA (bukan `@v4`) supaya supply chain tidak berubah diam-diam. Kalau memperbarui action, ambil SHA dari `https://api.github.com/repos/<owner>/<repo>/commits/<tag>`.
+- **Caddy menangani TLS sendiri.** Tidak perlu Certbot. Karena itu `deploy/nginx/vault.conf` sudah dihapus dari repo; satu-satunya konfigurasi web server adalah `deploy/caddy/Caddyfile`.
+- **Health check mewajibkan TLS yang valid.** Kalau `VPS_HOST` diisi IP, `https://<ip>/kept/` akan gagal verifikasi sertifikat dan deploy dianggap gagal (lalu rollback). Isi `VPS_HOST` dengan domain, atau set `KEPT_PUBLIC_URL=https://domain/kept/`.
+- **Deploy pertama bisa kena timeout 15 detik** karena Caddy baru menerbitkan sertifikat. Buka `https://domain/kept/` sekali secara manual dulu, baru jalankan workflow.
+- **Jangan pakai `--delete` di luar workflow ini.** Satu-satunya penulis `/srv/www/kept` adalah workflow; kalau ada workflow/script lain ikut menulis dengan base path berbeda, app akan blank.
+- **Base path harus sinkron.** `/kept/` di workflow (argumen `--base`) = `/kept/` di blok `handle_path` Caddy. Kalau mau pindah ke root domain, ubah keduanya sekaligus.
+- **Kalau di depan Caddy ada Cloudflare proxy,** sertifikat origin tetap diterbitkan Caddy (mode Full/Full Strict). Jangan pakai mode Flexible — HSTS + redirect akan membuat loop.
+- **Pin action ke commit SHA** (bukan `@v4`) supaya supply chain tidak berubah diam-diam. SHA baru: `https://api.github.com/repos/<owner>/<repo>/commits/<tag>`.
 - `vercel.json` di repo hanya relevan kalau deploy ke Vercel; tidak mengganggu VPS.
