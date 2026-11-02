@@ -73,6 +73,8 @@ export function useVaultSync({
           })
         )
         const decrypted = decryptedResults.filter(Boolean)
+        // Guard against race condition: if vault was locked while sync was decrypting, do not populate state
+        if (!vaultKeyRef.current) return
         setItems(decrypted)
       } catch (err) {
         console.warn('Sync warning:', err)
@@ -140,6 +142,7 @@ export function useVaultSync({
             )
           }
         } else if (action === 'upsert' && item) {
+          if (!vaultKeyRef.current) return
           setItems((prev) => {
             const exists = prev.some((i) => i.id === item.id)
             if (exists) {

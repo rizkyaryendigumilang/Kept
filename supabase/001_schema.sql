@@ -15,7 +15,7 @@ create table if not exists public.profiles (
 create table if not exists public.vault_items (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references auth.users(id) on delete cascade,
-  item_type text not null check (item_type in ('password','bank_card','secure_note')),
+  item_type text not null check (item_type in ('password','bank_card','secure_note','document')),
   category text not null,
   payload jsonb not null,
   created_at timestamptz not null default now(),

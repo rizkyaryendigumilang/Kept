@@ -10,6 +10,7 @@ import { useEffect, useRef, useCallback } from 'react'
  */
 export function useAutoLock({ vaultKey, onLock, showToast }) {
   const timerRef = useRef(null)
+  const lastActiveRef = useRef(Date.now())
 
   const getTimeoutMs = useCallback(() => {
     try {
@@ -22,6 +23,7 @@ export function useAutoLock({ vaultKey, onLock, showToast }) {
   }, [])
 
   const resetTimer = useCallback(() => {
+    lastActiveRef.current = Date.now()
     if (timerRef.current) {
       clearTimeout(timerRef.current)
       timerRef.current = null
@@ -55,9 +57,21 @@ export function useAutoLock({ vaultKey, onLock, showToast }) {
     events.forEach((ev) => window.addEventListener(ev, handleActivity, { passive: true }))
     resetTimer()
 
-    // Handle tab visibility change
+    // Handle tab visibility change with wall-clock elapsed check
+    // Prevents suspended mobile browsers from keeping vault unlocked past timeout
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible') {
+        const timeoutMs = getTimeoutMs()
+        if (timeoutMs) {
+          const elapsed = Date.now() - lastActiveRef.current
+          if (elapsed >= timeoutMs) {
+            if (onLock) onLock()
+            if (showToast) {
+              showToast('Vault otomatis terkunci karena tidak ada aktivitas.', 2500)
+            }
+            return
+          }
+        }
         resetTimer()
       }
     }
@@ -68,7 +82,7 @@ export function useAutoLock({ vaultKey, onLock, showToast }) {
       events.forEach((ev) => window.removeEventListener(ev, handleActivity))
       document.removeEventListener('visibilitychange', handleVisibilityChange)
     }
-  }, [vaultKey, resetTimer])
+  }, [vaultKey, getTimeoutMs, resetTimer, onLock, showToast])
 
   return { resetTimer }
 }

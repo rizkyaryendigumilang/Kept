@@ -209,6 +209,20 @@ export default function App() {
       }
       return null
     })
+    setItems([])
+    setSelectedItem(null)
+    setActiveRecoveryKey('')
+    setShareModalData(null)
+    setExportModalOpen(false)
+    setImportKeptEnvelope(null)
+    setCardBarcodeModalItem(null)
+    setCardEditModalItem(null)
+    setShowAdd(false)
+    setAddMode(null)
+    setDocAddModalOpen(false)
+    setCardAddModalOpen(false)
+    setSearchOpen(false)
+    setMenuOpen(false)
   }, [])
 
   const { installPrompt, promptInstall: handlePromptInstall } = usePwaInstall({
@@ -462,7 +476,11 @@ export default function App() {
         })
       )
       const decrypted = decryptedResults.filter(Boolean)
-      setItems(decrypted)
+      setVaultKey((currentKey) => {
+        if (!currentKey) return null
+        setItems(decrypted)
+        return currentKey
+      })
       showToast(`Kept terbuka · ${keyFingerprint(rawKey)}`, 1600)
 
       // Run offline sync check if online
