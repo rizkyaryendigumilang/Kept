@@ -4,6 +4,7 @@ import {
   DOCUMENT_CATEGORIES,
   DOCUMENT_TEMPLATES,
   getTemplateById,
+  getTemplateOptionLabel,
   compressDocumentImage
 } from '../lib/documents'
 import {
@@ -13,8 +14,6 @@ import {
   FileText,
   Upload,
   X,
-  Check,
-  Sparkles,
   Calendar,
   BadgeCheck
 } from '../components/Icons'
@@ -29,6 +28,7 @@ export default function AddDocumentModal({ onClose, onSubmit, lang = 'id' }) {
   const categoryInfo = useMemo(() => {
     return DOCUMENT_CATEGORIES.find((c) => c.id === template.category) || DOCUMENT_CATEGORIES[0]
   }, [template])
+  const categoryName = lang === 'en' ? (categoryInfo.nameEn || categoryInfo.name) : categoryInfo.name
 
   const [form, setForm] = useState({
     name: 'KTP Pribadi',
@@ -44,9 +44,6 @@ export default function AddDocumentModal({ onClose, onSubmit, lang = 'id' }) {
       pdf: null
     }
   })
-
-  const [isProcessingOcr, setIsProcessingOcr] = useState(false)
-  const [ocrSuccess, setOcrSuccess] = useState('')
 
   // Handle template change
   function handleTemplateChange(newId) {
@@ -100,11 +97,6 @@ export default function AddDocumentModal({ onClose, onSubmit, lang = 'id' }) {
             }
           }
         }))
-
-        // Simulated client-side smart OCR recognition for Indonesian documents
-        if (slot === 'front') {
-          runClientOcrExtraction(file.name)
-        }
       } catch (err) {
         console.warn('Canvas compression failed, falling back to direct upload:', err)
         readFileDirectly(slot, file)
@@ -157,27 +149,6 @@ export default function AddDocumentModal({ onClose, onSubmit, lang = 'id' }) {
     }))
   }
 
-  // Smart client-side OCR extractor helper
-  function runClientOcrExtraction(fileName) {
-    setIsProcessingOcr(true)
-    setTimeout(() => {
-      setIsProcessingOcr(false)
-      // Provide intelligent defaults if fields are empty
-      setForm((prev) => {
-        const updated = { ...prev }
-        if (!updated.doc_number) {
-          // Generate a sample realistic format based on template
-          if (template.id === 'ktp') updated.doc_number = '320101' + Math.floor(1000000000 + Math.random() * 9000000000)
-          else if (template.id === 'sim') updated.doc_number = '1234-' + Math.floor(1000 + Math.random() * 9000) + '-' + Math.floor(100000 + Math.random() * 900000)
-          else if (template.id === 'paspor') updated.doc_number = 'B' + Math.floor(1000000 + Math.random() * 9000000)
-        }
-        return updated
-      })
-      setOcrSuccess('Auto-fill membaca data dari scan berhasil!')
-      setTimeout(() => setOcrSuccess(''), 3500)
-    }, 700)
-  }
-
   function handleSubmit(e) {
     e.preventDefault()
     if (!form.name.trim()) return
@@ -186,7 +157,7 @@ export default function AddDocumentModal({ onClose, onSubmit, lang = 'id' }) {
       name: form.name.trim(),
       doc_type: template.id,
       category: template.category,
-      categoryLabel: categoryInfo.name,
+      categoryLabel: categoryName,
       owner_name: form.owner_name.trim(),
       doc_number: form.doc_number.trim(),
       issue_date: form.issue_date,
@@ -204,7 +175,7 @@ export default function AddDocumentModal({ onClose, onSubmit, lang = 'id' }) {
   return (
     <Modal
       title={t('doc_modal_title')}
-      eyebrow={categoryInfo.name}
+      eyebrow={categoryName}
       wide
       onClose={onClose}
     >
@@ -216,15 +187,18 @@ export default function AddDocumentModal({ onClose, onSubmit, lang = 'id' }) {
             value={selectedTemplateId}
             onChange={(e) => handleTemplateChange(e.target.value)}
           >
-            {DOCUMENT_CATEGORIES.map((cat) => (
-              <optgroup key={cat.id} label={`${cat.code}. ${cat.name}`}>
-                {DOCUMENT_TEMPLATES.filter((t) => t.category === cat.id).map((t) => (
-                  <option key={t.id} value={t.id}>
-                    {t.name} — {t.fullName}
-                  </option>
-                ))}
-              </optgroup>
-            ))}
+            {DOCUMENT_CATEGORIES.map((cat) => {
+              const catLabel = lang === 'en' ? (cat.nameEn || cat.name) : cat.name
+              return (
+                <optgroup key={cat.id} label={`${cat.code}. ${catLabel}`}>
+                  {DOCUMENT_TEMPLATES.filter((t) => t.category === cat.id).map((t) => (
+                    <option key={t.id} value={t.id}>
+                      {getTemplateOptionLabel(t, lang)}
+                    </option>
+                  ))}
+                </optgroup>
+              )
+            })}
           </select>
         </label>
 
@@ -256,6 +230,10 @@ export default function AddDocumentModal({ onClose, onSubmit, lang = 'id' }) {
           <span>{template.docNumberLabel || t('doc_field_number')}</span>
           <input
             type="text"
+            inputMode={['ktp', 'kia', 'kk', 'npwp', 'bpjs_kesehatan', 'bpjs_ketenagakerjaan'].includes(template.id) ? 'numeric' : 'text'}
+            autoCapitalize="characters"
+            autoCorrect="off"
+            spellCheck={false}
             value={form.doc_number}
             placeholder={template.docNumberPlaceholder || (lang === 'id' ? 'Opsional' : 'Optional')}
             onChange={(e) => setForm({ ...form, doc_number: e.target.value })}
@@ -287,7 +265,7 @@ export default function AddDocumentModal({ onClose, onSubmit, lang = 'id' }) {
         {/* Dynamic Fields for specific template */}
         {template.fields?.length > 0 && (
           <div className="dynamic-template-fields">
-            <span className="field-label">Field Tambahan ({template.name})</span>
+            <span className="field-label">{lang === 'id' ? `Field Tambahan (${template.name})` : `Additional Fields (${template.name})`}</span>
             <div className="detail-grid">
               {template.fields.map((f) => (
                 <label
@@ -305,6 +283,9 @@ export default function AddDocumentModal({ onClose, onSubmit, lang = 'id' }) {
                   ) : (
                     <input
                       type={f.type}
+                      inputMode={f.key.includes('nik') || f.key.includes('number') || f.key.includes('gpa') || f.key.includes('year') ? 'numeric' : 'text'}
+                      autoCorrect="off"
+                      spellCheck={false}
                       placeholder={f.placeholder}
                       value={form.dynamicFields[f.key] || ''}
                       onChange={(e) => setDynamicField(f.key, e.target.value)}
@@ -363,20 +344,6 @@ export default function AddDocumentModal({ onClose, onSubmit, lang = 'id' }) {
                 <span>PDF {form.attachments.pdf ? '✓' : ''}</span>
               </label>
             </div>
-
-            {/* OCR Notice */}
-            {isProcessingOcr && (
-              <div className="ocr-status-pill">
-                <Sparkles size={13} className="spin-slow" />
-                <span>{t('doc_ocr_reading')}</span>
-              </div>
-            )}
-            {ocrSuccess && (
-              <div className="ocr-status-pill success">
-                <Check size={13} />
-                <span>{ocrSuccess}</span>
-              </div>
-            )}
 
             {/* Attachment Previews */}
             {(form.attachments.front || form.attachments.back || form.attachments.pdf) && (

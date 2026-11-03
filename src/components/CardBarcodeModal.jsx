@@ -3,6 +3,7 @@ import { X, Copy, Check, QrCode, ScanLine, Sun, ShieldCheck } from './Icons'
 import { generateBarcodeSvg } from '../lib/cards'
 import { getTranslation } from '../lib/i18n'
 import { haptic } from '../lib/haptics'
+import { copyToClipboardSecure } from '../lib/clipboard'
 
 function generateQRMatrix(text) {
   const size = 25
@@ -82,7 +83,11 @@ export default function CardBarcodeModal({ card, onClose, lang = 'id' }) {
 
   const copyCode = async () => {
     try {
-      await navigator.clipboard.writeText(codeValue)
+      await copyToClipboardSecure(codeValue, {
+        label: t('card_show_barcode') || 'Barcode',
+        timeoutSec: 60,
+        lang
+      })
       setCopied(true)
       haptic('success')
       setTimeout(() => setCopied(false), 1400)

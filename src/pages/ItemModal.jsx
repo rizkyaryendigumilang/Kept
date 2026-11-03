@@ -39,6 +39,18 @@ export default function ItemModal({
   const [form, setForm] = useState(normalizeItem(item))
   const [visibleSecrets, setVisibleSecrets] = useState({})
 
+  // Auto-mask revealed passwords / secret fields after 8 seconds of inactivity for privacy protection
+  useEffect(() => {
+    const hasRevealed = Object.values(visibleSecrets).some(Boolean)
+    if (!hasRevealed) return
+
+    const timer = setTimeout(() => {
+      setVisibleSecrets({})
+    }, 8000)
+
+    return () => clearTimeout(timer)
+  }, [visibleSecrets])
+
   useEffect(() => {
     setForm(normalizeItem(item))
     setEditing(false)
@@ -395,6 +407,9 @@ function Field({
               ? 'password'
               : 'text'
           }
+          autoCapitalize={secret || (typeof label === 'string' && /user|email|username/i.test(label)) ? 'none' : undefined}
+          autoCorrect="off"
+          spellCheck={false}
         />
 
         <div className="input-actions">

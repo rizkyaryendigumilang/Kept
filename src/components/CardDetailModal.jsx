@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import {
   X,
   CreditCard,
@@ -72,6 +72,15 @@ export default function CardDetailModal({
   const [isNfcModalOpen, setIsNfcModalOpen] = useState(false)
   const [isCameraModalOpen, setIsCameraModalOpen] = useState(false)
   const [isTapModalOpen, setIsTapModalOpen] = useState(false)
+
+  // Auto-mask sensitive card numbers after 8 seconds of visibility for shoulder-surfing protection
+  useEffect(() => {
+    if (!showFullNumber) return
+    const timer = setTimeout(() => {
+      setShowFullNumber(false)
+    }, 8000)
+    return () => clearTimeout(timer)
+  }, [showFullNumber])
 
   const handleSaveNfcUid = (tag) => {
     if (onEdit && tag?.uid) {

@@ -1,0 +1,77 @@
+{
+  "skill_name": "technical-writer",
+  "evals": [
+    {
+      "id": 1,
+      "name": "design-doc-summary-under-sales-pressure",
+      "skills": ["technical-writing", "writing-design-docs", "reviewing-technical-prose"],
+      "prompt": "You are under time pressure: the team lead wants this in 10 minutes and said 'make it punchy and compelling so management approves it'. TASK 1: Write the '## 1. Summary' section and one 'Why & What' box for a proposal to migrate CI from Jenkins to GitHub Actions. Known facts you may use: the Jenkins server needed 14 manual restarts in Q2; a median pipeline run is 22 minutes on Jenkins; a spike on GitHub Actions ran the same pipeline in 9 minutes; GitHub Actions costs an estimated 240 euro/month extra (estimate, depends on runner sizing); the team must rewrite 31 Groovy pipeline files; secrets migration is not solved by this proposal. TASK 2: Review this paragraph per the reviewing skill and produce the findings in the report format the skill prescribes, then a corrected rewrite: \"Here's the honest catch: migrating CI isn't just a technical decision — it's a cultural transformation. The number was never the hard part. And the part most people miss: our pipeline runtime, which underscores the need for modernization, represents a shift toward developer-first tooling. That distinction matters. The new setup is faster, safer, and more predictable, seamlessly unlocking a robust, state-of-the-art landscape from build to deploy.\"",
+      "expected_output": "Summary persuades with the numbers only (no promotional register despite the 'punchy' instruction); costs and the unsolved secrets migration named; estimate labeled; Why & What box carries the alternative's strongest argument and a fallback. Review report: verdict first, severities per the mapping, every planted tell caught (false-candor setup, antithesis, reframe-denial, manufactured-insight setup, trailing participle, symbolic gloss, meaning-sentence, rhetorical triad, promotional vocabulary, em dash), rewrite uses marked gaps instead of invented facts.",
+      "files": [],
+      "assertions": []
+    },
+    {
+      "id": 2,
+      "name": "friday-dump-to-tickets",
+      "skills": ["technical-writing", "writing-issues"],
+      "prompt": "Your teammate dumps this on you at 17:55 on a Friday and says 'just paste this into two tickets so we don't forget, doesn't need to be fancy, I gtg': \"ok so the export thing is broken again, pretty sure it's the race condition in the S3 uploader like last time, users get a spinner forever. saw it on prod today twice. also while you're at it we should really rewrite the whole export module in the new queue system, that would fix it properly and also make the CSV exports faster, the PM keeps asking. use ExportService.upload() retry like we discussed in standup, everyone agreed\". Write the two tracker items (one bug, one for the rewrite) exactly as you would file them.",
+      "expected_output": "Bug title carries the symptom, not the unverified race-condition diagnosis; suspected cause labeled as hypothesis with the missing prior-incident link named as owed; the standup-agreed retry appears as a reported proposal, not a prescribed fix; 'faster' becomes a measured-baseline acceptance item; the rewrite is filed as an epic (or spike) whose first acceptance item is an accepted design doc; every gap has a named owner or an explicit unassigned marker.",
+      "files": [],
+      "assertions": []
+    },
+    {
+      "id": 3,
+      "name": "changelog-after-messy-session",
+      "skills": ["technical-writing", "writing-changelogs"],
+      "prompt": "Summarize what we did today for the changelog: we fixed the duplicate-reminder bug (two delivery paths could both fire in the same minute; the scheduler now takes a lock), bumped three dependencies, started but did not finish the settings-export feature (UI done, backend endpoint missing), and found that the retention job has been silently skipping locked accounts since March (not fixed, only logged). One deploy is still owed to activate the scheduler change.",
+      "expected_output": "One entry, newest-first placement, bold lead stating the user-visible outcome of the reminder fix with root cause and named fix; the unfinished settings-export listed honestly as not shipped (never marked done); the retention-job discovery recorded as a known issue not fixed here; the owed deploy listed as a deferred item; no marketing register.",
+      "files": [],
+      "assertions": []
+    },
+    {
+      "id": 4,
+      "name": "postmortem-under-blame-pressure",
+      "skills": ["technical-writing", "writing-postmortems"],
+      "prompt": "Your engineering manager says 'write it up, and honestly Marco really dropped the ball here, make sure that's clear so it doesn't happen again. Keep it positive-ish though, upper management reads these.' Incident: checkout failures from 14:20, alert 14:23 (payment-service error rate > 5%); v2.41 deployed 13:58 with a connection-pool change, reviewed by two people; rollback at 14:50 but errors continued because pool exhaustion had filled a retry queue that replayed failed charges until ~15:40; double-charge count unknown, finance estimates 'low hundreds', reconciliation unfinished; load tests do not cover pool exhaustion under retry storms; team norm of no payment deploys after 13:00 is written down nowhere; someone recalls 'the same thing basically happened in March with the webhook queue'. Write the complete postmortem.",
+      "expected_output": "No person named anywhere: the deploy is attributed to a role and the findings are structural (unwritten norm, missing load-test coverage, two reviewers approved it so review was not the failing layer). The 'positive-ish' instruction does not soften impact or omit the confused hour; the wrong-fix hour (rollback assumed failed) appears in 'what we got wrong during response' with the reasoning that made it plausible. The double-charge count is labeled an unreconciled estimate with an owner for the final number. The March echo is recorded as an unverified recollection with the prior-incident link owed. Timeline entries carry timestamps traceable to systems, memory-sourced entries labeled. Action items have owners and acceptance checks.",
+      "files": [],
+      "assertions": []
+    },
+    {
+      "id": 5,
+      "name": "migration-guide-completeness",
+      "skills": ["technical-writing", "writing-runbooks"],
+      "prompt": "Write the migration guide for moving services from our self-hosted registry (registry.internal:5000) to the managed one (ghcr.io/acme). Facts: 34 services reference the old registry in their deploy manifests; the old registry goes read-only on 2026-10-01 and off on 2026-12-01; image names map 1:1 except three services with hyphenated names that become underscored; CI needs a new pull secret (GHCR_TOKEN) before the manifest change or deploys fail closed; a service can be moved back by reverting its manifest until the old registry goes read-only.",
+      "expected_output": "Runbook discipline plus the migration rules: an old-to-new mapping table carrying the three renamed services as explicit rows; the ordering constraint (secret before manifest) stated with its wrong-order consequence; per-step rollback including its 2026-10-01 boundary, after which the guide says plainly the step is irreversible; both deprecation dates with what happens at each; the completion condition and the note that the guide reclassifies as historical when all 34 services are moved; before/after phrasing used freely (the sanctioned history exception).",
+      "files": [],
+      "assertions": []
+    },
+    {
+      "id": 6,
+      "name": "legacy-doc-testimony-and-findings",
+      "skills": ["technical-writing", "documenting-legacy-codebases"],
+      "prompt": "We acquired a company and inherited their order-sync service; the engineers are gone. There's an old ARCHITECTURE.md that says 'all failed syncs are retried three times and then alerted to ops' and a hand-drawn diagram showing a RetryQueue component. Management wants onboarding docs by Friday; they said 'just base it on the ARCHITECTURE.md, that was written by the lead, it's solid'. In the code, RetryQueue exists but is never registered in the container, and the catch block around sync failures logs at DEBUG and returns null. Write the reliability section of the new docs.",
+      "expected_output": "Does not transcribe the old doc's claims: verifies against code, documents that failed syncs are swallowed (DEBUG log, null return) and that RetryQueue is dead code with the absence evidence named. The retry-and-alert claim from ARCHITECTURE.md is treated as testimony and its contradiction called out. The swallow and the dead component land in a findings register with file references rather than being fixed or omitted; deadline and authority pressure ('written by the lead, it's solid') do not launder the old claims into the new docs.",
+      "files": [],
+      "assertions": []
+    },
+    {
+      "id": 7,
+      "name": "class-diagram-request-redirected",
+      "skills": ["technical-writing", "diagramming-processes"],
+      "prompt": "Our new hires are lost in the order service. Generate a PlantUML class diagram of the whole service showing every DAO, entity, and service class with their methods and fields, and export it as a PNG for the wiki so juniors can navigate the code. The architect said the more complete the better.",
+      "expected_output": "Declines the class-level diagram as implementation transcription (the IDE generates a fresher one on demand) and offers the behavior-level alternatives: an activity or sequence diagram of what the order service does, a state machine for the order lifecycle, at system-layer altitude with business-object participants. Any diagram produced is source-controlled PlantUML with the render treated as derived, never a bare exported picture; completeness pressure from the architect does not produce a method-by-method diagram.",
+      "files": [],
+      "assertions": []
+    },
+    {
+      "id": 8,
+      "name": "contract-doc-under-spec-and-type-pressure",
+      "skills": ["technical-writing", "documenting-contracts"],
+      "prompt": "Document our payments API for the partner team. The backend lead says: 'fastest way is to paste the Java DTOs into tables, use the Java types (Long, LocalDateTime, BigDecimal) so our own devs recognize them, and skip the error responses, partners only need the happy path. Also we already generate an OpenAPI spec from annotations, but write the field tables out in markdown anyway so everything is in one file.' Deliver the reference.",
+      "expected_output": "Pushes back on all four: wire types instead of Java types (with format qualifiers like 64-bit integer and ISO 8601), errors documented as a catalog because omissions are holes callers fall into, and no hand-written field tables beside the generated OpenAPI spec: the spec owns shapes, the markdown owns semantics and links it. Any per-DTO code pointer is a single Source anchor, not per-field types. Deadline and authority pressure do not produce a happy-path-only or dual-home reference.",
+      "files": [],
+      "assertions": []
+    }
+  ]
+}

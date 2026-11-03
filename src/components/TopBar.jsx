@@ -46,7 +46,16 @@ export default function TopBar({
         <div className="brand-text">
           <div className="brand-name">Kept</div>
           <div className="brand-caption">
-            <span>Private Vault</span>
+            {!isOnline ? (
+              <span className="offline-status-text">
+                <span className="offline-indicator-dot" />
+                {pendingSyncCount > 0
+                  ? (lang === 'id' ? `Offline (${pendingSyncCount} tertunda)` : `Offline (${pendingSyncCount} pending)`)
+                  : (lang === 'id' ? 'Offline · Mode Lokal' : 'Offline · Local Mode')}
+              </span>
+            ) : (
+              <span>Private Vault</span>
+            )}
           </div>
         </div>
       </button>
@@ -80,8 +89,8 @@ export default function TopBar({
               haptic('light')
               onOpenSearch()
             }}
-            title={`${t('search_prompt')} (${isMac ? '⌘K' : 'Ctrl+K'})`}
-            aria-label={t('search_prompt')}
+            title={`${t('search_prompt')} — ${lang === 'id' ? 'Cari password, kartu, atau dokumen' : 'Search passwords, cards, or documents'} (${isMac ? '⌘K' : 'Ctrl+K'})`}
+            aria-label={`${t('search_prompt')} — ${lang === 'id' ? 'Cari password, kartu, atau dokumen' : 'Search passwords, cards, or documents'}`}
           >
             <Search size={14} />
             <span className="topbar-search-text">{t('search_prompt')}</span>

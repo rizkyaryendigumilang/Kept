@@ -644,6 +644,9 @@ function Field({
               : 'text'
           }
           required={required}
+          autoCapitalize={secret || (typeof label === 'string' && /user|email|username/i.test(label)) ? 'none' : undefined}
+          autoCorrect="off"
+          spellCheck={false}
         />
 
         {secret && (

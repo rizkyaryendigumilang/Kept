@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { QrCode, X, Copy, Check, Download, ShieldCheck } from './Icons'
+import { copyToClipboardSecure } from '../lib/clipboard'
 
 function generateQRMatrix(text) {
   const size = 25
@@ -90,7 +91,11 @@ export default function DocumentQrModal({ doc, onClose, lang = 'id' }) {
   const svgSize = size * cellSize + padding * 2
 
   async function handleCopyData() {
-    await navigator.clipboard.writeText(qrData)
+    await copyToClipboardSecure(qrData, {
+      label: doc.name || 'QR Data',
+      timeoutSec: 60,
+      lang
+    })
     setCopied(true)
     setTimeout(() => setCopied(false), 1600)
   }

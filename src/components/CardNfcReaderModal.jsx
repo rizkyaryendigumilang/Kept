@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { X, Radio, Check, Copy, ShieldCheck, AlertTriangle, Sparkles, RefreshCw } from './Icons'
 import { getTranslation } from '../lib/i18n'
 import { haptic } from '../lib/haptics'
+import { copyToClipboardSecure } from '../lib/clipboard'
 
 // Presets of simulated physical card tags for instant cross-device testing
 const SAMPLE_NFC_TAGS = [
@@ -127,7 +128,11 @@ export default function CardNfcReaderModal({
   const copyUid = async () => {
     if (!scannedTag?.uid) return
     try {
-      await navigator.clipboard.writeText(scannedTag.uid)
+      await copyToClipboardSecure(scannedTag.uid, {
+        label: 'NFC UID',
+        timeoutSec: 60,
+        lang
+      })
       setCopied(true)
       haptic('success')
       setTimeout(() => setCopied(false), 1400)

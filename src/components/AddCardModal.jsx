@@ -521,6 +521,10 @@ export default function AddCardModal({
                 <span>{lang === 'id' ? 'Nomor Kartu (16 Digit)' : 'Card Number'}</span>
                 <input
                   type="text"
+                  inputMode="numeric"
+                  autoCapitalize="none"
+                  autoCorrect="off"
+                  spellCheck={false}
                   placeholder="4000 1234 5678 9010"
                   value={form.card_number}
                   onChange={(e) => update('card_number', e.target.value)}
@@ -531,6 +535,10 @@ export default function AddCardModal({
                 <span>{lang === 'id' ? 'Masa Berlaku (MM/YY)' : 'Expiry (MM/YY)'}</span>
                 <input
                   type="text"
+                  inputMode="numeric"
+                  autoCapitalize="none"
+                  autoCorrect="off"
+                  spellCheck={false}
                   placeholder="MM/YY"
                   value={form.expiry}
                   onChange={(e) => update('expiry', e.target.value)}
@@ -541,6 +549,9 @@ export default function AddCardModal({
                 <span>{lang === 'id' ? 'Nama Pemegang Kartu' : 'Cardholder Name'}</span>
                 <input
                   type="text"
+                  autoCapitalize="words"
+                  autoCorrect="off"
+                  spellCheck={false}
                   placeholder={lang === 'id' ? 'Nama sesuai kartu' : 'Name on card'}
                   value={form.account_owner}
                   onChange={(e) => update('account_owner', e.target.value)}
@@ -551,6 +562,10 @@ export default function AddCardModal({
                 <span>{lang === 'id' ? 'Nomor Rekening (Opsional)' : 'Account Number (Optional)'}</span>
                 <input
                   type="text"
+                  inputMode="numeric"
+                  autoCapitalize="none"
+                  autoCorrect="off"
+                  spellCheck={false}
                   placeholder={lang === 'id' ? 'Nomor rekening bank' : 'Bank account number'}
                   value={form.account_number}
                   onChange={(e) => update('account_number', e.target.value)}

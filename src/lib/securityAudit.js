@@ -110,7 +110,9 @@ export function detectDeviceInfo() {
 export function getOrCreateDeviceId() {
   let id = localStorage.getItem('kept_current_device_id')
   if (!id) {
-    id = 'dev_' + Math.random().toString(36).substring(2, 10) + Date.now().toString(36)
+    id = typeof crypto !== 'undefined' && crypto.randomUUID
+      ? 'dev_' + crypto.randomUUID().replace(/-/g, '')
+      : 'dev_' + Date.now().toString(36)
     localStorage.setItem('kept_current_device_id', id)
   }
   return id
@@ -225,7 +227,9 @@ export function recordSecurityActivity({
 }) {
   const logs = getSecurityActivityLogs()
   const newEntry = {
-    id: 'log_' + Date.now() + '_' + Math.random().toString(36).substring(2, 6),
+    id: typeof crypto !== 'undefined' && crypto.randomUUID
+      ? 'log_' + crypto.randomUUID().replace(/-/g, '')
+      : 'log_' + Date.now().toString(36),
     type,
     title,
     desc,

@@ -12,11 +12,11 @@ export default function Modal({
 }) {
   const dragControls = useDragControls()
   const [isMobile, setIsMobile] = useState(() => {
-    return typeof window !== 'undefined' ? window.innerWidth <= 640 : false
+    return typeof window !== 'undefined' ? window.innerWidth <= 700 : false
   })
 
   useEffect(() => {
-    const handleResize = () => setIsMobile(window.innerWidth <= 640)
+    const handleResize = () => setIsMobile(window.innerWidth <= 700)
     window.addEventListener('resize', handleResize)
     return () => window.removeEventListener('resize', handleResize)
   }, [])
@@ -93,6 +93,7 @@ export default function Modal({
             type="button"
             className="icon-button"
             onClick={onClose}
+            onPointerDown={(e) => e.stopPropagation()}
             aria-label="Close"
             title="Close"
           >

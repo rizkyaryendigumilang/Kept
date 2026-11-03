@@ -13,6 +13,7 @@ import {
 } from './Icons'
 import { haptic } from '../lib/haptics'
 import { getTranslation } from '../lib/i18n'
+import { copyToClipboardSecure } from '../lib/clipboard'
 
 export default function CommandPalette({
   isOpen,
@@ -152,16 +153,16 @@ export default function CommandPalette({
     }
   }
 
-  function handleQuickCopy(e, item) {
+  async function handleQuickCopy(e, item) {
     e.stopPropagation()
     if (!item.secretValue) return
 
-    navigator.clipboard.writeText(item.secretValue)
     setCopiedId(item.id)
-    haptic('success')
-    if (showToast) {
-      showToast(t('copied_toast'), 1800)
-    }
+    await copyToClipboardSecure(item.secretValue, {
+      label: item.type === 'card' ? t('type_card') : item.type === 'document' ? t('type_document') : t('type_password'),
+      lang,
+      onNotify: showToast
+    })
     setTimeout(() => setCopiedId(null), 1800)
   }
 

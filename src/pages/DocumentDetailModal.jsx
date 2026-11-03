@@ -20,6 +20,7 @@ import DocumentCard from '../components/DocumentCard'
 import ConfirmToast from '../components/ConfirmToast'
 import { getTranslation } from '../lib/i18n'
 import { haptic } from '../lib/haptics'
+import { copyToClipboardSecure } from '../lib/clipboard'
 
 export default function DocumentDetailModal({
   item,
@@ -41,8 +42,11 @@ export default function DocumentDetailModal({
 
   async function copyText(key, text) {
     if (!text) return
-    await navigator.clipboard.writeText(text)
     setCopiedKey(key)
+    await copyToClipboardSecure(text, {
+      label: key === 'doc_number' ? (lang === 'id' ? 'Nomor Dokumen' : 'Document Number') : key,
+      lang
+    })
     setTimeout(() => setCopiedKey(''), 1500)
   }
 

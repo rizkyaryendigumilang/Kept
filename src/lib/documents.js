@@ -4,31 +4,36 @@ export const DOCUMENT_CATEGORIES = [
   {
     id: '01_identity',
     code: '01',
-    name: 'Identity & Civil Records',
+    name: 'Identitas & Kependudukan',
+    nameEn: 'Identity & Civil Records',
     description: 'Dokumen identitas dan kependudukan'
   },
   {
     id: '02_education',
     code: '02',
-    name: 'Education & Career',
+    name: 'Pendidikan & Karir',
+    nameEn: 'Education & Career',
     description: 'Pendidikan dan administrasi pekerjaan'
   },
   {
     id: '03_mobility',
     code: '03',
-    name: 'Mobility & Legal',
+    name: 'Perjalanan & Legalitas',
+    nameEn: 'Mobility & Legal',
     description: 'Perjalanan dan status hukum'
   },
   {
     id: '04_health_assets',
     code: '04',
-    name: 'Health & Asset Ownership',
+    name: 'Kesehatan & Kepemilikan Aset',
+    nameEn: 'Health & Asset Ownership',
     description: 'Jaminan sosial dan kepemilikan aset'
   },
   {
     id: '05_other',
     code: '05',
-    name: 'Other Documents',
+    name: 'Dokumen Lainnya',
+    nameEn: 'Other Documents',
     description: 'Kontrak, sertifikat pelatihan, surat kuasa, dll.'
   }
 ]
@@ -38,7 +43,9 @@ export const DOCUMENT_TEMPLATES = [
   {
     id: 'ktp',
     name: 'KTP-el',
-    fullName: 'Kartu Tanda Penduduk Elektronik (KTP-el)',
+    fullName: 'Kartu Tanda Penduduk Elektronik',
+    optionLabel: 'KTP-el - Kartu Tanda Penduduk Elektronik',
+    optionLabelEn: 'KTP-el - National Identity Card',
     category: '01_identity',
     badge: 'KTP-el',
     color: '#0d3b66',
@@ -55,8 +62,10 @@ export const DOCUMENT_TEMPLATES = [
   },
   {
     id: 'kia',
-    name: 'Kartu Identitas Anak (KIA)',
-    fullName: 'Kartu Identitas Anak (KIA)',
+    name: 'KIA',
+    fullName: 'Kartu Identitas Anak',
+    optionLabel: 'KIA - Kartu Identitas Anak',
+    optionLabelEn: 'KIA - Child Identity Card',
     category: '01_identity',
     badge: 'KIA',
     color: '#9d174d',
@@ -72,8 +81,10 @@ export const DOCUMENT_TEMPLATES = [
   },
   {
     id: 'kk',
-    name: 'Kartu Keluarga (KK)',
-    fullName: 'Kartu Keluarga (KK)',
+    name: 'KK',
+    fullName: 'Kartu Keluarga',
+    optionLabel: 'KK - Kartu Keluarga',
+    optionLabelEn: 'KK - Family Card',
     category: '01_identity',
     badge: 'KK',
     color: '#1e293b',
@@ -90,6 +101,8 @@ export const DOCUMENT_TEMPLATES = [
     id: 'akta_lahir',
     name: 'Akta Kelahiran',
     fullName: 'Kutipan Akta Kelahiran',
+    optionLabel: 'Akta Kelahiran - Kutipan Pencatatan Sipil',
+    optionLabelEn: 'Birth Certificate (Akta Kelahiran)',
     category: '01_identity',
     badge: 'Akta Lahir',
     color: '#065f46',
@@ -108,7 +121,9 @@ export const DOCUMENT_TEMPLATES = [
   {
     id: 'ijazah',
     name: 'Ijazah',
-    fullName: 'Ijazah Pendidikan',
+    fullName: 'Ijazah Pendidikan Formal',
+    optionLabel: 'Ijazah - Kelulusan Pendidikan Formal',
+    optionLabelEn: 'Academic Diploma / Degree Certificate',
     category: '02_education',
     badge: 'Ijazah',
     color: '#713f12',
@@ -125,6 +140,8 @@ export const DOCUMENT_TEMPLATES = [
     id: 'transkrip',
     name: 'Transkrip Nilai',
     fullName: 'Transkrip Akademik',
+    optionLabel: 'Transkrip Nilai - Prestasi Akademik',
+    optionLabelEn: 'Academic Transcript',
     category: '02_education',
     badge: 'Transkrip',
     color: '#3730a3',
@@ -140,7 +157,9 @@ export const DOCUMENT_TEMPLATES = [
   {
     id: 'npwp',
     name: 'NPWP',
-    fullName: 'Nomor Pokok Wajib Pajak (NPWP)',
+    fullName: 'Nomor Pokok Wajib Pajak',
+    optionLabel: 'NPWP - Nomor Pokok Wajib Pajak',
+    optionLabelEn: 'NPWP - Tax Identification Number',
     category: '02_education',
     badge: 'NPWP',
     color: '#854d0e',
@@ -158,7 +177,9 @@ export const DOCUMENT_TEMPLATES = [
   {
     id: 'sim',
     name: 'SIM',
-    fullName: 'Surat Izin Mengemudi (SIM)',
+    fullName: 'Surat Izin Mengemudi',
+    optionLabel: 'SIM - Surat Izin Mengemudi',
+    optionLabelEn: 'SIM - Driver License',
     category: '03_mobility',
     badge: 'SIM',
     color: '#15803d',
@@ -176,6 +197,8 @@ export const DOCUMENT_TEMPLATES = [
     id: 'paspor',
     name: 'Paspor',
     fullName: 'Paspor Republik Indonesia',
+    optionLabel: 'Paspor - Republik Indonesia',
+    optionLabelEn: 'Passport - Republic of Indonesia',
     category: '03_mobility',
     badge: 'Paspor RI',
     color: '#0f3b4c',
@@ -191,7 +214,9 @@ export const DOCUMENT_TEMPLATES = [
   {
     id: 'buku_nikah',
     name: 'Buku Nikah',
-    fullName: 'Kutipan Akta Nikah / Buku Nikah',
+    fullName: 'Kutipan Akta Nikah (KUA)',
+    optionLabel: 'Buku Nikah - Kementerian Agama (KUA)',
+    optionLabelEn: 'Marriage Certificate - Ministry of Religious Affairs (KUA)',
     category: '03_mobility',
     badge: 'Buku Nikah',
     color: '#92400e',
@@ -208,7 +233,9 @@ export const DOCUMENT_TEMPLATES = [
   {
     id: 'akta_kawin',
     name: 'Akta Perkawinan',
-    fullName: 'Akta Perkawinan Sipil (Disdukcapil)',
+    fullName: 'Akta Perkawinan Catatan Sipil',
+    optionLabel: 'Akta Perkawinan - Catatan Sipil (Disdukcapil)',
+    optionLabelEn: 'Marriage Certificate - Civil Registry',
     category: '03_mobility',
     badge: 'Akta Perkawinan',
     color: '#831843',
@@ -225,6 +252,8 @@ export const DOCUMENT_TEMPLATES = [
     id: 'akta_cerai',
     name: 'Akta Perceraian',
     fullName: 'Akta Perceraian Resmi',
+    optionLabel: 'Akta Perceraian - Salinan Putusan Pengadilan',
+    optionLabelEn: 'Divorce Certificate - Court Decree',
     category: '03_mobility',
     badge: 'Akta Cerai',
     color: '#475569',
@@ -241,7 +270,9 @@ export const DOCUMENT_TEMPLATES = [
   {
     id: 'bpjs_kesehatan',
     name: 'BPJS Kesehatan',
-    fullName: 'Kartu Indonesia Sehat (BPJS Kesehatan)',
+    fullName: 'Kartu Indonesia Sehat (KIS)',
+    optionLabel: 'BPJS Kesehatan - Kartu Indonesia Sehat (KIS)',
+    optionLabelEn: 'BPJS Health - National Health Insurance (KIS)',
     category: '04_health_assets',
     badge: 'BPJS Kesehatan',
     color: '#008345',
@@ -256,7 +287,9 @@ export const DOCUMENT_TEMPLATES = [
   {
     id: 'bpjs_ketenagakerjaan',
     name: 'BPJS Ketenagakerjaan',
-    fullName: 'BPJS Ketenagakerjaan (BPJSTK)',
+    fullName: 'Jaminan Sosial Ketenagakerjaan (BPJSTK)',
+    optionLabel: 'BPJS Ketenagakerjaan - Jamsostek (BPJSTK)',
+    optionLabelEn: 'BPJS Employment - Social Security (BPJSTK)',
     category: '04_health_assets',
     badge: 'BPJSTK',
     color: '#0f766e',
@@ -270,8 +303,10 @@ export const DOCUMENT_TEMPLATES = [
   },
   {
     id: 'sertifikat_tanah',
-    name: 'Sertifikat Tanah/Bangunan',
+    name: 'Sertifikat Tanah',
     fullName: 'Sertifikat Hak Atas Tanah (BPN)',
+    optionLabel: 'Sertifikat Tanah - Hak Atas Tanah (BPN)',
+    optionLabelEn: 'Land Title Certificate - National Land Agency (BPN)',
     category: '04_health_assets',
     badge: 'Sertifikat Tanah',
     color: '#7c2d12',
@@ -287,10 +322,12 @@ export const DOCUMENT_TEMPLATES = [
   },
   {
     id: 'bpkb',
-    name: 'BPKB Kendaraan',
-    fullName: 'Buku Pemilik Kendaraan Bermotor (BPKB)',
+    name: 'BPKB',
+    fullName: 'Buku Pemilik Kendaraan Bermotor',
+    optionLabel: 'BPKB - Buku Pemilik Kendaraan Bermotor',
+    optionLabelEn: 'BPKB - Motor Vehicle Ownership Logbook',
     category: '04_health_assets',
-    badge: 'BPKB Kendaraan',
+    badge: 'BPKB',
     color: '#0f172a',
     docNumberLabel: 'Nomor BPKB',
     docNumberPlaceholder: 'Nomor registrasi BPKB',
@@ -304,10 +341,12 @@ export const DOCUMENT_TEMPLATES = [
   },
   {
     id: 'stnk',
-    name: 'STNK Kendaraan',
-    fullName: 'Surat Tanda Nomor Kendaraan (STNK)',
+    name: 'STNK',
+    fullName: 'Surat Tanda Nomor Kendaraan',
+    optionLabel: 'STNK - Surat Tanda Nomor Kendaraan',
+    optionLabelEn: 'STNK - Vehicle Registration Certificate',
     category: '04_health_assets',
-    badge: 'STNK Kendaraan',
+    badge: 'STNK',
     color: '#1d4ed8',
     docNumberLabel: 'Nomor Registrasi STNK / Plat',
     docNumberPlaceholder: 'cth. B 1234 ABC',
@@ -323,8 +362,10 @@ export const DOCUMENT_TEMPLATES = [
   // 05. Other Documents
   {
     id: 'kontrak',
-    name: 'Kontrak / Perjanjian',
+    name: 'Kontrak Kerja',
     fullName: 'Perjanjian Kontrak Kerja / Bisnis',
+    optionLabel: 'Kontrak Kerja - Perjanjian Kerja atau Bisnis',
+    optionLabelEn: 'Employment / Business Contract',
     category: '05_other',
     badge: 'Kontrak',
     color: '#334155',
@@ -339,7 +380,9 @@ export const DOCUMENT_TEMPLATES = [
   {
     id: 'sertifikat_pelatihan',
     name: 'Sertifikat Pelatihan',
-    fullName: 'Sertifikat Keahlian / Pelatihan',
+    fullName: 'Sertifikat Keahlian & Kompetensi',
+    optionLabel: 'Sertifikat Pelatihan - Keahlian atau Kompetensi',
+    optionLabelEn: 'Training & Professional Certification',
     category: '05_other',
     badge: 'Sertifikat',
     color: '#6b21a8',
@@ -354,7 +397,9 @@ export const DOCUMENT_TEMPLATES = [
   {
     id: 'asuransi',
     name: 'Polis Asuransi',
-    fullName: 'Polis Asuransi Jiwa / Kesehatan / Kendaraan',
+    fullName: 'Polis Asuransi Jiwa, Kesehatan, atau Kendaraan',
+    optionLabel: 'Polis Asuransi - Jiwa, Kesehatan, atau Kendaraan',
+    optionLabelEn: 'Insurance Policy (Life, Health, Vehicle)',
     category: '05_other',
     badge: 'Asuransi',
     color: '#0e7490',
@@ -371,6 +416,8 @@ export const DOCUMENT_TEMPLATES = [
     id: 'surat_kuasa',
     name: 'Surat Kuasa',
     fullName: 'Surat Kuasa Khusus / Umum',
+    optionLabel: 'Surat Kuasa - Pelimpahan Wewenang',
+    optionLabelEn: 'Power of Attorney (Surat Kuasa)',
     category: '05_other',
     badge: 'Surat Kuasa',
     color: '#52525b',
@@ -385,7 +432,9 @@ export const DOCUMENT_TEMPLATES = [
   {
     id: 'other',
     name: 'Dokumen Lainnya',
-    fullName: 'Dokumen Kustom Lainnya',
+    fullName: 'Dokumen Kustom / Berkas Lainnya',
+    optionLabel: 'Dokumen Lainnya - Arsip atau Berkas Kustom',
+    optionLabelEn: 'Other Custom Document',
     category: '05_other',
     badge: 'Dokumen',
     color: '#3f3f46',
@@ -407,6 +456,21 @@ export function getTemplateById(id) {
 export function getTemplatesByCategory(catId) {
   if (!catId || catId === 'all') return DOCUMENT_TEMPLATES
   return DOCUMENT_TEMPLATES.filter((t) => t.category === catId)
+}
+
+/**
+ * Returns a typographically refined, non-redundant label for dropdowns and selectors.
+ * Strictly adheres to technical writing rules (no em-dash stutter, clean hyphenation).
+ */
+export function getTemplateOptionLabel(template, lang = 'id') {
+  if (!template) return ''
+  if (lang === 'en' && template.optionLabelEn) {
+    return template.optionLabelEn
+  }
+  if (template.optionLabel) {
+    return template.optionLabel
+  }
+  return `${template.name} - ${template.fullName}`
 }
 
 /**

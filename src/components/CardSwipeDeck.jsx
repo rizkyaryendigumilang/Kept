@@ -23,6 +23,7 @@ import {
 import { CARD_CATEGORIES, evaluateCardCapability } from '../lib/cards'
 import { getTranslation } from '../lib/i18n'
 import { haptic } from '../lib/haptics'
+import { copyToClipboardSecure } from '../lib/clipboard'
 
 const CATEGORY_ICON_MAP = {
   bank: CreditCard,
@@ -111,9 +112,11 @@ function SwipeableCard({
     e.stopPropagation()
     if (!identifier) return
     try {
-      await navigator.clipboard.writeText(identifier)
       setCopied(true)
-      haptic('success')
+      await copyToClipboardSecure(identifier, {
+        label: t('type_card') || 'Nomor Kartu',
+        lang
+      })
       setTimeout(() => setCopied(false), 1400)
     } catch {
       // ignore

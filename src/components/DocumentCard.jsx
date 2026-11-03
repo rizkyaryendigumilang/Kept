@@ -9,6 +9,7 @@ import {
   Eye
 } from './Icons'
 import { isSafeImageDataUrl } from '../lib/safeUrl'
+import { copyToClipboardSecure } from '../lib/clipboard'
 
 function getDisplayFileName(doc) {
   const name = doc?.name || 'Dokumen'
@@ -92,8 +93,10 @@ function DocumentCard({
   async function handleCopyNumber(e) {
     e.stopPropagation()
     if (!doc.doc_number) return
-    await navigator.clipboard.writeText(doc.doc_number)
     setCopied(true)
+    await copyToClipboardSecure(doc.doc_number, {
+      label: 'Nomor Dokumen'
+    })
     setTimeout(() => {
       setCopied(false)
       setMenuOpen(false)

@@ -15,6 +15,7 @@ import {
 import { createSecureShare } from '../lib/secureShare'
 import { getTranslation } from '../lib/i18n'
 import { haptic } from '../lib/haptics'
+import { copyToClipboardSecure } from '../lib/clipboard'
 
 export default function ShareSecretModal({
   isOpen,
@@ -83,12 +84,14 @@ export default function ShareSecretModal({
 
   function handleCopy() {
     if (!generatedResult?.shareUrl) return
-    navigator.clipboard.writeText(generatedResult.shareUrl)
+    copyToClipboardSecure(generatedResult.shareUrl, {
+      label: t('share_secret_btn') || 'Tautan Rahasia',
+      timeoutSec: 120,
+      lang,
+      onNotify: showToast
+    })
     setCopied(true)
     haptic('success')
-    if (showToast) {
-      showToast(t('share_secret_copied'))
-    }
     setTimeout(() => setCopied(false), 2400)
   }
 
@@ -118,9 +121,9 @@ export default function ShareSecretModal({
   }
 
   return (
-    <div className="modal-backdrop" onMouseDown={onClose}>
+    <div className="sheet-backdrop" onMouseDown={onClose}>
       <div
-        className="modal-card share-secret-modal"
+        className="modal share-secret-modal"
         onMouseDown={(e) => e.stopPropagation()}
         role="dialog"
         aria-modal="true"
@@ -246,6 +249,10 @@ export default function ShareSecretModal({
                 <div className="share-pin-input-wrap">
                   <input
                     type="password"
+                    inputMode="numeric"
+                    autoCapitalize="none"
+                    autoCorrect="off"
+                    spellCheck={false}
                     value={pin}
                     onChange={(e) => setPin(e.target.value)}
                     placeholder={t('share_secret_pin_ph')}

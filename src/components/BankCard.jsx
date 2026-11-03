@@ -23,6 +23,7 @@ import { useEffect, useState } from 'react'
 import { haptic } from '../lib/haptics'
 import { CARD_CATEGORIES, evaluateCardCapability } from '../lib/cards'
 import { getTranslation } from '../lib/i18n'
+import { copyToClipboardSecure } from '../lib/clipboard'
 
 const CATEGORY_ICON_MAP = {
   bank: CreditCard,
@@ -106,9 +107,11 @@ export default function BankCard({
     const textToCopy = card.card_number || card.account_number || card.barcode_value || ''
     if (!textToCopy) return
     try {
-      await navigator.clipboard.writeText(textToCopy)
       setCopied(true)
-      haptic('success')
+      await copyToClipboardSecure(textToCopy, {
+        label: t('type_card') || 'Nomor Kartu',
+        lang
+      })
       setTimeout(() => setCopied(false), 1400)
     } catch {
       // ignore

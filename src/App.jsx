@@ -65,6 +65,7 @@ import {
   verifyMasterKey
 } from './lib/vault'
 import { idbClearUser, idbGetPendingQueue } from './lib/idb'
+import { copyToClipboardSecure } from './lib/clipboard'
 import { Copy, Check, Download, ShieldCheck, Lock } from './components/Icons'
 import { isWeakPin, MIN_PIN_LENGTH, recordSecurityActivity, registerCurrentDevice } from './lib/securityAudit'
 import { KEPT_ICON, KEPT_LOGO } from './lib/brand'
@@ -255,6 +256,9 @@ export default function App() {
   function handleLanguageChange(newLang) {
     setLang(newLang)
     localStorage.setItem('kept_language', newLang)
+    if (showToast) {
+      showToast(newLang === 'id' ? 'Bahasa: Bahasa Indonesia' : 'Language: English')
+    }
   }
 
   // Global shortcut for Command Palette (Ctrl+K or Cmd+K)
@@ -1468,8 +1472,13 @@ function FirstVaultSetup({ onCreate, lang = 'id' }) {
   }, [])
 
   function handleCopy() {
-    navigator.clipboard.writeText(generatedKey)
     setCopiedKey(true)
+    copyToClipboardSecure(generatedKey, {
+      label: 'Emergency Recovery Key',
+      timeoutSec: 60,
+      lang: 'id',
+      onNotify: showToast
+    })
     setTimeout(() => setCopiedKey(false), 1800)
   }
 
