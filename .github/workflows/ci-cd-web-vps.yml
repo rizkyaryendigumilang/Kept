@@ -142,10 +142,10 @@ jobs:
           # Auto-detect active port if not explicitly set via secrets (probe port 22 first, then 2222)
           TARGET_PORT="${INPUT_PORT:-}"
           if [ -z "$TARGET_PORT" ]; then
-            if timeout 3 bash -c "true < /dev/tcp/$VPS_HOST/22" 2>/dev/null; then
+            if nc -z -w 3 "$VPS_HOST" 22 2>/dev/null || timeout 3 bash -c "true < /dev/tcp/$VPS_HOST/22" 2>/dev/null; then
               echo "Port 22 is reachable on $VPS_HOST. Using port 22."
               TARGET_PORT="22"
-            elif timeout 3 bash -c "true < /dev/tcp/$VPS_HOST/2222" 2>/dev/null; then
+            elif nc -z -w 3 "$VPS_HOST" 2222 2>/dev/null || timeout 3 bash -c "true < /dev/tcp/$VPS_HOST/2222" 2>/dev/null; then
               echo "Port 22 is unreachable, but port 2222 is open on $VPS_HOST. Using port 2222."
               TARGET_PORT="2222"
             else
@@ -412,6 +412,7 @@ jobs:
           - **Commit SHA**: \`${{ github.sha }}\`
           - **Trigger Event**: \`${{ github.event_name }}\`
           - **Target Host**: \`${VPS_HOST}\`
+          - **SSH Port**: \`${{ env.VPS_PORT || '22' }}\`
           - **Target Directory**: \`/srv/www/kept\`
           - **Base Path**: \`${BASE_PATH}\`
           - **Endpoint Verified**: \`${TARGET_ENDPOINT}\`

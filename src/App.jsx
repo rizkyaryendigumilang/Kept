@@ -112,6 +112,7 @@ const savedInitialTheme = (() => {
 })()
 applyTheme(savedInitialTheme)
 
+// Kept Web Vault Application
 export default function App() {
   const [session, setSession] = useState(null)
   const [profile, setProfile] = useState(null)
