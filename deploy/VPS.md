@@ -58,10 +58,10 @@ cat ~/.ssh/id_github_actions.pub >> ~/.ssh/authorized_keys
 Ambil fingerprint host untuk `VPS_SSH_KNOWN_HOSTS` (mencegah MITM):
 
 ```bash
-ssh-keyscan -p 2222 vault.example.com
+ssh-keyscan -p 22 vault.example.com
 ```
 
-*(Catatan: Workflow sudah dilengkapi pendeteksi otomatis dan fallback `ssh-keyscan` jika port non-standar seperti 2222 digunakan).*
+*(Catatan: Workflow sudah dilengkapi pendeteksi port cerdas (auto-detect port 22 & 2222) serta fallback `ssh-keyscan` jika host key belum tersimpan di secrets).*
 
 ---
 
@@ -74,10 +74,10 @@ ssh-keyscan -p 2222 vault.example.com
 | `VPS_HOST` | ya | `vault.example.com` (pakai domain, bukan IP — lihat catatan health check) |
 | `VPS_USERNAME` | ya | `rizky` |
 | `VPS_SSH_KEY` | ya | isi `~/.ssh/id_github_actions` (private key) |
-| `VPS_SSH_KNOWN_HOSTS` | opsional | output `ssh-keyscan -p 2222` (otomatis disintesis/discan bila belum diisi) |
+| `VPS_SSH_KNOWN_HOSTS` | opsional | output `ssh-keyscan` (otomatis disintesis/discan bila belum diisi) |
 | `VITE_SUPABASE_URL` | ya | `https://<project-ref>.supabase.co` |
 | `VITE_SUPABASE_PUBLISHABLE_KEY` | ya | `sb_publishable_...` |
-| `VPS_SSH_PORT` | tidak | `2222` (default: 2222) |
+| `VPS_SSH_PORT` | tidak | `22` (otomatis mendeteksi port aktif 22 atau 2222) |
 | `KEPT_PUBLIC_URL` | tidak | `https://vault.example.com/kept/` |
 
 Workflow **tidak** punya fallback untuk dua secret Supabase. Kalau salah satunya kosong, build berhenti dengan `Missing repository secret`, bukan menghasilkan bundle rusak.

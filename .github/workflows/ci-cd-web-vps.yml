@@ -132,13 +132,32 @@ jobs:
           VPS_USER: ${{ secrets.VPS_USERNAME }}
           VPS_KEY: ${{ secrets.VPS_SSH_KEY }}
           VPS_SSH_KNOWN_HOSTS: ${{ secrets.VPS_SSH_KNOWN_HOSTS }}
-          VPS_PORT: ${{ secrets.VPS_SSH_PORT || secrets.VPS_PORT || '2222' }}
+          INPUT_PORT: ${{ secrets.VPS_SSH_PORT || secrets.VPS_PORT || '' }}
         run: |
           set -euo pipefail
           test -n "${VPS_HOST:-}" || { echo "::error::Missing required repository secret: VPS_HOST"; exit 1; }
           test -n "${VPS_USER:-}" || { echo "::error::Missing required repository secret: VPS_USERNAME"; exit 1; }
           test -n "${VPS_KEY:-}" || { echo "::error::Missing required repository secret: VPS_SSH_KEY"; exit 1; }
-          [[ "$VPS_PORT" =~ ^[0-9]+$ ]] && ((VPS_PORT > 0 && VPS_PORT < 65536)) || { echo "::error::Invalid VPS SSH Port: $VPS_PORT"; exit 1; }
+
+          # Auto-detect active port if not explicitly set via secrets (probe port 22 first, then 2222)
+          TARGET_PORT="${INPUT_PORT:-}"
+          if [ -z "$TARGET_PORT" ]; then
+            if timeout 3 bash -c "true < /dev/tcp/$VPS_HOST/22" 2>/dev/null; then
+              echo "Port 22 is reachable on $VPS_HOST. Using port 22."
+              TARGET_PORT="22"
+            elif timeout 3 bash -c "true < /dev/tcp/$VPS_HOST/2222" 2>/dev/null; then
+              echo "Port 22 is unreachable, but port 2222 is open on $VPS_HOST. Using port 2222."
+              TARGET_PORT="2222"
+            else
+              echo "Probe timed out or blocked; defaulting to standard port 22."
+              TARGET_PORT="22"
+            fi
+          fi
+
+          [[ "$TARGET_PORT" =~ ^[0-9]+$ ]] && ((TARGET_PORT > 0 && TARGET_PORT < 65536)) || { echo "::error::Invalid VPS SSH Port: $TARGET_PORT"; exit 1; }
+          echo "Active deployment SSH port: $TARGET_PORT"
+          echo "VPS_PORT=$TARGET_PORT" >> "$GITHUB_ENV"
+          VPS_PORT="$TARGET_PORT"
 
           install -d -m 700 "$HOME/.ssh"
           printf '%s\n' "$VPS_KEY" | tr -d '\r' > "$HOME/.ssh/id_ed25519"
@@ -150,9 +169,9 @@ jobs:
             touch "$HOME/.ssh/known_hosts"
           fi
 
-          # Ensure host key entry exists for [VPS_HOST]:VPS_PORT
+          # Ensure host key entry exists for [VPS_HOST]:VPS_PORT if non-standard port
           if [ "$VPS_PORT" != "22" ]; then
-            # If known_hosts contains entry for VPS_HOST on standard port, synthesize [host]:port entry
+            # Synthesize [host]:port entry from bare host entry if present
             awk -v host="$VPS_HOST" -v port="$VPS_PORT" '
               $1 == host || $1 ~ "(^|,)" host "(,|$)" {
                 print "[" host "]:" port, $2, $3
@@ -160,14 +179,12 @@ jobs:
             ' "$HOME/.ssh/known_hosts" >> "$HOME/.ssh/known_hosts" 2>/dev/null || true
           fi
 
-          # If known_hosts is still missing a valid key for the target host & port, automatically scan
-          if [ ! -s "$HOME/.ssh/known_hosts" ] || ! ssh-keygen -F "[$VPS_HOST]:$VPS_PORT" -f "$HOME/.ssh/known_hosts" >/dev/null 2>&1; then
-            if [ "$VPS_PORT" = "22" ] && ssh-keygen -F "$VPS_HOST" -f "$HOME/.ssh/known_hosts" >/dev/null 2>&1; then
-              : # Key already exists for default port 22
-            else
-              echo "Scanning and registering host fingerprint for $VPS_HOST on port $VPS_PORT..."
-              ssh-keyscan -p "$VPS_PORT" -T 10 "$VPS_HOST" >> "$HOME/.ssh/known_hosts" 2>/dev/null || true
-            fi
+          # If known_hosts does not have target host entry or was empty, scan directly on target port
+          HOST_QUERY="$VPS_HOST"
+          [ "$VPS_PORT" != "22" ] && HOST_QUERY="[$VPS_HOST]:$VPS_PORT"
+          if [ ! -s "$HOME/.ssh/known_hosts" ] || ! ssh-keygen -F "$HOST_QUERY" -f "$HOME/.ssh/known_hosts" >/dev/null 2>&1; then
+            echo "Scanning and registering host fingerprint for $VPS_HOST on port $VPS_PORT..."
+            ssh-keyscan -p "$VPS_PORT" -T 10 "$VPS_HOST" >> "$HOME/.ssh/known_hosts" 2>/dev/null || true
           fi
 
           chmod 600 "$HOME/.ssh/known_hosts"
@@ -176,7 +193,7 @@ jobs:
         env:
           VPS_HOST: ${{ secrets.VPS_HOST }}
           VPS_USER: ${{ secrets.VPS_USERNAME }}
-          VPS_PORT: ${{ secrets.VPS_SSH_PORT || secrets.VPS_PORT || '2222' }}
+          VPS_PORT: ${{ env.VPS_PORT || secrets.VPS_SSH_PORT || secrets.VPS_PORT || '22' }}
         run: |
           scp -o BatchMode=yes -o StrictHostKeyChecking=yes -i "$HOME/.ssh/id_ed25519" -P "$VPS_PORT" \
             ./artifact/web-dist.tar.gz \
@@ -188,7 +205,7 @@ jobs:
         env:
           VPS_HOST: ${{ secrets.VPS_HOST }}
           VPS_USER: ${{ secrets.VPS_USERNAME }}
-          VPS_PORT: ${{ secrets.VPS_SSH_PORT || secrets.VPS_PORT || '2222' }}
+          VPS_PORT: ${{ env.VPS_PORT || secrets.VPS_SSH_PORT || secrets.VPS_PORT || '22' }}
           RELEASE_SHA: ${{ github.sha }}
         run: |
           set -euo pipefail
@@ -358,7 +375,7 @@ jobs:
         env:
           VPS_HOST: ${{ secrets.VPS_HOST }}
           VPS_USER: ${{ secrets.VPS_USERNAME }}
-          VPS_PORT: ${{ secrets.VPS_SSH_PORT || secrets.VPS_PORT || '2222' }}
+          VPS_PORT: ${{ env.VPS_PORT || secrets.VPS_SSH_PORT || secrets.VPS_PORT || '22' }}
           RELEASE_SHA: ${{ github.sha }}
         run: |
           echo "Health check failed after deployment. Executing remote rollback on VPS..."
