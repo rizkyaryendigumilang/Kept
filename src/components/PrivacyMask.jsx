@@ -23,26 +23,11 @@ export default function PrivacyMask({ enabled = true, lang = 'id' }) {
       }
     }
 
-    const handleBlur = () => {
-      // Optional blur trigger for window/app switcher
-      setMasked(true)
-    }
-
-    const handleFocus = () => {
-      timeoutId = setTimeout(() => {
-        setMasked(false)
-      }, 120)
-    }
-
     document.addEventListener('visibilitychange', handleVisibility)
-    window.addEventListener('blur', handleBlur)
-    window.addEventListener('focus', handleFocus)
 
     return () => {
       if (timeoutId) clearTimeout(timeoutId)
       document.removeEventListener('visibilitychange', handleVisibility)
-      window.removeEventListener('blur', handleBlur)
-      window.removeEventListener('focus', handleFocus)
     }
   }, [enabled])
 

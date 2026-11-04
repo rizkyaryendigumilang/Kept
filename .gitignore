@@ -13,4 +13,5 @@ Payload/
 kept-import-credentials.*
 *-credentials.*
 *.csv
+scratch/
 

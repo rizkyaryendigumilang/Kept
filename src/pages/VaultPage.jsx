@@ -17,6 +17,7 @@ import { haptic } from '../lib/haptics'
 export default function VaultPage({ items = [], onAdd, onOpen, lang = 'id' }) {
   const [filter, setFilter] = React.useState('all')
   const [query, setQuery] = React.useState('')
+  const deferredQuery = React.useDeferredValue(query)
   const t = (k) => getTranslation(k, lang)
 
   const handleOpenItem = React.useCallback((targetItem) => {
@@ -33,17 +34,31 @@ export default function VaultPage({ items = [], onAdd, onOpen, lang = 'id' }) {
     { id: 'secure_note', label: t('filter_notes'), icon: StickyNote }
   ], [lang])
 
-  const counts = React.useMemo(() => ({
-    all: items.filter((item) => item.item_type !== 'bank_card' && item.item_type !== 'document').length,
-    favorite: items.filter((item) => item.favorite).length,
-    social: items.filter((item) => item.category === 'social').length,
-    web: items.filter((item) => item.category === 'web').length,
-    project: items.filter((item) => item.category === 'project').length,
-    secure_note: items.filter((item) => item.item_type === 'secure_note').length
-  }), [items])
+  const counts = React.useMemo(() => {
+    let all = 0
+    let favorite = 0
+    let social = 0
+    let web = 0
+    let project = 0
+    let secure_note = 0
+
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i]
+      if (item.item_type !== 'bank_card' && item.item_type !== 'document') {
+        all += 1
+      }
+      if (item.favorite) favorite += 1
+      if (item.category === 'social') social += 1
+      if (item.category === 'web') web += 1
+      if (item.category === 'project') project += 1
+      if (item.item_type === 'secure_note') secure_note += 1
+    }
+
+    return { all, favorite, social, web, project, secure_note }
+  }, [items])
 
   const filtered = React.useMemo(() => {
-    const q = query.trim().toLowerCase()
+    const q = deferredQuery.trim().toLowerCase()
     return items
       .filter((item) => {
         let matchesFilter = true
@@ -75,7 +90,7 @@ export default function VaultPage({ items = [], onAdd, onOpen, lang = 'id' }) {
         if (!a.favorite && b.favorite) return 1
         return 0
       })
-  }, [items, filter, query])
+  }, [items, filter, deferredQuery])
 
   return (
     <div className="page-shell">

@@ -1076,7 +1076,9 @@ Jangan pernah membagikan kode ini kepada siapapun!
     )
   }
 
-  const vaultContextValue = {
+  const vaultContextValue = useMemo(() => ({
+    user: session?.user,
+    profile,
     items,
     setItems,
     hydratedItems,
@@ -1106,7 +1108,37 @@ Jangan pernah membagikan kode ini kepada siapapun!
     onOpenShareSecret: handleOpenShareSecret,
     showToast,
     lang
-  }
+  }), [
+    session?.user,
+    profile,
+    items,
+    hydratedItems,
+    trashedItems,
+    stats,
+    favorites,
+    suggestedFavorite,
+    recent,
+    alerts,
+    expiryAlerts,
+    banks,
+    documents,
+    vaultKey,
+    lockVault,
+    isOnline,
+    pendingSyncCount,
+    isSyncing,
+    runSync,
+    saveItem,
+    removeItem,
+    restoreItem,
+    permanentDeleteItem,
+    emptyTrash,
+    toggleFavorite,
+    openItem,
+    handleOpenShareSecret,
+    showToast,
+    lang
+  ])
 
   return (
     <VaultContext.Provider value={vaultContextValue}>

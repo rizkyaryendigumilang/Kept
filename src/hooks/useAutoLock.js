@@ -11,6 +11,10 @@ import { useEffect, useRef, useCallback } from 'react'
 export function useAutoLock({ vaultKey, onLock, showToast }) {
   const timerRef = useRef(null)
   const lastActiveRef = useRef(Date.now())
+  const onLockRef = useRef(onLock)
+  onLockRef.current = onLock
+  const showToastRef = useRef(showToast)
+  showToastRef.current = showToast
 
   const getTimeoutMs = useCallback(() => {
     try {
@@ -35,12 +39,12 @@ export function useAutoLock({ vaultKey, onLock, showToast }) {
     if (!timeoutMs) return
 
     timerRef.current = setTimeout(() => {
-      if (onLock) onLock()
-      if (showToast) {
-        showToast('Vault otomatis terkunci karena tidak ada aktivitas.', 2500)
+      if (onLockRef.current) onLockRef.current()
+      if (showToastRef.current) {
+        showToastRef.current('Vault otomatis terkunci karena tidak ada aktivitas.', 2500)
       }
     }, timeoutMs)
-  }, [vaultKey, getTimeoutMs, onLock, showToast])
+  }, [vaultKey, getTimeoutMs])
 
   useEffect(() => {
     if (!vaultKey) {
@@ -64,9 +68,9 @@ export function useAutoLock({ vaultKey, onLock, showToast }) {
       if (timeoutMs) {
         const elapsed = Date.now() - lastActiveRef.current
         if (elapsed >= timeoutMs) {
-          if (onLock) onLock()
-          if (showToast) {
-            showToast('Vault otomatis terkunci karena tidak ada aktivitas.', 2500)
+          if (onLockRef.current) onLockRef.current()
+          if (showToastRef.current) {
+            showToastRef.current('Vault otomatis terkunci karena tidak ada aktivitas.', 2500)
           }
           return
         }
@@ -93,7 +97,7 @@ export function useAutoLock({ vaultKey, onLock, showToast }) {
       document.removeEventListener('visibilitychange', handleVisibilityChange)
       window.removeEventListener('pageshow', handlePageShow)
     }
-  }, [vaultKey, getTimeoutMs, resetTimer, onLock, showToast])
+  }, [vaultKey, getTimeoutMs, resetTimer])
 
   return { resetTimer }
 }
