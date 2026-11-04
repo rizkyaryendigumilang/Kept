@@ -57,13 +57,13 @@
   --btn-primary-text: #ffffff;
   --btn-primary-border: #414856;
 
-  /* Omarchy Elevation */
+  /* Omarchy Elevation — 21st Crafted Depth */
   --shadow-flat: inset 0 -1px 0 var(--border-subtle);
-  --shadow-raised: 0 1px 3px rgba(0, 0, 0, 0.35);
-  --shadow-floating: 0 4px 16px rgba(0, 0, 0, 0.45);
+  --shadow-raised: 0 1px 3px rgba(0, 0, 0, 0.35), inset 0 1px 0 0 rgba(255, 255, 255, 0.05);
+  --shadow-floating: 0 4px 16px rgba(0, 0, 0, 0.45), inset 0 1px 0 0 rgba(255, 255, 255, 0.07);
 
-  --transition-fast: 150ms ease-out;
-  --transition-normal: 220ms ease-out;
+  --transition-fast: 140ms cubic-bezier(0.16, 1, 0.3, 1);
+  --transition-normal: 220ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 :root[data-theme="dark"] {
@@ -93,8 +93,8 @@
   --btn-primary-border: #414856;
 
   --shadow-flat: inset 0 -1px 0 var(--border-subtle);
-  --shadow-raised: 0 1px 3px rgba(0, 0, 0, 0.35);
-  --shadow-floating: 0 4px 16px rgba(0, 0, 0, 0.45);
+  --shadow-raised: 0 1px 3px rgba(0, 0, 0, 0.35), inset 0 1px 0 0 rgba(255, 255, 255, 0.05);
+  --shadow-floating: 0 4px 16px rgba(0, 0, 0, 0.45), inset 0 1px 0 0 rgba(255, 255, 255, 0.07);
 }
 
 :root[data-theme="light"] {
@@ -127,6 +127,6 @@
   --btn-primary-border: #0c0e10;
 
   --shadow-flat: inset 0 -1px 0 var(--border-subtle);
-  --shadow-raised: 0 1px 3px rgba(0, 0, 0, 0.08);
-  --shadow-floating: 0 4px 16px rgba(0, 0, 0, 0.12);
+  --shadow-raised: 0 1px 3px rgba(0, 0, 0, 0.08), inset 0 1px 0 0 rgba(255, 255, 255, 0.8);
+  --shadow-floating: 0 4px 16px rgba(0, 0, 0, 0.12), inset 0 1px 0 0 rgba(255, 255, 255, 0.6);
 }

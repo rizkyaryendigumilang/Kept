@@ -287,6 +287,7 @@ export default function App() {
 
   useEffect(() => {
     let mounted = true
+
     registerCurrentDevice()
     supabase.auth.getSession().then(async ({ data }) => {
       if (!mounted) return
@@ -1035,47 +1036,6 @@ Jangan pernah membagikan kode ini kepada siapapun!
     setExportModalOpen(true)
   }
 
-  if (authLoading) return <Splash />
-  if (shareParams) {
-    return (
-      <Suspense fallback={<Splash />}>
-        <ViewSharedSecretScreen
-          shareParams={shareParams}
-          onExit={() => {
-            window.location.hash = ''
-            setShareParams(null)
-          }}
-          lang={lang}
-        />
-      </Suspense>
-    )
-  }
-
-  if (recovery) {
-    return (
-      <Suspense fallback={<Splash />}>
-        <ResetPasswordScreen onDone={() => setRecovery(false)} lang={lang} />
-      </Suspense>
-    )
-  }
-  if (!session) return <AuthScreen lang={lang} />
-  if (!profile) return <Splash />
-  if (!profile.vault_salt || !profile.vault_verifier) {
-    return <FirstVaultSetup onCreate={initializeVault} lang={lang} />
-  }
-  if (!vaultKey) {
-    return (
-      <UnlockScreen
-        profile={profile}
-        user={session.user}
-        onUnlocked={unlock}
-        onRecoverMasterPassword={handleRecoverMasterPassword}
-        onResetVault={handleResetVault}
-        lang={lang}
-      />
-    )
-  }
-
   const vaultContextValue = useMemo(() => ({
     user: session?.user,
     profile,
@@ -1139,6 +1099,47 @@ Jangan pernah membagikan kode ini kepada siapapun!
     showToast,
     lang
   ])
+
+  if (authLoading) return <Splash />
+  if (shareParams) {
+    return (
+      <Suspense fallback={<Splash />}>
+        <ViewSharedSecretScreen
+          shareParams={shareParams}
+          onExit={() => {
+            window.location.hash = ''
+            setShareParams(null)
+          }}
+          lang={lang}
+        />
+      </Suspense>
+    )
+  }
+
+  if (recovery) {
+    return (
+      <Suspense fallback={<Splash />}>
+        <ResetPasswordScreen onDone={() => setRecovery(false)} lang={lang} />
+      </Suspense>
+    )
+  }
+  if (!session) return <AuthScreen lang={lang} />
+  if (!profile) return <Splash />
+  if (!profile.vault_salt || !profile.vault_verifier) {
+    return <FirstVaultSetup onCreate={initializeVault} lang={lang} />
+  }
+  if (!vaultKey) {
+    return (
+      <UnlockScreen
+        profile={profile}
+        user={session.user}
+        onUnlocked={unlock}
+        onRecoverMasterPassword={handleRecoverMasterPassword}
+        onResetVault={handleResetVault}
+        lang={lang}
+      />
+    )
+  }
 
   return (
     <VaultContext.Provider value={vaultContextValue}>

@@ -62,7 +62,7 @@ export default function PwaInstallCard({ t, lang = 'id', installPrompt, onPrompt
                 setPlatformTab('ios')
               }}
             >
-              <span>🍎 iPhone / iPad</span>
+              <span>iOS (Safari)</span>
             </button>
             <button
               type="button"
@@ -72,7 +72,7 @@ export default function PwaInstallCard({ t, lang = 'id', installPrompt, onPrompt
                 setPlatformTab('android')
               }}
             >
-              <span>🤖 Android</span>
+              <span>Android (Chrome)</span>
             </button>
           </div>
 

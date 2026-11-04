@@ -99,8 +99,8 @@ export default function ShareSecretModal({
     if (!generatedResult?.shareUrl) return
     const text =
       lang === 'id'
-        ? `🔐 Berikut tautan rahasia sekali buka untuk Anda (hancur otomatis setelah dibuka):\n${generatedResult.shareUrl}`
-        : `🔐 Here is a self-destructing secure secret link for you:\n${generatedResult.shareUrl}`
+        ? `Berikut tautan rahasia sekali buka (hancur otomatis setelah dibuka):\n${generatedResult.shareUrl}`
+        : `Here is a self-destructing secret link:\n${generatedResult.shareUrl}`
     window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`, '_blank')
   }
 
