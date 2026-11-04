@@ -12,9 +12,8 @@ import { safeLazy } from './lib/safeLazy'
 // Code splitting: Lazy-loaded pages & modals for fast initial load
 const ResetPasswordScreen = safeLazy(() => import('./components/ResetPasswordScreen'))
 const VaultPage = safeLazy(() => import('./pages/VaultPage'))
-const BankingPage = safeLazy(() => import('./pages/BankingPage'))
+const MyCardsPage = safeLazy(() => import('./pages/MyCardsPage'))
 const DocumentsPage = safeLazy(() => import('./pages/DocumentsPage'))
-const SettingsPage = safeLazy(() => import('./pages/SettingsPage'))
 const SettingsDrawer = safeLazy(() => import('./components/SettingsDrawer'))
 const AlertsPanel = safeLazy(() => import('./pages/AlertsPanel'))
 const ItemModal = safeLazy(() => import('./pages/ItemModal'))
@@ -1217,56 +1216,14 @@ Jangan pernah membagikan kode ini kepada siapapun!
             />
           )}
           {route === 'banking' && (
-            <BankingPage
-              banks={banks}
+            <MyCardsPage
+              cards={banks}
               styleMode={profile.card_style || 'realistic'}
-              onAdd={() => openAdd('bank-card')}
-              onOpen={openItem}
-              onSave={(cardData, id) => saveItem(id ? { ...cardData, id } : cardData)}
-              onDelete={removeItem}
+              onAddCard={() => openAdd('bank-card')}
+              onSaveCard={(cardData, id) => saveItem(id ? { ...cardData, id } : cardData)}
+              onDeleteCard={removeItem}
               onToggleFavorite={toggleFavorite}
               lang={lang}
-            />
-          )}
-          {route === 'settings' && (
-            <SettingsPage
-              profile={profile}
-              user={session.user}
-              vaultKey={vaultKey}
-              items={hydratedItems}
-              documents={documents}
-              trashedItems={trashedItems}
-              onRestoreItem={restoreItem}
-              onPermanentDelete={permanentDeleteItem}
-              onEmptyTrash={emptyTrash}
-              privacyMaskEnabled={privacyMaskEnabled}
-              onTogglePrivacyMask={handleTogglePrivacyMask}
-              installPrompt={installPrompt}
-              onPromptInstall={handlePromptInstall}
-              onOpenShareSecret={handleOpenShareSecret}
-              isOnline={isOnline}
-              pendingSyncCount={pendingSyncCount}
-              onTheme={updateTheme}
-              onCardStyle={updateCardStyle}
-              onSaveProfile={saveProfile}
-              onUploadAvatar={uploadProfileAvatar}
-              onRemoveAvatar={handleRemoveAvatar}
-              onSignOut={signOut}
-              onImport={() => document.getElementById('csv-import').click()}
-              onExport={openExportModal}
-              onChangeAccountPassword={handleChangeAccountPassword}
-              onChangeMasterPassword={handleChangeMasterPassword}
-              recoveryKey={activeRecoveryKey}
-              onDownloadEmergencySheet={handleDownloadEmergencySheet}
-              onLockVault={() => {
-                lockVault()
-                showToast('Vault telah dikunci.')
-              }}
-              showToast={showToast}
-              hamburgerStyle={hamburgerStyle}
-              onHamburgerStyle={updateHamburgerStyle}
-              lang={lang}
-              onLanguage={handleLanguageChange}
             />
           )}
         </Suspense>

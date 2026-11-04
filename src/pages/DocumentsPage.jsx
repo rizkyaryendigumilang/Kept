@@ -61,7 +61,7 @@ export default function DocumentsPage({
 
       return nameMatch || ownerMatch || numMatch || noteMatch || typeMatch
     })
-    return [...list].sort((a, b) => (b.favorite ? 1 : 0) - (a.favorite ? 1 : 0))
+    return list.sort((a, b) => (b.favorite ? 1 : 0) - (a.favorite ? 1 : 0))
   }, [documents, activeCategory, query])
 
   // Reset to page 1 when query or category changes

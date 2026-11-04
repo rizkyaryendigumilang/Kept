@@ -3255,24 +3255,17 @@ img.site-logo {
 
 /* ==========================================================================
    DOCUMENT SECTION & TEMPLATES (KEPT ZERO-KNOWLEDGE DOCUMENT SYSTEM)
+   Modern Documents Page (3x2 Grid, Preview & Hide Preview Modes)
    ========================================================================== */
 
 .documents-page {
-  padding-bottom: var(--space-xl);
+  padding-bottom: 48px;
 }
 
 .doc-search-filter-stack {
   display: grid;
   gap: var(--space-sm);
   margin-bottom: var(--space-md);
-}
-
-/* ==========================================================================
-   Modern Documents Page (3x2 Grid, Preview & Hide Preview Modes)
-   ========================================================================== */
-
-.documents-page {
-  padding-bottom: 48px;
 }
 
 .doc-page-header {
