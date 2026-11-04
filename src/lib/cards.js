@@ -27,8 +27,8 @@ export const CARD_CATEGORIES = [
     id: 'membership',
     labelKey: 'card_cat_membership',
     icon: 'Tag',
-    color: '#7c3aed',
-    gradient: 'linear-gradient(135deg, #7c3aed 0%, #4c1d95 100%)',
+    color: '#4f46e5',
+    gradient: 'linear-gradient(135deg, #4338ca 0%, #312e81 100%)',
     descKey: 'card_cat_membership_desc',
     sample: 'Starbucks, MAPCLUB, Indomaret, Gym'
   },

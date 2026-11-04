@@ -146,7 +146,7 @@ export default function HomePage({
         <div className="fav-suggestion-card">
           <div className="fav-suggestion-left">
             <div className="fav-suggestion-sparkle">
-              <Sparkles size={14} className="text-amber-400" />
+              <Sparkles size={14} />
             </div>
             <div className="fav-suggestion-text">
               <strong>{t('fav_suggest_title')}</strong>

@@ -3,35 +3,30 @@
 export const DOCUMENT_CATEGORIES = [
   {
     id: '01_identity',
-    code: '01',
     name: 'Identitas & Kependudukan',
     nameEn: 'Identity & Civil Records',
     description: 'Dokumen identitas dan kependudukan'
   },
   {
     id: '02_education',
-    code: '02',
     name: 'Pendidikan & Karir',
     nameEn: 'Education & Career',
     description: 'Pendidikan dan administrasi pekerjaan'
   },
   {
     id: '03_mobility',
-    code: '03',
     name: 'Perjalanan & Legalitas',
     nameEn: 'Mobility & Legal',
     description: 'Perjalanan dan status hukum'
   },
   {
     id: '04_health_assets',
-    code: '04',
     name: 'Kesehatan & Kepemilikan Aset',
     nameEn: 'Health & Asset Ownership',
     description: 'Jaminan sosial dan kepemilikan aset'
   },
   {
     id: '05_other',
-    code: '05',
     name: 'Dokumen Lainnya',
     nameEn: 'Other Documents',
     description: 'Kontrak, sertifikat pelatihan, surat kuasa, dll.'

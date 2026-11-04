@@ -167,7 +167,7 @@ export default function CommandPalette({
   }
 
   function renderTypeIcon(type) {
-    if (type === 'action') return <Flame size={16} className="text-amber-500" />
+    if (type === 'action') return <Flame size={16} />
     if (type === 'card') return <CreditCard size={16} />
     if (type === 'document') return <FileText size={16} />
     return <KeyRound size={16} />
