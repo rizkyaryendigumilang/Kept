@@ -4,8 +4,6 @@ on:
   push:
     branches:
       - main
-    paths-ignore:
-      - '.github/workflows/**'
   workflow_dispatch:
 
 permissions:
@@ -108,11 +106,19 @@ jobs:
       - name: Compile and Archive iOS App (Unsigned)
         run: |
           mkdir -p build
+          # Clear Swift PM cache to prevent SPM "already exists in file system fatalError"
+          rm -rf ~/Library/Caches/org.swift.swiftpm/
+          rm -rf ~/Library/org.swift.swiftpm/
+          rm -rf ~/Library/Developer/Xcode/DerivedData/
+
           if [ -d "ios/App/App.xcworkspace" ]; then
             TARGET_FLAG="-workspace ios/App/App.xcworkspace"
           else
             TARGET_FLAG="-project ios/App/App.xcodeproj"
           fi
+
+          echo "Resolving Swift packages cleanly..."
+          xcodebuild -resolvePackageDependencies $TARGET_FLAG -scheme App || true
 
           echo "Running xcodebuild archive with $TARGET_FLAG..."
           xcodebuild archive \
