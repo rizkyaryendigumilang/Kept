@@ -31,6 +31,7 @@
   },
   "overrides": {
     "minimatch": "^11.0.1",
-    "glob": "^14.0.4"
+    "glob": "^14.0.4",
+    "deepmerge": "^4.3.1"
   }
 }

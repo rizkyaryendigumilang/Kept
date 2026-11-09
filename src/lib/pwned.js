@@ -44,11 +44,7 @@ async function fetchRangePrefix(prefix) {
     // ignore storage access issues
   }
 
-  const res = await fetch(`https://api.pwnedpasswords.com/range/${cleanPrefix}`, {
-    headers: {
-      'User-Agent': 'Kept-Private-Vault-ZK'
-    }
-  })
+  const res = await fetch(`https://api.pwnedpasswords.com/range/${cleanPrefix}`)
 
   if (!res.ok) {
     throw new Error(`Pwned API error: HTTP ${res.status}`)

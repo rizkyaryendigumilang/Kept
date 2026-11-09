@@ -79,7 +79,7 @@ export default function CardTapModal({ card, onClose, lang = 'id' }) {
               {isEmulating || isTapReady ? <CheckCheck size={20} /> : <Smartphone size={20} />}
             </div>
             <div>
-              <h3>{lang === 'id' ? 'Uji Kemampuan Tap (NFC Emulation)' : 'Tap Capability Test (NFC Emulation)'}</h3>
+              <h3>{t('card_tap_modal_title')}</h3>
               <span className="tap-subtitle">{card.name || card.bank_name}</span>
             </div>
           </div>
@@ -107,7 +107,7 @@ export default function CardTapModal({ card, onClose, lang = 'id' }) {
           <div className="tap-status-headline">
             {isEmulating ? (
               <span className="tap-status-badge success animate-pulse">
-                <Cpu size={14} /> {lang === 'id' ? 'Emulasi HCE Aktif Memancar' : 'HCE Emulation Transmitting'}
+                <Cpu size={14} /> {t('hce_status_badge')}
               </span>
             ) : isTapReady ? (
               <span className="tap-status-badge success">
@@ -115,7 +115,7 @@ export default function CardTapModal({ card, onClose, lang = 'id' }) {
               </span>
             ) : (
               <span className="tap-status-badge warning">
-                <AlertTriangle size={14} /> Belum Mendukung Tap Langsung
+                <AlertTriangle size={14} /> {t('card_tap_status_unsupported')}
               </span>
             )}
           </div>
@@ -141,12 +141,10 @@ export default function CardTapModal({ card, onClose, lang = 'id' }) {
             {isEmulating ? (
               <div className="hce-active-box">
                 <h4 className="text-emerald font-bold">
-                  {lang === 'id' ? 'Sinyal Emulasi Aktif' : 'Emulation Signal Active'}
+                  {t('hce_active_title')}
                 </h4>
                 <p className="text-sm mt-xs">
-                  {lang === 'id'
-                    ? 'Ponsel sedang memancarkan token kartu melalui protokol ISO 7816-4 (AID: F0010203040506). Dekatkan ponsel ke pembaca turnstile atau mesin absensi modern yang mendukung smart AID.'
-                    : 'Device is actively transmitting card token via ISO 7816-4 (AID: F0010203040506). Hold phone against smart reader or turnstile.'}
+                  {t('hce_active_desc')}
                 </p>
               </div>
             ) : isTapReady ? (
@@ -187,9 +185,7 @@ export default function CardTapModal({ card, onClose, lang = 'id' }) {
           >
             <Cpu size={15} />
             <span>
-              {isEmulating
-                ? (lang === 'id' ? 'Hentikan Emulasi' : 'Stop Emulation')
-                : (lang === 'id' ? 'Aktifkan Emulasi HCE' : 'Start HCE Emulation')}
+              {isEmulating ? t('hce_btn_stop') : t('hce_btn_start')}
             </span>
           </button>
 

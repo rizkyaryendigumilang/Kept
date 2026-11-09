@@ -3,8 +3,14 @@ const DB_VERSION = 2
 const STORE_ITEMS = 'vault_items'
 const STORE_QUEUE = 'sync_queue'
 
-function openDb() {
-  return new Promise((resolve, reject) => {
+let cachedDb = null
+let openDbPromise = null
+
+function getDb() {
+  if (cachedDb) return Promise.resolve(cachedDb)
+  if (openDbPromise) return openDbPromise
+
+  openDbPromise = new Promise((resolve, reject) => {
     const request = indexedDB.open(DB_NAME, DB_VERSION)
     request.onupgradeneeded = (event) => {
       const db = request.result
@@ -29,17 +35,38 @@ function openDb() {
         queueStore.createIndex('created_at', 'created_at', { unique: false })
       }
     }
-    request.onsuccess = () => resolve(request.result)
-    request.onerror = () => reject(request.error)
+    request.onsuccess = () => {
+      cachedDb = request.result
+      cachedDb.onclose = () => {
+        cachedDb = null
+      }
+      cachedDb.onversionchange = () => {
+        if (cachedDb) {
+          cachedDb.close()
+          cachedDb = null
+        }
+      }
+      openDbPromise = null
+      resolve(cachedDb)
+    }
+    request.onerror = () => {
+      openDbPromise = null
+      reject(request.error)
+    }
   })
+
+  return openDbPromise
 }
 
 async function withDb(fn) {
-  const db = await openDb()
-  try {
-    return await fn(db)
-  } finally {
-    db.close()
+  const db = await getDb()
+  return fn(db)
+}
+
+export function closeIdb() {
+  if (cachedDb) {
+    cachedDb.close()
+    cachedDb = null
   }
 }
 

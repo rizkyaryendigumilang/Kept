@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { supabase } from '../lib/supabase'
+import { supabase, isSupabaseConfigured } from '../lib/supabase'
 import { getTranslation } from '../lib/i18n'
 import { KEPT_LOGO } from '../lib/brand'
 
@@ -167,6 +167,17 @@ export default function AuthScreen({ lang = 'id' }) {
           <h1>{heading}</h1>
           {blurb && <p>{blurb}</p>}
         </div>
+
+        {!isSupabaseConfigured && (
+          <div className="auth-config-notice">
+            <strong>{lang === 'id' ? 'Konfigurasi Cloud Diperlukan' : 'Cloud Setup Required'}</strong>
+            <p>
+              {lang === 'id'
+                ? 'Salin .env.example ke .env.local dan isi VITE_SUPABASE_URL serta VITE_SUPABASE_PUBLISHABLE_KEY untuk mengaktifkan sinkronisasi cloud.'
+                : 'Copy .env.example to .env.local and fill in VITE_SUPABASE_URL and VITE_SUPABASE_PUBLISHABLE_KEY to enable cloud sync.'}
+            </p>
+          </div>
+        )}
 
         {mode !== 'reset' && (
           <>

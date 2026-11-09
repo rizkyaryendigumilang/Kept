@@ -14,20 +14,8 @@ const ResetPasswordScreen = safeLazy(() => import('./components/ResetPasswordScr
 const VaultPage = safeLazy(() => import('./pages/VaultPage'))
 const MyCardsPage = safeLazy(() => import('./pages/MyCardsPage'))
 const DocumentsPage = safeLazy(() => import('./pages/DocumentsPage'))
-const SettingsDrawer = safeLazy(() => import('./components/SettingsDrawer'))
-const AlertsPanel = safeLazy(() => import('./pages/AlertsPanel'))
-const ItemModal = safeLazy(() => import('./pages/ItemModal'))
-const AddItemModal = safeLazy(() => import('./pages/AddItemModal'))
-const AddDocumentModal = safeLazy(() => import('./pages/AddDocumentModal'))
-const AddCardModal = safeLazy(() => import('./components/AddCardModal'))
-const CardDetailModal = safeLazy(() => import('./components/CardDetailModal'))
-const CardBarcodeModal = safeLazy(() => import('./components/CardBarcodeModal'))
-const DocumentDetailModal = safeLazy(() => import('./pages/DocumentDetailModal'))
-const CommandPalette = safeLazy(() => import('./components/CommandPalette'))
-const ExportModal = safeLazy(() => import('./components/ExportModal'))
-const ImportKeptModal = safeLazy(() => import('./components/ImportKeptModal'))
-const ShareSecretModal = safeLazy(() => import('./components/ShareSecretModal'))
 const ViewSharedSecretScreen = safeLazy(() => import('./components/ViewSharedSecretScreen'))
+import VaultModalHost from './components/VaultModalHost'
 import { parseShareHash } from './lib/secureShare'
 import { checkDocumentExpiry } from './lib/documents'
 import { downloadAttachmentSafely } from './lib/safeUrl'
@@ -40,6 +28,7 @@ import {
   deriveVaultKey,
   deriveVaultKeyAsync,
   zeroKey,
+  clearAesKeyCache,
   encryptJson,
   decryptJson,
   generateSalt,
@@ -204,6 +193,7 @@ export default function App() {
   }, [])
 
   const lockVault = useCallback(() => {
+    clearAesKeyCache()
     setVaultKey((prevKey) => {
       if (prevKey) {
         zeroKey(prevKey)
@@ -1247,185 +1237,80 @@ Jangan pernah membagikan kode ini kepada siapapun!
       />
 
       {showAdd && <AddSheet onClose={() => setShowAdd(false)} onChoose={openAdd} lang={lang} />}
-      <Suspense fallback={null}>
-        {addMode && vaultKey && <AddItemModal mode={addMode} onClose={() => setAddMode(null)} onSubmit={saveItem} lang={lang} />}
-        {docAddModalOpen && vaultKey && (
-          <AddDocumentModal
-            onClose={() => setDocAddModalOpen(false)}
-            onSubmit={(docPayload) => saveItem({ ...docPayload, item_type: 'document' })}
-            lang={lang}
-          />
-        )}
-        {cardAddModalOpen && vaultKey && (
-          <AddCardModal
-            onClose={() => setCardAddModalOpen(false)}
-            onSubmit={(cardData) => {
-              setCardAddModalOpen(false)
-              saveItem(cardData)
-            }}
-            lang={lang}
-          />
-        )}
-        {cardEditModalItem && vaultKey && (
-          <AddCardModal
-            initialCard={cardEditModalItem}
-            onClose={() => setCardEditModalItem(null)}
-            onSubmit={(cardData) => {
-              const id = cardEditModalItem.id
-              setCardEditModalItem(null)
-              saveItem({ ...cardData, id })
-            }}
-            lang={lang}
-          />
-        )}
-        {cardBarcodeModalItem && (
-          <CardBarcodeModal
-            card={cardBarcodeModalItem}
-            onClose={() => setCardBarcodeModalItem(null)}
-            lang={lang}
-          />
-        )}
-        {selectedItem && selectedItem.item_type === 'document' ? (
-          <DocumentDetailModal
-            item={selectedItem}
-            onClose={() => setSelectedItem(null)}
-            onDelete={removeItem}
-            onSave={async (id, updatedDoc) => {
-              await saveItem({ ...updatedDoc, id, item_type: 'document' })
-            }}
-            onToggleFavorite={toggleFavorite}
-            lang={lang}
-          />
-        ) : selectedItem && (selectedItem.item_type === 'bank_card' || selectedItem.item_type === 'card') ? (
-          <CardDetailModal
-            card={selectedItem}
-            onClose={() => setSelectedItem(null)}
-            onDelete={removeItem}
-            onEdit={(card) => {
-              setSelectedItem(null)
-              setCardEditModalItem(card)
-            }}
-            onShowBarcode={(card) => {
-              setSelectedItem(null)
-              setCardBarcodeModalItem(card)
-            }}
-            onToggleFavorite={toggleFavorite}
-            lang={lang}
-          />
-        ) : selectedItem ? (
-          <ItemModal
-            item={selectedItem}
-            onClose={() => setSelectedItem(null)}
-            onDelete={removeItem}
-            onSave={updateItem}
-            onToggleFavorite={toggleFavorite}
-            onShareSecret={handleOpenShareSecret}
-            lang={lang}
-          />
-        ) : null}
-        {alertsOpen && (
-          <AlertsPanel
-            alerts={alerts}
-            items={hydratedItems}
-            onClose={() => setAlertsOpen(false)}
-            onOpenItem={openItem}
-            onDismissAlert={handleDismissAlert}
-            onDismissAllAlerts={handleDismissAllAlerts}
-            dismissedCount={dismissedAlerts.size}
-            onResetDismissedAlerts={handleResetDismissedAlerts}
-            lang={lang}
-          />
-        )}
-        <SettingsDrawer
-          isOpen={menuOpen}
-          activeSubpage={menuSubpage}
-          onSubpageChange={setMenuSubpage}
-          onClose={() => {
-            setMenuOpen(false)
-            setMenuSubpage(null)
-          }}
-          profile={profile}
-          user={session.user}
-          vaultKey={vaultKey}
-          items={hydratedItems}
-          documents={documents}
-          trashedItems={trashedItems}
-          onRestoreItem={restoreItem}
-          onPermanentDelete={permanentDeleteItem}
-          onEmptyTrash={emptyTrash}
-          privacyMaskEnabled={privacyMaskEnabled}
-          onTogglePrivacyMask={handleTogglePrivacyMask}
-          installPrompt={installPrompt}
-          onPromptInstall={handlePromptInstall}
-          onOpenShareSecret={handleOpenShareSecret}
-          isOnline={isOnline}
-          pendingSyncCount={pendingSyncCount}
-          onTheme={updateTheme}
-          onCardStyle={updateCardStyle}
-          onSaveProfile={saveProfile}
-          onUploadAvatar={uploadProfileAvatar}
-          onRemoveAvatar={handleRemoveAvatar}
-          onSignOut={signOut}
-          onImport={() => document.getElementById('csv-import').click()}
-          onExport={openExportModal}
-          onChangeAccountPassword={handleChangeAccountPassword}
-          onChangeMasterPassword={handleChangeMasterPassword}
-          recoveryKey={activeRecoveryKey}
-          onDownloadEmergencySheet={handleDownloadEmergencySheet}
-          onLockVault={() => {
-            lockVault()
-            showToast('Vault telah dikunci.')
-          }}
-          showToast={showToast}
-          hamburgerStyle={hamburgerStyle}
-          onHamburgerStyle={updateHamburgerStyle}
-          lang={lang}
-          onLanguage={handleLanguageChange}
-        />
-        <CommandPalette
-          isOpen={searchOpen}
-          onClose={() => setSearchOpen(false)}
-          items={hydratedItems}
-          documents={documents}
-          banks={banks}
-          onOpenItem={openItem}
-          onShareSecret={handleOpenShareSecret}
-          showToast={showToast}
-          lang={lang}
-        />
-        {exportModalOpen && (
-          <ExportModal
-            isOpen={exportModalOpen}
-            onClose={() => setExportModalOpen(false)}
-            user={session?.user}
-            profile={profile}
-            items={hydratedItems}
-            lang={lang}
-            showToast={showToast}
-            recordSecurityActivity={recordSecurityActivity}
-          />
-        )}
-        {importKeptEnvelope && (
-          <ImportKeptModal
-            isOpen={Boolean(importKeptEnvelope)}
-            onClose={() => setImportKeptEnvelope(null)}
-            fileEnvelope={importKeptEnvelope}
-            onDecrypted={handleRestoreKeptItems}
-            lang={lang}
-          />
-        )}
-        {shareModalData?.isOpen && (
-          <ShareSecretModal
-            isOpen={shareModalData.isOpen}
-            onClose={() => setShareModalData(null)}
-            initialTitle={shareModalData.initialTitle}
-            initialContent={shareModalData.initialContent}
-            user={session?.user}
-            lang={lang}
-            showToast={showToast}
-          />
-        )}
-      </Suspense>
+      <VaultModalHost
+        addMode={addMode}
+        setAddMode={setAddMode}
+        docAddModalOpen={docAddModalOpen}
+        setDocAddModalOpen={setDocAddModalOpen}
+        cardAddModalOpen={cardAddModalOpen}
+        setCardAddModalOpen={setCardAddModalOpen}
+        cardEditModalItem={cardEditModalItem}
+        setCardEditModalItem={setCardEditModalItem}
+        cardBarcodeModalItem={cardBarcodeModalItem}
+        setCardBarcodeModalItem={setCardBarcodeModalItem}
+        selectedItem={selectedItem}
+        setSelectedItem={setSelectedItem}
+        saveItem={saveItem}
+        updateItem={updateItem}
+        removeItem={removeItem}
+        toggleFavorite={toggleFavorite}
+        openItem={openItem}
+        handleOpenShareSecret={handleOpenShareSecret}
+        alertsOpen={alertsOpen}
+        setAlertsOpen={setAlertsOpen}
+        alerts={alerts}
+        dismissedAlerts={dismissedAlerts}
+        handleDismissAlert={handleDismissAlert}
+        handleDismissAllAlerts={handleDismissAllAlerts}
+        handleResetDismissedAlerts={handleResetDismissedAlerts}
+        menuOpen={menuOpen}
+        setMenuOpen={setMenuOpen}
+        menuSubpage={menuSubpage}
+        setMenuSubpage={setMenuSubpage}
+        profile={profile}
+        session={session}
+        vaultKey={vaultKey}
+        hydratedItems={hydratedItems}
+        documents={documents}
+        trashedItems={trashedItems}
+        restoreItem={restoreItem}
+        permanentDeleteItem={permanentDeleteItem}
+        emptyTrash={emptyTrash}
+        privacyMaskEnabled={privacyMaskEnabled}
+        handleTogglePrivacyMask={handleTogglePrivacyMask}
+        installPrompt={installPrompt}
+        handlePromptInstall={handlePromptInstall}
+        isOnline={isOnline}
+        pendingSyncCount={pendingSyncCount}
+        updateTheme={updateTheme}
+        updateCardStyle={updateCardStyle}
+        saveProfile={saveProfile}
+        uploadProfileAvatar={uploadProfileAvatar}
+        handleRemoveAvatar={handleRemoveAvatar}
+        signOut={signOut}
+        openExportModal={openExportModal}
+        handleChangeAccountPassword={handleChangeAccountPassword}
+        handleChangeMasterPassword={handleChangeMasterPassword}
+        activeRecoveryKey={activeRecoveryKey}
+        handleDownloadEmergencySheet={handleDownloadEmergencySheet}
+        lockVault={lockVault}
+        showToast={showToast}
+        hamburgerStyle={hamburgerStyle}
+        updateHamburgerStyle={updateHamburgerStyle}
+        lang={lang}
+        handleLanguageChange={handleLanguageChange}
+        searchOpen={searchOpen}
+        setSearchOpen={setSearchOpen}
+        banks={banks}
+        exportModalOpen={exportModalOpen}
+        setExportModalOpen={setExportModalOpen}
+        recordSecurityActivity={recordSecurityActivity}
+        importKeptEnvelope={importKeptEnvelope}
+        setImportKeptEnvelope={setImportKeptEnvelope}
+        handleRestoreKeptItems={handleRestoreKeptItems}
+        shareModalData={shareModalData}
+        setShareModalData={setShareModalData}
+      />
       {toast && <div className="toast">{toast}</div>}
       {error && (
         <div className="error-banner" onClick={() => setError('')}>

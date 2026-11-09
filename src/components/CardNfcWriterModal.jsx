@@ -193,7 +193,7 @@ export default function CardNfcWriterModal({
               <Cpu size={18} />
             </div>
             <div>
-              <h3>{lang === 'id' ? 'Penulis Tag NFC (Stiker/Koin)' : 'NFC Tag Writer (Sticker/Fob)'}</h3>
+              <h3>{t('nfc_writer_title')}</h3>
               <span className="nfc-subtitle">
                 {card?.name || card?.bank_name || 'Kartu Vault'}
               </span>
@@ -218,7 +218,7 @@ export default function CardNfcWriterModal({
         <div className="nfc-writer-content">
           <div className="nfc-format-selector-row">
             <span className="micro-label">
-              {lang === 'id' ? 'PILIH FORMAT DATA UNTUK STIKER' : 'SELECT STICKER DATA FORMAT'}
+              {t('nfc_format_title')}
             </span>
             <div className="nfc-format-pills">
               <button
@@ -230,8 +230,8 @@ export default function CardNfcWriterModal({
                   setWriteSuccess(false)
                 }}
               >
-                <strong>UID / Text</strong>
-                <span className="text-xs">Smart Lock / Scanner</span>
+                <strong>{t('nfc_format_uid')}</strong>
+                <span className="text-xs">{t('nfc_format_uid_desc')}</span>
               </button>
 
               <button
@@ -243,8 +243,8 @@ export default function CardNfcWriterModal({
                   setWriteSuccess(false)
                 }}
               >
-                <strong>Web Pass URL</strong>
-                <span className="text-xs">Tap to Open Link</span>
+                <strong>{t('nfc_format_url')}</strong>
+                <span className="text-xs">{t('nfc_format_url_desc')}</span>
               </button>
 
               <button
@@ -256,8 +256,8 @@ export default function CardNfcWriterModal({
                   setWriteSuccess(false)
                 }}
               >
-                <strong>JSON Token</strong>
-                <span className="text-xs">IoT / Microcontroller</span>
+                <strong>{t('nfc_format_json')}</strong>
+                <span className="text-xs">{t('nfc_format_json_desc')}</span>
               </button>
 
               <button
@@ -269,8 +269,8 @@ export default function CardNfcWriterModal({
                   setWriteSuccess(false)
                 }}
               >
-                <strong>Magic CUID</strong>
-                <span className="text-xs">Apartemen / Gate</span>
+                <strong>{t('nfc_format_cuid')}</strong>
+                <span className="text-xs">{t('nfc_format_cuid_desc')}</span>
               </button>
             </div>
           </div>
@@ -280,38 +280,26 @@ export default function CardNfcWriterModal({
             <div className="cuid-guide-box">
               <div className="cuid-guide-header">
                 <ShieldCheck size={18} className="text-accent" />
-                <h4>{lang === 'id' ? 'Panduan Khusus: Kartu Akses Apartemen / Lift' : 'Guide: Apartment / Lift Access Cards'}</h4>
+                <h4>{t('cuid_guide_title')}</h4>
               </div>
               <p>
-                {lang === 'id'
-                  ? 'Sebagian besar mesin pembaca lift apartemen lama (Mifare Classic 1K) hanya membaca UID fisik di Sektor 0. Stiker NTAG213/215 biasa memiliki Sektor 0 terkunci permanen oleh pabrik.'
-                  : 'Most older building / elevator readers (Mifare Classic 1K) only inspect physical UID in Sector 0. Standard NTAG213/215 stickers have Sector 0 permanently locked at factory.'}
+                {t('cuid_guide_desc')}
               </p>
               <div className="cuid-instruction-steps">
                 <div className="cuid-step-item">
                   <span className="cuid-step-badge">1</span>
-                  <span>
-                    {lang === 'id' 
-                      ? 'Gunakan stiker / koin tipe "CUID / Gen2 Magic UID" (banyak dijual di marketplace mulai Rp3.000).' 
-                      : 'Use "CUID / Gen2 Magic UID" tags (available online starting ~$0.50).'}
-                  </span>
+                  <span>{t('cuid_step_1')}</span>
                 </div>
                 <div className="cuid-step-item">
                   <span className="cuid-step-badge">2</span>
                   <span>
-                    {lang === 'id' 
-                      ? 'Salin UID kartu Anda di Kept:' 
-                      : 'Copy your card UID from Kept:'}
+                    {t('cuid_step_2')}
                     <code className="cuid-inline-code">{rawIdentifier}</code>
                   </span>
                 </div>
                 <div className="cuid-step-item">
                   <span className="cuid-step-badge">3</span>
-                  <span>
-                    {lang === 'id'
-                      ? 'Gunakan fitur "Set UID" pada aplikasi CUID Writer (atau alat seperti Flipper Zero / Proxmark) untuk menanamkan UID ini ke Sektor 0 stiker CUID.'
-                      : 'Use "Set UID" on a CUID writer app (or Flipper Zero / Proxmark) to write this UID to Sector 0.'}
-                  </span>
+                  <span>{t('cuid_step_3')}</span>
                 </div>
               </div>
               <div className="cuid-action-row">
@@ -321,7 +309,7 @@ export default function CardNfcWriterModal({
                   onClick={handleCopyPayload}
                 >
                   {copiedPayload ? <Check size={15} /> : <Copy size={15} />}
-                  <span>{copiedPayload ? (lang === 'id' ? 'UID Tersalin!' : 'UID Copied!') : (lang === 'id' ? 'Salin UID untuk CUID' : 'Copy UID for CUID')}</span>
+                  <span>{copiedPayload ? t('cuid_btn_copied') : t('cuid_btn_copy')}</span>
                 </button>
               </div>
             </div>

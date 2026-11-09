@@ -1,0 +1,790 @@
+/* Apple & Emil Design Polish: Tactile Feedback & Press States */
+.nfc-action-pill-btn,
+.format-pill-btn,
+.wallet-tab-btn,
+.apple-pass-flip-btn {
+  transition: transform 120ms cubic-bezier(0.23, 1, 0.32, 1), background 150ms ease, border-color 150ms ease;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.nfc-action-pill-btn:active,
+.format-pill-btn:active,
+.wallet-tab-btn:active {
+  transform: scale(0.97);
+}
+
+/* Apple Translucent Frosted Glass Materials */
+.card-nfc-dialog,
+.nfc-writer-dialog,
+.card-wallet-pass-dialog,
+.card-tap-dialog {
+  background: rgba(30, 41, 59, 0.88);
+  backdrop-filter: blur(24px) saturate(190%);
+  -webkit-backdrop-filter: blur(24px) saturate(190%);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-top: 1px solid rgba(255, 255, 255, 0.22);
+  border-radius: 22px;
+  width: 100%;
+  max-width: 480px;
+  padding: 22px;
+  box-shadow: 0 28px 60px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(255, 255, 255, 0.05);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.nfc-icon-chip.writer {
+  background: rgba(139, 92, 246, 0.15);
+  color: #a78bfa;
+  border-color: rgba(139, 92, 246, 0.28);
+}
+
+.nfc-writer-content {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.nfc-format-selector-row {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.nfc-format-pills {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+}
+
+.format-pill-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  padding: 8px 12px;
+  border-radius: 10px;
+  background: var(--bg-surface-subtle, rgba(255, 255, 255, 0.04));
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
+  font-size: 12px;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.format-pill-btn:hover {
+  background: var(--bg-hover);
+  border-color: var(--brand, #3b82f6);
+}
+
+.format-pill-btn.active {
+  background: rgba(59, 130, 246, 0.12);
+  border-color: var(--brand, #3b82f6);
+  color: #60a5fa;
+}
+
+.nfc-payload-card {
+  background: var(--bg-surface-subtle, rgba(255, 255, 255, 0.04));
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 12px 14px;
+}
+
+.payload-meta-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.payload-display-wrap {
+  background: rgba(0, 0, 0, 0.3);
+  padding: 8px 10px;
+  border-radius: 8px;
+  margin-top: 6px;
+}
+
+.payload-code-text {
+  font-family: var(--font-mono, monospace);
+  font-size: 12px;
+  word-break: break-all;
+  color: #38bdf8;
+}
+
+.payload-summary-text {
+  font-size: 11.5px;
+  color: var(--text-muted);
+  margin-top: 6px;
+  line-height: 1.4;
+}
+
+.cuid-guide-box {
+  background: rgba(139, 92, 246, 0.08);
+  border: 1px solid rgba(139, 92, 246, 0.25);
+  border-radius: 12px;
+  padding: 14px;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.cuid-guide-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+  color: #c4b5fd;
+}
+
+.cuid-instruction-steps {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 12px 0;
+}
+
+.cuid-step-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  line-height: 1.4;
+}
+
+.cuid-step-badge {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #8b5cf6;
+  color: #ffffff;
+  display: inline-grid;
+  place-items: center;
+  font-size: 11px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.cuid-inline-code {
+  font-family: var(--font-mono, monospace);
+  background: rgba(255, 255, 255, 0.1);
+  padding: 1px 6px;
+  border-radius: 4px;
+  margin-left: 4px;
+  color: #38bdf8;
+}
+
+.nfc-writer-radar-area {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  margin: 6px 0;
+}
+
+.nfc-writer-status-info {
+  text-align: center;
+  max-width: 380px;
+}
+
+.nfc-error-alert {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.25);
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 12px;
+  color: #ef4444;
+}
+
+/* Digital Wallet Pass Dialog & Elements */
+.card-wallet-pass-dialog {
+  background: var(--surface, #1e293b);
+  border: 1px solid var(--border-color);
+  border-radius: 22px;
+  width: 100%;
+  max-width: 480px;
+  padding: 22px;
+  box-shadow: 0 24px 50px rgba(0, 0, 0, 0.5);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.card-wallet-pass-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.card-wallet-pass-title-wrap {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.wallet-pass-icon-chip {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(16, 185, 129, 0.15);
+  color: #10b981;
+  border: 1px solid rgba(16, 185, 129, 0.28);
+}
+
+.wallet-pass-subtitle {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.wallet-platform-tabs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  background: var(--bg-surface-subtle, rgba(255, 255, 255, 0.05));
+  padding: 4px;
+  border-radius: 12px;
+}
+
+.wallet-tab-btn {
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.wallet-tab-btn.active {
+  background: var(--surface, #1e293b);
+  color: var(--text-primary);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+}
+
+.wallet-pass-body {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.apple-pass-perspective-container {
+  perspective: 1200px;
+  width: 100%;
+}
+
+.apple-pass-visual-card {
+  position: relative;
+  width: 100%;
+  min-height: 240px;
+  border-radius: 18px;
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.4);
+  transform-style: preserve-3d;
+  transition: transform 600ms cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+.apple-pass-visual-card.is-flipped {
+  transform: rotateY(180deg);
+}
+
+.apple-pass-side {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border-radius: 18px;
+  padding: 18px;
+  color: #ffffff;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  overflow: hidden;
+}
+
+.apple-pass-front {
+  transform: rotateY(0deg);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.25);
+}
+
+.apple-pass-back {
+  background: #1e293b;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  transform: rotateY(180deg);
+}
+
+.apple-pass-back-inner {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  color: #e2e8f0;
+}
+
+.apple-pass-top-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.apple-pass-type-badge {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  background: rgba(0, 0, 0, 0.25);
+  padding: 2px 8px;
+  border-radius: 6px;
+}
+
+.apple-pass-logo-text {
+  font-weight: 800;
+  font-size: 15px;
+  letter-spacing: -0.02em;
+}
+
+.apple-pass-primary-row {
+  margin-bottom: 10px;
+}
+
+.apple-pass-micro-label {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  opacity: 0.75;
+  display: block;
+  margin-bottom: 2px;
+}
+
+.apple-pass-primary-text {
+  font-size: 18px;
+  font-weight: 800;
+  margin: 0;
+  letter-spacing: -0.015em;
+}
+
+.apple-pass-secondary-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.apple-pass-barcode-section {
+  background: #ffffff;
+  border-radius: 10px;
+  padding: 8px 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.apple-pass-barcode-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  color: #1e293b;
+}
+
+.apple-pass-barcode-alt {
+  font-size: 11px;
+  font-weight: 700;
+  color: #1e293b;
+}
+
+.apple-pass-flip-btn {
+  position: absolute;
+  bottom: 12px;
+  right: 12px;
+  z-index: 10;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.4);
+  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  transition: transform 120ms ease-out, background 150ms ease;
+}
+
+.apple-pass-flip-btn:hover {
+  background: rgba(0, 0, 0, 0.65);
+}
+
+.apple-pass-flip-btn:active {
+  transform: scale(0.92);
+}
+
+.apple-pass-back-title {
+  font-size: 14px;
+  font-weight: 700;
+  margin-bottom: 4px;
+  letter-spacing: -0.01em;
+}
+
+.apple-pass-back-field {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  padding-bottom: 4px;
+}
+
+.apple-pass-back-notes {
+  font-size: 11px;
+  color: #94a3b8;
+  margin-top: 6px;
+  line-height: 1.4;
+}
+
+.wallet-pass-notice {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  background: rgba(59, 130, 246, 0.08);
+  border: 1px solid rgba(59, 130, 246, 0.2);
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-size: 11.5px;
+  color: var(--text-secondary);
+}
+
+.google-wallet-info-card {
+  background: var(--bg-surface-subtle, rgba(255, 255, 255, 0.04));
+  border: 1px solid var(--border-color);
+  border-radius: 14px;
+  padding: 16px;
+}
+
+.google-wallet-header-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.google-wallet-icon-badge {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: #ffffff;
+  color: #4285f4;
+  font-weight: 900;
+  font-size: 18px;
+  display: grid;
+  place-items: center;
+}
+
+.google-pass-fields-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 12px 0;
+  font-size: 12px;
+}
+
+.google-field-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+/* Accessibility & Reduced Motion Overrides */
+@media (prefers-reduced-motion: reduce) {
+  .apple-pass-visual-card {
+    transition: opacity 200ms ease;
+    transform: none !important;
+  }
+  .apple-pass-visual-card.is-flipped .apple-pass-front {
+    display: none;
+  }
+  .apple-pass-visual-card:not(.is-flipped) .apple-pass-back {
+    display: none;
+  }
+  .nfc-radar-pulse {
+    animation: none;
+    opacity: 0.3;
+  }
+}
+
+/* Camera Barcode/QR Dialog */
+.card-camera-dialog {
+  background: var(--surface, #1e293b);
+  border: 1px solid var(--border-color);
+  border-radius: 22px;
+  width: 100%;
+  max-width: 480px;
+  padding: 22px;
+  box-shadow: 0 24px 50px rgba(0, 0, 0, 0.5);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.camera-viewport-wrap {
+  position: relative;
+  width: 100%;
+  height: 240px;
+  border-radius: 14px;
+  overflow: hidden;
+  background: #0f172a;
+  display: grid;
+  place-items: center;
+}
+
+.camera-video-feed {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.camera-video-feed.hidden {
+  display: none;
+}
+
+.camera-frame-guide {
+  position: absolute;
+  width: 180px;
+  height: 180px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 12px;
+  pointer-events: none;
+}
+
+.corner-tl, .corner-tr, .corner-bl, .corner-br {
+  position: absolute;
+  width: 18px;
+  height: 18px;
+  border-color: #38bdf8;
+  border-style: solid;
+}
+
+.corner-tl { top: -2px; left: -2px; border-width: 3px 0 0 3px; border-top-left-radius: 6px; }
+.corner-tr { top: -2px; right: -2px; border-width: 3px 3px 0 0; border-top-right-radius: 6px; }
+.corner-bl { bottom: -2px; left: -2px; border-width: 0 0 3px 3px; border-bottom-left-radius: 6px; }
+.corner-br { bottom: -2px; right: -2px; border-width: 0 3px 3px 0; border-bottom-right-radius: 6px; }
+
+.camera-laser-line {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, #38bdf8, transparent);
+  box-shadow: 0 0 8px #38bdf8;
+  animation: laserScan 2s infinite ease-in-out alternate;
+}
+
+@keyframes laserScan {
+  0% { top: 6px; opacity: 0.8; }
+  100% { top: calc(100% - 8px); opacity: 0.8; }
+}
+
+.camera-standby-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  color: var(--text-muted);
+  text-align: center;
+  padding: 20px;
+  font-size: 12.5px;
+}
+
+.camera-sub-controls {
+  display: flex;
+  justify-content: center;
+  margin-top: 10px;
+}
+
+.file-upload-pill {
+  cursor: pointer;
+}
+
+.camera-samples-section {
+  margin-top: 10px;
+  border-top: 1px solid var(--border-color);
+  padding-top: 10px;
+}
+
+.camera-samples-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11.5px;
+  color: var(--text-muted);
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.camera-samples-row {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.sample-barcode-btn {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: var(--bg-surface-subtle, rgba(255, 255, 255, 0.04));
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
+  font-size: 12px;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.sample-barcode-btn:hover {
+  background: var(--bg-hover);
+  border-color: var(--brand, #3b82f6);
+}
+
+.camera-result-card {
+  background: var(--bg-surface-subtle, rgba(255, 255, 255, 0.04));
+  border: 1px solid var(--border-color);
+  border-radius: 14px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: center;
+  text-align: center;
+}
+
+.scanned-code-display {
+  font-family: var(--font-mono, monospace);
+  font-size: 17px;
+  font-weight: 700;
+  color: #38bdf8;
+  word-break: break-all;
+}
+
+.scanned-type-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11.5px;
+  color: var(--text-muted);
+}
+
+/* Card Tap Ready Modal */
+.card-tap-dialog {
+  background: var(--surface, #1e293b);
+  border: 1px solid var(--border-color);
+  border-radius: 22px;
+  width: 100%;
+  max-width: 480px;
+  padding: 22px;
+  box-shadow: 0 24px 50px rgba(0, 0, 0, 0.5);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.tap-graphic-body {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  margin: 10px 0;
+}
+
+.tap-beacon-circle {
+  position: relative;
+  width: 90px;
+  height: 90px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+}
+
+.tap-beacon-circle.is-ready {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: #fff;
+  box-shadow: 0 10px 30px rgba(16, 185, 129, 0.4);
+}
+
+.tap-beacon-circle.is-limited {
+  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+  color: #fff;
+  box-shadow: 0 10px 30px rgba(245, 158, 11, 0.4);
+}
+
+.tap-status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.tap-status-badge.success {
+  background: rgba(16, 185, 129, 0.15);
+  color: #10b981;
+  border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.tap-status-badge.warning {
+  background: rgba(245, 158, 11, 0.15);
+  color: #f59e0b;
+  border: 1px solid rgba(245, 158, 11, 0.3);
+}
+
+.tap-assessment-card {
+  background: var(--bg-surface-subtle, rgba(255, 255, 255, 0.04));
+  border: 1px solid var(--border-color);
+  border-radius: 14px;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.assessment-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.assessment-label {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.assessment-explanation {
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--text-secondary);
+  border-top: 1px solid var(--border-color-subtle, rgba(255, 255, 255, 0.05));
+  padding-top: 10px;
+}
+
+.tap-solution-box {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  background: rgba(59, 130, 246, 0.08);
+  border: 1px solid rgba(59, 130, 246, 0.25);
+  border-radius: 10px;
+  padding: 10px 12px;
+  margin-top: 10px;
+  font-size: 11.5px;
+  color: #38bdf8;
+}
+
+.hce-active-box {
+  background: rgba(16, 185, 129, 0.1);
+  border: 1px solid rgba(16, 185, 129, 0.28);
+  border-radius: 10px;
+  padding: 12px;
+  color: var(--text-primary);
+}

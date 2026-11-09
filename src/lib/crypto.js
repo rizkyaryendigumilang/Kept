@@ -110,6 +110,20 @@ export async function deriveVaultKeyAsync(masterPassword, saltBase64) {
  *
  * @param {Uint8Array|null} rawKey
  */
+let aesKeyCache = new WeakMap()
+
+/**
+ * Resets the AES CryptoKey cache so no active CryptoKey objects remain in memory.
+ */
+export function clearAesKeyCache() {
+  aesKeyCache = new WeakMap()
+}
+
+/**
+ * Zeroes out a raw cryptographic key in memory and evicts cached CryptoKey objects.
+ *
+ * @param {Uint8Array|null} rawKey
+ */
 export function zeroKey(rawKey) {
   if (rawKey && rawKey instanceof Uint8Array) {
     try {
@@ -118,9 +132,8 @@ export function zeroKey(rawKey) {
       // ignore
     }
   }
+  clearAesKeyCache()
 }
-
-const aesKeyCache = new WeakMap()
 
 async function importAesKey(rawKey) {
   if (rawKey && typeof rawKey === 'object') {
