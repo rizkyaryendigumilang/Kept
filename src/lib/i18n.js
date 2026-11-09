@@ -101,6 +101,8 @@ export const TRANSLATIONS = {
     // Card Actions & Detail
     card_show_barcode: 'Tampilkan Barcode / QR',
     card_scan_nfc: 'Uji / Baca NFC',
+    card_write_nfc: 'Tulis Stiker NFC',
+    card_wallet_pass: 'Wallet Pass',
     card_copy_number: 'Salin Nomor',
     card_number_copied: 'Nomor kartu disalin',
     card_preview_hide: 'Sembunyikan Nomor',
@@ -778,6 +780,8 @@ export const TRANSLATIONS = {
     // Card Actions & Detail
     card_show_barcode: 'Show Barcode / QR',
     card_scan_nfc: 'Test / Read NFC',
+    card_write_nfc: 'Write NFC Sticker',
+    card_wallet_pass: 'Wallet Pass',
     card_copy_number: 'Copy Number',
     card_number_copied: 'Card number copied',
     card_preview_hide: 'Hide Full Number',

@@ -1,15 +1,67 @@
-import { X, Smartphone, CheckCheck, AlertTriangle, ShieldCheck, Radio } from './Icons'
+import { useState, useEffect } from 'react'
+import { X, Smartphone, CheckCheck, AlertTriangle, ShieldCheck, Radio, Cpu, RefreshCw } from './Icons'
 import { evaluateCardCapability } from '../lib/cards'
 import { getTranslation } from '../lib/i18n'
 import { haptic } from '../lib/haptics'
+import { checkHceSupport, activateHceCard, deactivateHceCard, getHceStatus } from '../lib/hce'
 
 export default function CardTapModal({ card, onClose, lang = 'id' }) {
   const t = (k) => getTranslation(k, lang)
+
+  const [hceInfo, setHceInfo] = useState({ isNative: false, supported: false, enabled: false })
+  const [isEmulating, setIsEmulating] = useState(false)
+  const [emulationStatusText, setEmulationStatusText] = useState('')
 
   if (!card) return null
 
   const capability = evaluateCardCapability(card)
   const isTapReady = capability.id === 'tap_ready'
+
+  useEffect(() => {
+    let mounted = true
+    async function initHce() {
+      const info = await checkHceSupport()
+      if (!mounted) return
+      setHceInfo(info)
+
+      const status = await getHceStatus()
+      if (mounted && status.isEmulating) {
+        setIsEmulating(true)
+        setEmulationStatusText(lang === 'id' ? 'Emulasi aktif untuk kartu ini' : 'Emulation active for this card')
+      }
+    }
+    initHce()
+    return () => {
+      mounted = false
+    }
+  }, [lang])
+
+  const handleToggleEmulation = async () => {
+    haptic('medium')
+    try {
+      if (isEmulating) {
+        await deactivateHceCard()
+        setIsEmulating(false)
+        setEmulationStatusText(lang === 'id' ? 'Emulasi dihentikan' : 'Emulation stopped')
+      } else {
+        const rawUid = card.nfc_uid || card.card_number || '04A9723CEF51'
+        await activateHceCard({
+          id: card.id,
+          name: card.name || card.bank_name,
+          uid: rawUid,
+          payload: `KEPT-PASS:${card.id || '01'}`
+        })
+        setIsEmulating(true)
+        setEmulationStatusText(lang === 'id' ? 'Emulasi HCE aktif: Siap di-tap ke pembaca smart reader' : 'HCE active: Ready to tap on smart reader')
+        if (typeof navigator !== 'undefined' && navigator.vibrate) {
+          navigator.vibrate([30, 50])
+        }
+      }
+    } catch (err) {
+      haptic('error')
+      setEmulationStatusText(err.message || 'Gagal mengubah status emulasi')
+    }
+  }
 
   return (
     <div className="sheet-backdrop" onMouseDown={onClose}>
@@ -23,11 +75,11 @@ export default function CardTapModal({ card, onClose, lang = 'id' }) {
         {/* Header */}
         <div className="card-tap-header">
           <div className="card-tap-title-wrap">
-            <div className={`tap-icon-chip ${isTapReady ? 'ready' : 'warning'}`}>
-              {isTapReady ? <CheckCheck size={20} /> : <Smartphone size={20} />}
+            <div className={`tap-icon-chip ${isEmulating || isTapReady ? 'ready' : 'warning'}`}>
+              {isEmulating || isTapReady ? <CheckCheck size={20} /> : <Smartphone size={20} />}
             </div>
             <div>
-              <h3>Uji Kemampuan Tap (NFC Emulation)</h3>
+              <h3>{lang === 'id' ? 'Uji Kemampuan Tap (NFC Emulation)' : 'Tap Capability Test (NFC Emulation)'}</h3>
               <span className="tap-subtitle">{card.name || card.bank_name}</span>
             </div>
           </div>
@@ -45,15 +97,19 @@ export default function CardTapModal({ card, onClose, lang = 'id' }) {
           </button>
         </div>
 
-        {/* Status Graphic */}
+        {/* Status Graphic with Pulse */}
         <div className="tap-graphic-body">
-          <div className={`tap-beacon-circle ${isTapReady ? 'is-ready' : 'is-limited'}`}>
+          <div className={`tap-beacon-circle ${isEmulating || isTapReady ? 'is-ready' : 'is-limited'}`}>
             <Radio size={36} className="tap-pulse-icon" />
             <div className="tap-pulse-ring" />
           </div>
 
           <div className="tap-status-headline">
-            {isTapReady ? (
+            {isEmulating ? (
+              <span className="tap-status-badge success animate-pulse">
+                <Cpu size={14} /> {lang === 'id' ? 'Emulasi HCE Aktif Memancar' : 'HCE Emulation Transmitting'}
+              </span>
+            ) : isTapReady ? (
               <span className="tap-status-badge success">
                 <CheckCheck size={14} /> Tap Ready (Apple Wallet Terintegrasi)
               </span>
@@ -82,22 +138,39 @@ export default function CardTapModal({ card, onClose, lang = 'id' }) {
           </div>
 
           <div className="assessment-explanation">
-            {isTapReady ? (
+            {isEmulating ? (
+              <div className="hce-active-box">
+                <h4 className="text-emerald font-bold">
+                  {lang === 'id' ? 'Sinyal Emulasi Aktif' : 'Emulation Signal Active'}
+                </h4>
+                <p className="text-sm mt-xs">
+                  {lang === 'id'
+                    ? 'Ponsel sedang memancarkan token kartu melalui protokol ISO 7816-4 (AID: F0010203040506). Dekatkan ponsel ke pembaca turnstile atau mesin absensi modern yang mendukung smart AID.'
+                    : 'Device is actively transmitting card token via ISO 7816-4 (AID: F0010203040506). Hold phone against smart reader or turnstile.'}
+                </p>
+              </div>
+            ) : isTapReady ? (
               <p>
                 Kartu ini telah memiliki kredensial resmi atau pas Apple Wallet yang telah diprovisikan.
                 Anda dapat melakukan tap langsung ke terminal atau gerbang yang kompatibel.
               </p>
             ) : (
               <div>
-                <strong>Mengapa belum bisa di-tap langsung?</strong>
+                <strong>Mengapa kartu apartemen/kantor lama belum bisa di-tap langsung?</strong>
                 <p>
-                  Berhasil membaca tag (status <em>NFC Scanned</em>) hanya membuktikan bahwa ponsel dapat membaca nomor tag fisik.
-                  Ponsel <strong>tidak dapat menirukan (emulasi)</strong> frekuensi kartu fisik tersebut ke mesin reader/gate karena batasan keamanan sistem operasi Apple iOS.
+                  Mesin pembaca apartemen lama (Mifare Classic 1K) hanya membaca <em>Hardware UID fisik</em>.
+                  Sistem operasi modern (iOS & Android) secara sengaja <strong>mengacak (randomize) UID</strong> untuk alasan privasi sehingga gerbang menolak sinyalnya.
                 </p>
                 <div className="tap-solution-box">
                   <ShieldCheck size={15} />
                   <span>
-                    Untuk bertransaksi atau masuk gedung via NFC iPhone, gunakan kredensial resmi dari aplikasi penerbit kartu atau tambahkan ke Apple Wallet resmi.
+                    <strong>Solusi yang didukung Kept:</strong>
+                    <br />
+                    1. Gunakan <em>Tulis Stiker NFC</em> (Fase 1) untuk membuat duplikat fisik ke stiker CUID murah.
+                    <br />
+                    2. Gunakan <em>Wallet Pass</em> (Fase 2) untuk menambahkan kartu ke Apple Wallet atau Google Wallet.
+                    <br />
+                    3. Aktifkan <em>Host Card Emulation (HCE)</em> di bawah untuk smart reader kantor / IoT.
                   </span>
                 </div>
               </div>
@@ -107,6 +180,18 @@ export default function CardTapModal({ card, onClose, lang = 'id' }) {
 
         {/* Action Controls */}
         <div className="card-tap-actions">
+          <button
+            type="button"
+            className={`pill-button flex-1 ${isEmulating ? 'danger-button' : 'primary-button'}`}
+            onClick={handleToggleEmulation}
+          >
+            <Cpu size={15} />
+            <span>
+              {isEmulating
+                ? (lang === 'id' ? 'Hentikan Emulasi' : 'Stop Emulation')
+                : (lang === 'id' ? 'Aktifkan Emulasi HCE' : 'Start HCE Emulation')}
+            </span>
+          </button>
 
           <button
             type="button"

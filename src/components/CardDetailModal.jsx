@@ -22,7 +22,8 @@ import {
   Clock,
   ShieldCheck,
   Smartphone,
-  Camera
+  Camera,
+  Cpu
 } from './Icons'
 import {
   CARD_CATEGORIES,
@@ -36,6 +37,8 @@ import ConfirmToast from './ConfirmToast'
 import CardNfcReaderModal from './CardNfcReaderModal'
 import CardCameraScannerModal from './CardCameraScannerModal'
 import CardTapModal from './CardTapModal'
+import CardNfcWriterModal from './CardNfcWriterModal'
+import CardWalletPassModal from './CardWalletPassModal'
 
 const CATEGORY_ICON_MAP = {
   bank: CreditCard,
@@ -70,6 +73,8 @@ export default function CardDetailModal({
   const [copiedKey, setCopiedKey] = useState(null)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [isNfcModalOpen, setIsNfcModalOpen] = useState(false)
+  const [isNfcWriterOpen, setIsNfcWriterOpen] = useState(false)
+  const [isWalletPassOpen, setIsWalletPassOpen] = useState(false)
   const [isCameraModalOpen, setIsCameraModalOpen] = useState(false)
   const [isTapModalOpen, setIsTapModalOpen] = useState(false)
 
@@ -259,6 +264,32 @@ export default function CardDetailModal({
           >
             <Radio size={14} />
             <span>{card.nfc_uid ? 'Uji / Baca Ulang NFC' : 'Pindai Tag NFC'}</span>
+          </button>
+
+          <button
+            type="button"
+            className="nfc-action-pill-btn"
+            onClick={() => {
+              haptic('light')
+              setIsNfcWriterOpen(true)
+            }}
+            title="Tulis ke stiker NFC NTAG213/215"
+          >
+            <Cpu size={14} />
+            <span>Tulis Stiker NFC</span>
+          </button>
+
+          <button
+            type="button"
+            className="nfc-action-pill-btn"
+            onClick={() => {
+              haptic('light')
+              setIsWalletPassOpen(true)
+            }}
+            title="Ekspor ke Apple Wallet (.pkpass) atau Google Wallet"
+          >
+            <WalletCards size={14} />
+            <span>Wallet Pass</span>
           </button>
 
           <button
@@ -461,6 +492,24 @@ export default function CardDetailModal({
         <CardTapModal
           card={card}
           onClose={() => setIsTapModalOpen(false)}
+          lang={lang}
+        />
+      )}
+
+      {/* NFC Tag Writer Modal */}
+      {isNfcWriterOpen && (
+        <CardNfcWriterModal
+          card={card}
+          onClose={() => setIsNfcWriterOpen(false)}
+          lang={lang}
+        />
+      )}
+
+      {/* Digital Wallet Pass Modal (Apple / Google Wallet) */}
+      {isWalletPassOpen && (
+        <CardWalletPassModal
+          card={card}
+          onClose={() => setIsWalletPassOpen(false)}
           lang={lang}
         />
       )}

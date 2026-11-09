@@ -15,6 +15,8 @@ import {
 import { isWeakPin, isUnlockPinLength } from '../src/lib/securityAudit.js'
 import { isSafeDataUrl, parseDataUrl } from '../src/lib/safeUrl.js'
 import { sha1Hex } from '../src/lib/pwned.js'
+import { generateApplePassJson, buildPkpassBundle, hexToRgbString } from '../src/lib/walletPass.js'
+import { checkHceSupport, activateHceCard, deactivateHceCard } from '../src/lib/hce.js'
 
 console.log('======================================================================')
 console.log('AI ENGINEERING TEAM SPECIFICATION: 5-LEVEL TESTING STANDARD VERIFICATION')
@@ -96,6 +98,37 @@ if (parseDataUrl(maliciousUrl) !== null || !isSafeDataUrl(validDataUrl)) {
 }
 console.log('[PASS] 2.3 Safe URL & Anti-XSS Sanitizer Module (fails closed on non-allowlisted MIME)')
 
+// 2.4 Digital Wallet Pass Engine (.pkpass & Apple PassKit)
+const sampleCard = {
+  id: 'card_verify_01',
+  name: 'BCA Flazz Verified',
+  bank_name: 'BCA',
+  nfc_uid: 'A4:1F:8B:2C',
+  barcode_value: '123456789012',
+  color: '#0056b3'
+}
+const generatedPassJson = generateApplePassJson(sampleCard)
+if (!generatedPassJson.passTypeIdentifier || !generatedPassJson.barcodes || generatedPassJson.backgroundColor !== hexToRgbString('#0056b3')) {
+  throw new Error('Apple PassKit pass.json structure generation failed')
+}
+const pkpassZipBuffer = await buildPkpassBundle(generatedPassJson)
+if (!pkpassZipBuffer || pkpassZipBuffer.length < 500) {
+  throw new Error('.pkpass ZIP binary bundling failed')
+}
+console.log(`[PASS] 2.4 Digital Wallet Pass Engine (pass.json & .pkpass binary ZIP ${pkpassZipBuffer.length} bytes)`)
+
+// 2.5 Host Card Emulation (HCE) & Native Android Bridge Module
+const hceSupport = await checkHceSupport()
+if (typeof hceSupport.supported !== 'boolean') {
+  throw new Error('HCE bridge support verification failed')
+}
+const hceActivate = await activateHceCard({ id: sampleCard.id, name: sampleCard.name, uid: sampleCard.nfc_uid })
+if (!hceActivate.active) {
+  throw new Error('HCE card activation failed')
+}
+await deactivateHceCard()
+console.log('[PASS] 2.5 Host Card Emulation (HCE) Android Service & Capacitor Bridge Module')
+
 // -----------------------------------------------------------------------------
 // Level 3: Integration Testing (docs/18-testing-standard.md:83)
 // -----------------------------------------------------------------------------
@@ -157,7 +190,14 @@ for (const file of [
   '.env.example',
   '.env.production.example',
   'capacitor.config.json',
-  'vite.config.js'
+  'vite.config.js',
+  'src/components/CardNfcWriterModal.jsx',
+  'src/components/CardWalletPassModal.jsx',
+  'src/lib/walletPass.js',
+  'src/lib/hce.js',
+  'android/app/src/main/res/xml/apduservice.xml',
+  'android/app/src/main/java/com/kept/app/KeptCardEmulationService.java',
+  'android/app/src/main/java/com/kept/app/KeptHcePlugin.java'
 ]) {
   if (!existsSync(file)) throw new Error(`Missing required configuration file: ${file}`)
 }

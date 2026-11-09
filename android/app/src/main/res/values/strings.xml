@@ -4,4 +4,6 @@
     <string name="title_activity_main">Kept</string>
     <string name="package_name">com.kept.app</string>
     <string name="custom_url_scheme">com.kept.app</string>
+    <string name="hce_service_desc">Kept Vault Card Emulation Service</string>
+    <string name="hce_aid_desc">Kept Smart Card Access Passes</string>
 </resources>
