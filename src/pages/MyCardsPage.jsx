@@ -15,7 +15,6 @@ import {
   Search,
   X,
   ChevronRight,
-  Sparkles,
   QrCode,
   Camera,
   Radio
@@ -235,7 +234,7 @@ export default function MyCardsPage({
               setDeckIndex(0)
             }}
           >
-            <Sparkles size={13} />
+            <WalletCards size={13} />
             <span>{t('card_cat_all')}</span>
             <span className="pill-count">{categoryCounts.all}</span>
           </button>

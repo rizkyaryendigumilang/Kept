@@ -664,7 +664,7 @@ export default function SettingsDrawer({
                       if (onLanguage) onLanguage('id')
                     }}
                   >
-                    <span>🇮🇩</span>
+                    <span className="lang-code font-mono">ID</span>
                     <span>{t('lang_id')}</span>
                   </button>
                   <button
@@ -675,7 +675,7 @@ export default function SettingsDrawer({
                       if (onLanguage) onLanguage('en')
                     }}
                   >
-                    <span>🇬🇧</span>
+                    <span className="lang-code font-mono">EN</span>
                     <span>{t('lang_en')}</span>
                   </button>
                 </div>

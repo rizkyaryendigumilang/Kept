@@ -53,7 +53,7 @@ export default function ResetPasswordScreen({ onDone, lang = 'id' }) {
   if (done) {
     return (
       <main className="unlock-screen">
-        <div className="unlock-orb">
+        <div className="unlock-icon-badge">
           <ShieldCheck size={28} />
         </div>
 
@@ -77,7 +77,7 @@ export default function ResetPasswordScreen({ onDone, lang = 'id' }) {
 
   return (
     <main className="unlock-screen">
-      <div className="unlock-orb">
+      <div className="unlock-icon-badge">
         <KeyRound size={28} />
       </div>
 

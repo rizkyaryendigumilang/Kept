@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { X, Camera, QrCode, ScanLine, Check, Upload, AlertTriangle, Sparkles, RefreshCw } from './Icons'
+import { X, Camera, QrCode, ScanLine, Check, Upload, AlertTriangle, RefreshCw } from './Icons'
 import { getTranslation } from '../lib/i18n'
 import { haptic } from '../lib/haptics'
 
@@ -241,7 +241,7 @@ export default function CardCameraScannerModal({
             {/* Quick Test Samples */}
             <div className="camera-samples-section">
               <span className="camera-samples-label">
-                <Sparkles size={13} /> Uji Simulasi Kode:
+                <ScanLine size={13} /> Uji Simulasi Kode:
               </span>
               <div className="camera-samples-row">
                 {SAMPLE_BARCODES.map((s) => (

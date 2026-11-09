@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import { ShieldCheck, ShieldAlert, Sparkles, Check, X } from './Icons'
+import { ShieldCheck, ShieldAlert, Check, X } from './Icons'
 
 /**
  * Evaluates password strength and criteria compliance.

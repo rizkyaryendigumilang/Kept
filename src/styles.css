@@ -3862,11 +3862,9 @@ img.site-logo {
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  font-size: 10.5px;
-  font-weight: 600;
+  font-size: 11px;
+  font-weight: 500;
   color: var(--text-muted);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
 }
 
 .doc-qr-body {
@@ -6608,8 +6606,8 @@ img.site-logo {
 }
 
 .cmd-row-icon.tone-action {
-  color: #8b5cf6;
-  background: rgba(139, 92, 246, 0.12);
+  color: var(--text-primary);
+  background: var(--surface-hover);
 }
 
 .cmd-row-info {
@@ -6637,26 +6635,23 @@ img.site-logo {
 
 .cmd-type-badge {
   font-size: 10px;
-  font-weight: 700;
-  padding: 1px 7px;
-  border-radius: var(--radius-pill);
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
+  font-weight: 500;
+  padding: 1px 6px;
+  border-radius: var(--radius-xs, 6px);
+  border: 1px solid var(--border-subtle);
+  background: var(--surface-alt);
+  color: var(--text-secondary);
 }
 
-.badge-pass {
-  background: rgba(59, 130, 246, 0.15);
-  color: #3b82f6;
-}
-
-.badge-card {
-  background: rgba(16, 185, 129, 0.15);
-  color: #10b981;
-}
-
+.badge-pass,
+.badge-card,
 .badge-doc {
-  background: rgba(245, 158, 11, 0.15);
-  color: #f59e0b;
+  color: var(--text-secondary);
+}
+
+.badge-action {
+  color: var(--text-primary);
+  background: var(--surface-hover);
 }
 
 .cmd-row-subtitle {
@@ -6979,14 +6974,22 @@ img.site-logo {
   justify-content: center;
   gap: 6px;
   padding: 6px 12px;
-  border-radius: var(--radius-pill);
+  border-radius: var(--radius-xs, 8px);
   background: var(--surface-alt);
   border: 1px solid var(--border-subtle);
   color: var(--text-secondary);
   font-size: 12px;
-  font-weight: 600;
+  font-weight: 500;
   cursor: pointer;
-  transition: all var(--transition-fast);
+  transition: background-color var(--transition-fast), color var(--transition-fast), border-color var(--transition-fast);
+}
+
+.language-pill-btn .lang-code {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  opacity: 0.85;
 }
 
 .language-pill-btn:hover {
@@ -6998,7 +7001,7 @@ img.site-logo {
   background: var(--btn-primary-bg);
   border-color: var(--btn-primary-border);
   color: var(--btn-primary-text);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.15);
 }
 
 /* ==========================================================================
@@ -8242,6 +8245,7 @@ img.site-logo {
   flex: 1;
 }
 
+.fav-suggestion-star,
 .fav-suggestion-sparkle {
   width: 28px;
   height: 28px;
@@ -9314,10 +9318,8 @@ img.site-logo {
 
 .card-barcode-issuer {
   font-size: 11.5px;
-  text-transform: uppercase;
   color: var(--text-muted);
-  font-weight: 700;
-  letter-spacing: 0.5px;
+  font-weight: 500;
 }
 
 .card-barcode-info h3 {

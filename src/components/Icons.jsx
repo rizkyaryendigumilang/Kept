@@ -28,7 +28,6 @@ export {
   Sun,
   Moon,
   Laptop,
-  Sparkles,
   Pencil,
   Trash2,
   Upload,

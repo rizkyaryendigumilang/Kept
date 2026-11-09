@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { X, Radio, Check, Copy, ShieldCheck, AlertTriangle, Sparkles, RefreshCw } from './Icons'
+import { X, Radio, Check, Copy, ShieldCheck, AlertTriangle, RefreshCw } from './Icons'
 import { getTranslation } from '../lib/i18n'
 import { haptic } from '../lib/haptics'
 import { copyToClipboardSecure } from '../lib/clipboard'
@@ -216,7 +216,7 @@ export default function CardNfcReaderModal({
             {/* Quick Test / Simulation Buttons */}
             <div className="nfc-sim-section">
               <span className="nfc-sim-label">
-                <Sparkles size={13} /> Memindai:
+                <Radio size={13} /> Memindai:
               </span>
               <div className="nfc-sim-buttons-grid">
                 {SAMPLE_NFC_TAGS.map((sample) => (

@@ -9,8 +9,7 @@ import {
   Eye,
   Share2,
   ExternalLink,
-  ShieldCheck,
-  Sparkles
+  ShieldCheck
 } from './Icons'
 import { createSecureShare } from '../lib/secureShare'
 import { getTranslation } from '../lib/i18n'

@@ -1,4 +1,4 @@
-import { ChevronRight, CreditCard, KeyRound, FileText, AlertTriangle, Sparkles, Star, X } from '../components/Icons'
+import { ChevronRight, CreditCard, KeyRound, FileText, AlertTriangle, Star, X } from '../components/Icons'
 import SiteLogo from '../components/SiteLogo'
 import StatCard from '../components/StatCard'
 import { haptic } from '../lib/haptics'
@@ -145,8 +145,8 @@ export default function HomePage({
       {suggestedFavorite && (
         <div className="fav-suggestion-card">
           <div className="fav-suggestion-left">
-            <div className="fav-suggestion-sparkle">
-              <Sparkles size={14} />
+            <div className="fav-suggestion-star">
+              <Star size={14} />
             </div>
             <div className="fav-suggestion-text">
               <strong>{t('fav_suggest_title')}</strong>
