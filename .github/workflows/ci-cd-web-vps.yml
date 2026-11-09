@@ -11,7 +11,7 @@ on:
       - 'package-lock.json'
       - 'vite.config.*'
       - 'scripts/**'
-      - '.github/workflows/ci-cd-web-vps.yml'
+      - '.github/workflows/**'
   pull_request:
     branches: [main]
     paths:
@@ -22,7 +22,7 @@ on:
       - 'package-lock.json'
       - 'vite.config.*'
       - 'scripts/**'
-      - '.github/workflows/ci-cd-web-vps.yml'
+      - '.github/workflows/**'
   workflow_dispatch:
     inputs:
       deploy:
