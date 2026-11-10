@@ -17,7 +17,6 @@ scratch/
 concat-projects/
 public/showcase/
 src/remotion/
-src/lib/demoShowcaseData.js
 scripts/build-concat-projects.mjs
 scripts/capture-live-demo.mjs
 scripts/render-remotion-showcase.mjs

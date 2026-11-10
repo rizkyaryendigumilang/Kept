@@ -57,7 +57,6 @@ import { copyToClipboardSecure } from './lib/clipboard'
 import { Copy, Check, Download, ShieldCheck, Lock } from './components/Icons'
 import { isWeakPin, MIN_PIN_LENGTH, recordSecurityActivity, registerCurrentDevice } from './lib/securityAudit'
 import { KEPT_ICON, KEPT_LOGO } from './lib/brand'
-import { buildDemoShowcaseData, seedDemoSecurityAuditStorage } from './lib/demoShowcaseData'
 
 const CATEGORY_LABELS = {
   social: 'Social Media',
@@ -281,76 +280,85 @@ export default function App() {
 
     const searchParams = new URLSearchParams(window.location.search)
     if (import.meta.env.DEV && searchParams.get('demo') === '1') {
-      seedDemoSecurityAuditStorage()
-      const demo = buildDemoShowcaseData()
+      import('./lib/demoShowcaseData')
+        .then(({ buildDemoShowcaseData, seedDemoSecurityAuditStorage }) => {
+          if (!mounted) return
+          seedDemoSecurityAuditStorage()
+          const demo = buildDemoShowcaseData()
 
-      const applyDemoParams = (params) => {
-        const p = params instanceof URLSearchParams ? params : new URLSearchParams(params)
-        const themeParam = p.get('theme') || 'dark'
-        applyTheme(themeParam)
-        setSession(demo.session)
-        setProfile({ ...demo.profile, theme: themeParam })
-        setItems(demo.items)
+          const applyDemoParams = (params) => {
+            const p = params instanceof URLSearchParams ? params : new URLSearchParams(params)
+            const themeParam = p.get('theme') || 'dark'
+            applyTheme(themeParam)
+            setSession(demo.session)
+            setProfile({ ...demo.profile, theme: themeParam })
+            setItems(demo.items)
 
-        const screenParam = p.get('screen')
-        if (screenParam === 'unlock') {
-          setVaultKey(null)
-        } else {
-          setVaultKey(demo.rawKey)
-        }
+            const screenParam = p.get('screen')
+            if (screenParam === 'unlock') {
+              setVaultKey(null)
+            } else {
+              setVaultKey(demo.rawKey)
+            }
 
-        const routeParam = p.get('route') || 'home'
-        if (routeParam === 'menu') {
-          setRoute('home')
-          setMenuOpen(true)
-          setMenuSubpage(p.get('subpage') || null)
-        } else {
-          setRoute(routeParam)
-          setMenuOpen(p.get('modal') === 'menu')
-          setMenuSubpage(p.get('subpage') || null)
-        }
+            const routeParam = p.get('route') || 'home'
+            if (routeParam === 'menu') {
+              setRoute('home')
+              setMenuOpen(true)
+              setMenuSubpage(p.get('subpage') || null)
+            } else {
+              setRoute(routeParam)
+              setMenuOpen(p.get('modal') === 'menu')
+              setMenuSubpage(p.get('subpage') || null)
+            }
 
-        const modalParam = p.get('modal')
-        setSearchOpen(modalParam === 'command')
-        setAlertsOpen(modalParam === 'alerts')
+            const modalParam = p.get('modal')
+            setSearchOpen(modalParam === 'command')
+            setAlertsOpen(modalParam === 'alerts')
 
-        const openItemId = p.get('openItem')
-        if (openItemId) {
-          const found = demo.items.find((i) => i.id === openItemId)
-          setSelectedItem(found || null)
-        } else {
-          setSelectedItem(null)
-        }
+            const openItemId = p.get('openItem')
+            if (openItemId) {
+              const found = demo.items.find((i) => i.id === openItemId)
+              setSelectedItem(found || null)
+            } else {
+              setSelectedItem(null)
+            }
 
-        const shareItemId = p.get('shareItem')
-        if (shareItemId) {
-          const found = demo.items.find((i) => i.id === shareItemId)
-          if (found) {
-            setShareModalData({
-              isOpen: true,
-              initialTitle: found.name,
-              initialContent: `Username: ${found.username}\nPassword: ${found.password}\nURL: ${found.url}`
-            })
+            const shareItemId = p.get('shareItem')
+            if (shareItemId) {
+              const found = demo.items.find((i) => i.id === shareItemId)
+              if (found) {
+                setShareModalData({
+                  isOpen: true,
+                  initialTitle: found.name,
+                  initialContent: `Username: ${found.username}\nPassword: ${found.password}\nURL: ${found.url}`
+                })
+              }
+            } else {
+              setShareModalData(null)
+            }
+
+            const barcodeCardId = p.get('barcodeCard')
+            if (barcodeCardId) {
+              const found = demo.items.find((i) => i.id === barcodeCardId)
+              setCardBarcodeModalItem(found || null)
+            } else {
+              setCardBarcodeModalItem(null)
+            }
+
+            setAuthLoading(false)
           }
-        } else {
-          setShareModalData(null)
-        }
 
-        const barcodeCardId = p.get('barcodeCard')
-        if (barcodeCardId) {
-          const found = demo.items.find((i) => i.id === barcodeCardId)
-          setCardBarcodeModalItem(found || null)
-        } else {
-          setCardBarcodeModalItem(null)
-        }
+          applyDemoParams(searchParams)
+          window.__setDemoState = (queryString) => {
+            applyDemoParams(new URLSearchParams(queryString))
+          }
+        })
+        .catch((err) => {
+          console.warn('[Kept] Demo showcase data failed to load:', err)
+          setAuthLoading(false)
+        })
 
-        setAuthLoading(false)
-      }
-
-      applyDemoParams(searchParams)
-      window.__setDemoState = (queryString) => {
-        applyDemoParams(new URLSearchParams(queryString))
-      }
       return () => {
         delete window.__setDemoState
       }
