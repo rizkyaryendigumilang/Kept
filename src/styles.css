@@ -1,5 +1,6 @@
 @import './styles/tokens.css';
 @import './styles/nfc-wallet.css';
+@import './styles/helpdesk.css';
 
 /* Base reset */
 * {

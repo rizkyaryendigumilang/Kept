@@ -9,11 +9,13 @@ import {
   ChevronRight,
   ShieldCheck,
   Lock,
-  Flame
+  Flame,
+  LifeBuoy
 } from './Icons'
 import { haptic } from '../lib/haptics'
 import { getTranslation } from '../lib/i18n'
 import { copyToClipboardSecure } from '../lib/clipboard'
+import { openHelpdeskTicket } from '../lib/helpdesk'
 
 export default function CommandPalette({
   isOpen,
@@ -21,6 +23,8 @@ export default function CommandPalette({
   items = [],
   documents = [],
   banks = [],
+  user,
+  profile,
   onOpenItem,
   onShareSecret,
   showToast,
@@ -87,6 +91,20 @@ export default function CommandPalette({
       })
     }
 
+    if (!q || 'bantuan help lapor tiket kendala ticket support issue helpdesk'.includes(q)) {
+      all.unshift({
+        id: 'action-helpdesk-ticket',
+        name: t('helpdesk_btn_title'),
+        type: 'helpdesk',
+        subtitle: t('helpdesk_cmd_subtitle'),
+        isAction: true,
+        action: () => {
+          onClose()
+          openHelpdeskTicket({ user, profile })
+        }
+      })
+    }
+
     if (!q || 'bagikan share rahasia secret sekali buka'.includes(q)) {
       all.unshift({
         id: 'action-share-secret',
@@ -111,7 +129,7 @@ export default function CommandPalette({
         (entry.subtitle && entry.subtitle.toLowerCase().includes(q))
       )
     }).slice(0, 15)
-  }, [items, documents, banks, query, onShareSecret, lang])
+  }, [items, documents, banks, query, onShareSecret, user, profile, lang])
 
   // Keyboard navigation
   useEffect(() => {
@@ -167,6 +185,7 @@ export default function CommandPalette({
   }
 
   function renderTypeIcon(type) {
+    if (type === 'helpdesk') return <LifeBuoy size={16} />
     if (type === 'action') return <Flame size={16} />
     if (type === 'card') return <CreditCard size={16} />
     if (type === 'document') return <FileText size={16} />
@@ -174,6 +193,7 @@ export default function CommandPalette({
   }
 
   function renderTypeBadge(type) {
+    if (type === 'helpdesk') return <span className="cmd-type-badge badge-action">Helpdesk</span>
     if (type === 'action') return <span className="cmd-type-badge badge-action">Share</span>
     if (type === 'card') return <span className="cmd-type-badge badge-card">{t('type_card')}</span>
     if (type === 'document') return <span className="cmd-type-badge badge-doc">{t('type_document')}</span>

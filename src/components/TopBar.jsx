@@ -1,8 +1,9 @@
-import { Bell, Home, KeyRound, WalletCards, FileText, Menu, X, ArrowLeft, Search } from './Icons'
+import { Bell, Home, KeyRound, WalletCards, FileText, Menu, X, ArrowLeft, Search, LifeBuoy } from './Icons'
 import AnimatedHamburger from './AnimatedHamburger'
 import { haptic } from '../lib/haptics'
 import { getTranslation } from '../lib/i18n'
 import { KEPT_ICON } from '../lib/brand'
+import { openHelpdeskTicket } from '../lib/helpdesk'
 
 export default function TopBar({
   user,
@@ -97,6 +98,19 @@ export default function TopBar({
             <span className="topbar-search-shortcut">{isMac ? '⌘K' : 'Ctrl+K'}</span>
           </button>
         )}
+
+        <button
+          type="button"
+          className="icon-button helpdesk-topbar-button"
+          onClick={() => {
+            haptic('light')
+            openHelpdeskTicket({ user, profile })
+          }}
+          aria-label={t('helpdesk_btn_title')}
+          title={t('helpdesk_btn_title')}
+        >
+          <LifeBuoy size={18} strokeWidth={1.8} />
+        </button>
 
         <button
           className="icon-button notification-button"

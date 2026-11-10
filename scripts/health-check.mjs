@@ -17,6 +17,7 @@ import { isSafeDataUrl, parseDataUrl } from '../src/lib/safeUrl.js'
 import { sha1Hex } from '../src/lib/pwned.js'
 import { generateApplePassJson, buildPkpassBundle, hexToRgbString } from '../src/lib/walletPass.js'
 import { checkHceSupport, activateHceCard, deactivateHceCard } from '../src/lib/hce.js'
+import { getHelpdeskHandoffUrl, HELPDESK_BASE, APP_SLUG } from '../src/lib/helpdesk.js'
 
 console.log('======================================================================')
 console.log('AI ENGINEERING TEAM SPECIFICATION: 5-LEVEL TESTING STANDARD VERIFICATION')
@@ -128,6 +129,46 @@ if (!hceActivate.active) {
 }
 await deactivateHceCard()
 console.log('[PASS] 2.5 Host Card Emulation (HCE) Android Service & Capacitor Bridge Module')
+
+// 2.6 VPS Helpdesk SSO JIT Handoff Module
+const testUser = { id: 'usr_kept_verify_99', email: 'audit@kept.app' }
+const testProfile = { display_name: 'Super Auditor', role: 'Member' }
+const testFromUrl = 'https://kept.app/#vault'
+const handoffUrlStr = getHelpdeskHandoffUrl({ user: testUser, profile: testProfile, fromUrl: testFromUrl })
+const parsedUrl = new URL(handoffUrlStr)
+
+if (!handoffUrlStr.startsWith(HELPDESK_BASE)) {
+  throw new Error(`Helpdesk base URL mismatch: ${handoffUrlStr}`)
+}
+if (parsedUrl.searchParams.get('app') !== APP_SLUG) {
+  throw new Error(`Helpdesk app slug mismatch: expected ${APP_SLUG}`)
+}
+if (parsedUrl.searchParams.get('uid') !== testUser.id) {
+  throw new Error(`Helpdesk uid mismatch: expected ${testUser.id}`)
+}
+if (parsedUrl.searchParams.get('name') !== testProfile.display_name) {
+  throw new Error(`Helpdesk name mismatch: expected ${testProfile.display_name}`)
+}
+if (parsedUrl.searchParams.get('role') !== testProfile.role) {
+  throw new Error(`Helpdesk role mismatch: expected ${testProfile.role}`)
+}
+if (parsedUrl.searchParams.get('from_url') !== testFromUrl) {
+  throw new Error(`Helpdesk from_url mismatch: expected ${testFromUrl}`)
+}
+if (parsedUrl.searchParams.get('new') !== '1') {
+  throw new Error(`Helpdesk new param mismatch: expected '1'`)
+}
+
+// Guest fallback verification
+const guestHandoffUrl = getHelpdeskHandoffUrl({ user: null, profile: null, fromUrl: testFromUrl })
+const parsedGuestUrl = new URL(guestHandoffUrl)
+if (!parsedGuestUrl.searchParams.get('uid')) {
+  throw new Error('Helpdesk guest fallback uid missing')
+}
+if (parsedGuestUrl.searchParams.get('role') !== 'Guest') {
+  throw new Error('Helpdesk guest role mismatch')
+}
+console.log('[PASS] 2.6 VPS Helpdesk SSO JIT Handoff Module (URL params & guest fallback verified)')
 
 // -----------------------------------------------------------------------------
 // Level 3: Integration Testing (docs/18-testing-standard.md:83)

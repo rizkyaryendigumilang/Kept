@@ -48,6 +48,7 @@ export {
   Cloud,
   Database,
   HelpCircle,
+  LifeBuoy,
   ZoomIn,
   ZoomOut,
   Image,

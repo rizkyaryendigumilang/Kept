@@ -9,7 +9,11 @@
     "preview": "vite preview",
     "test": "node scripts/health-check.mjs",
     "cap:sync": "cap sync",
-    "cap:build": "vite build && cap sync"
+    "cap:build": "vite build && cap sync",
+    "showcase:live-tour": "node scripts/record-live-browser-tour.mjs",
+    "remotion:studio": "remotion studio src/remotion/index.js",
+    "remotion:render-all": "node scripts/render-remotion-showcase.mjs",
+    "concat:build": "node scripts/build-concat-projects.mjs"
   },
   "dependencies": {
     "@capacitor/android": "^8.5.3",
@@ -25,7 +29,13 @@
   },
   "devDependencies": {
     "@capacitor/cli": "^8.5.3",
+    "@remotion/bundler": "^4.0.542",
+    "@remotion/cli": "^4.0.542",
+    "@remotion/renderer": "^4.0.542",
+    "@remotion/transitions": "^4.0.542",
     "@vitejs/plugin-react": "^5.0.4",
+    "playwright-core": "^1.65.0",
+    "remotion": "^4.0.542",
     "vite": "^7.1.7",
     "vite-plugin-pwa": "^1.0.3"
   },

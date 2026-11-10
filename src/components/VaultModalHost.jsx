@@ -249,6 +249,8 @@ export default function VaultModalHost({
         items={hydratedItems}
         documents={documents}
         banks={banks}
+        user={session?.user}
+        profile={profile}
         onOpenItem={openItem}
         onShareSecret={handleOpenShareSecret}
         showToast={showToast}

@@ -464,6 +464,15 @@ export const TRANSLATIONS = {
 
     // Help & About Subpage
     help_lead: 'Informasi arsitektur zero-knowledge, panduan, dan detail rilis aplikasi.',
+    helpdesk_btn_title: 'Bantuan / Laporkan Kendala',
+    helpdesk_btn_subtitle: 'Buka formulir tiket langsung ke tim support (SSO VPS Helpdesk)',
+    helpdesk_card_title: 'Pusat Bantuan & Tiket Kendala',
+    helpdesk_card_desc: 'Terhubung langsung ke VPS Helpdesk terpusat tanpa login ulang (Just-In-Time SSO).',
+    helpdesk_badge_sso: 'SSO JIT Aktif',
+    helpdesk_action_open: 'Buat Tiket Baru',
+    helpdesk_open_in_new_tab: 'Buka di Tab Baru',
+    helpdesk_quick_tip: 'Sistem otomatis menyertakan URL halaman aktif dan identitas sesi Anda agar investigasi kendala lebih cepat dan tepat sasaran.',
+    helpdesk_cmd_subtitle: 'Buka formulir pembuatan tiket baru di VPS Helpdesk',
     help_about_title: 'Tentang Kept',
     help_about_desc: 'Private Vault & Identity Wallet Indonesia',
     help_version_label: 'Versi Aplikasi:',
@@ -1170,6 +1179,15 @@ export const TRANSLATIONS = {
 
     // Help & About Subpage
     help_lead: 'Information on zero-knowledge architecture, guides, and app release details.',
+    helpdesk_btn_title: 'Help / Report Issue',
+    helpdesk_btn_subtitle: 'Open ticket form directly to support team (SSO VPS Helpdesk)',
+    helpdesk_card_title: 'Helpdesk & Support Tickets',
+    helpdesk_card_desc: 'Direct connection to central VPS Helpdesk without re-logging in (Just-In-Time SSO).',
+    helpdesk_badge_sso: 'SSO JIT Active',
+    helpdesk_action_open: 'Create New Ticket',
+    helpdesk_open_in_new_tab: 'Open in New Tab',
+    helpdesk_quick_tip: 'The system automatically transmits your active page URL and session identity so our technical team can diagnose issues faster.',
+    helpdesk_cmd_subtitle: 'Open new issue ticket form on VPS Helpdesk',
     help_about_title: 'About Kept',
     help_about_desc: 'Private Vault & Identity Wallet',
     help_version_label: 'App Version:',

@@ -2,6 +2,9 @@ import { useState } from 'react'
 import { supabase, isSupabaseConfigured } from '../lib/supabase'
 import { getTranslation } from '../lib/i18n'
 import { KEPT_LOGO } from '../lib/brand'
+import { LifeBuoy } from './Icons'
+import { haptic } from '../lib/haptics'
+import { openHelpdeskTicket } from '../lib/helpdesk'
 
 function GoogleMark() {
   return (
@@ -301,6 +304,20 @@ export default function AuthScreen({ lang = 'id' }) {
               </button>
             </>
           )}
+        </div>
+
+        <div className="auth-helpdesk-footer">
+          <button
+            type="button"
+            className="auth-helpdesk-link"
+            onClick={() => {
+              haptic('light')
+              openHelpdeskTicket()
+            }}
+          >
+            <LifeBuoy size={13} />
+            <span>{t('helpdesk_btn_title')}</span>
+          </button>
         </div>
       </div>
     </main>

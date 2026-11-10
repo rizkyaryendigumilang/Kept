@@ -29,7 +29,9 @@ import {
   Camera,
   Trash2,
   Image,
-  Flame
+  Flame,
+  LifeBuoy,
+  ExternalLink
 } from './Icons'
 
 const AvatarCropModal = safeLazy(() => import('./AvatarCropModal'))
@@ -38,6 +40,7 @@ import PwaInstallCard from './PwaInstallCard'
 import TrashManager from './TrashManager'
 import { haptic } from '../lib/haptics'
 import { getTranslation } from '../lib/i18n'
+import { openHelpdeskTicket } from '../lib/helpdesk'
 
 import {
   enrollBiometric,
@@ -624,19 +627,42 @@ export default function SettingsDrawer({
                 })}
               </div>
 
-              {/* Sign Out Button */}
-              <div className="drawer-signout-wrap">
+              {/* Helpdesk Quick Action & Sign Out Button */}
+              <div className="drawer-actions-stack">
                 <button
                   type="button"
-                  className="drawer-signout-btn"
+                  className="drawer-helpdesk-btn"
                   onClick={() => {
-                    onClose()
-                    onSignOut()
+                    haptic('light')
+                    openHelpdeskTicket({ user, profile })
                   }}
+                  title={t('helpdesk_btn_subtitle')}
                 >
-                  <LogOut size={16} />
-                  <span>{t('sign_out')}</span>
+                  <div className="drawer-helpdesk-left">
+                    <div className="drawer-helpdesk-icon">
+                      <LifeBuoy size={17} strokeWidth={2} />
+                    </div>
+                    <div className="drawer-helpdesk-text">
+                      <span className="drawer-helpdesk-label">{t('helpdesk_btn_title')}</span>
+                      <span className="drawer-helpdesk-sub">SSO VPS Handoff &bull; {t('helpdesk_action_open')}</span>
+                    </div>
+                  </div>
+                  <ExternalLink size={15} className="drawer-helpdesk-ext" />
                 </button>
+
+                <div className="drawer-signout-wrap">
+                  <button
+                    type="button"
+                    className="drawer-signout-btn"
+                    onClick={() => {
+                      onClose()
+                      onSignOut()
+                    }}
+                  >
+                    <LogOut size={16} />
+                    <span>{t('sign_out')}</span>
+                  </button>
+                </div>
               </div>
             </div>
           )}
@@ -1336,6 +1362,60 @@ export default function SettingsDrawer({
               <p className="subpage-lead-desc">
                 {t('help_lead')}
               </p>
+
+              {/* VPS Helpdesk Direct Ticket Card */}
+              <div className="subpage-card helpdesk-hero-card">
+                <div className="helpdesk-hero-header">
+                  <div className="helpdesk-badge-chip">
+                    <LifeBuoy size={22} />
+                  </div>
+                  <div className="helpdesk-hero-titles">
+                    <div className="flex items-center gap-xs">
+                      <strong>{t('helpdesk_card_title')}</strong>
+                      <span className="helpdesk-sso-badge">
+                        <Check size={11} strokeWidth={2.5} /> {t('helpdesk_badge_sso')}
+                      </span>
+                    </div>
+                    <span>{t('helpdesk_card_desc')}</span>
+                  </div>
+                </div>
+
+                <div className="helpdesk-session-preview">
+                  <div className="helpdesk-meta-row">
+                    <span className="meta-label">Aplikasi Target:</span>
+                    <span className="meta-val font-mono">Kept</span>
+                  </div>
+                  <div className="helpdesk-meta-row">
+                    <span className="meta-label">Sesi Pengguna:</span>
+                    <span className="meta-val font-mono">
+                      {user?.id ? user.id.slice(0, 16) + '...' : user?.email || 'Tamu / Guest'}
+                    </span>
+                  </div>
+                  <div className="helpdesk-meta-row">
+                    <span className="meta-label">Peran (Role):</span>
+                    <span className="meta-val">{profile?.role || (user ? 'Member' : 'Guest')}</span>
+                  </div>
+                </div>
+
+                <p className="helpdesk-hint-text">
+                  {t('helpdesk_quick_tip')}
+                </p>
+
+                <div className="helpdesk-action-wrap">
+                  <button
+                    type="button"
+                    className="primary-button helpdesk-open-btn"
+                    onClick={() => {
+                      haptic('medium')
+                      openHelpdeskTicket({ user, profile })
+                    }}
+                  >
+                    <LifeBuoy size={16} />
+                    <span>{t('helpdesk_action_open')}</span>
+                    <ExternalLink size={14} className="ml-auto opacity-70" />
+                  </button>
+                </div>
+              </div>
 
               <div className="subpage-card">
                 <div className="subpage-card-heading">
