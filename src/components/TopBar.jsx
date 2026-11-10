@@ -20,6 +20,7 @@ export default function TopBar({
   currentRoute,
   onNavigate,
   onOpenSearch,
+  onOpenHelpdesk,
   lang = 'id'
 }) {
   const handleMenuClick = onOpenMenu || onSettings
@@ -104,7 +105,11 @@ export default function TopBar({
           className="icon-button helpdesk-topbar-button"
           onClick={() => {
             haptic('light')
-            openHelpdeskTicket({ user, profile })
+            if (onOpenHelpdesk) {
+              onOpenHelpdesk()
+            } else {
+              openHelpdeskTicket({ user, profile })
+            }
           }}
           aria-label={t('helpdesk_btn_title')}
           title={t('helpdesk_btn_title')}

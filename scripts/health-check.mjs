@@ -17,7 +17,7 @@ import { isSafeDataUrl, parseDataUrl } from '../src/lib/safeUrl.js'
 import { sha1Hex } from '../src/lib/pwned.js'
 import { generateApplePassJson, buildPkpassBundle, hexToRgbString } from '../src/lib/walletPass.js'
 import { checkHceSupport, activateHceCard, deactivateHceCard } from '../src/lib/hce.js'
-import { getHelpdeskHandoffUrl, HELPDESK_BASE, APP_SLUG } from '../src/lib/helpdesk.js'
+import { getHelpdeskHandoffUrl, submitHelpdeskTicket, HELPDESK_BASE, APP_SLUG } from '../src/lib/helpdesk.js'
 
 console.log('======================================================================')
 console.log('AI ENGINEERING TEAM SPECIFICATION: 5-LEVEL TESTING STANDARD VERIFICATION')
@@ -168,7 +168,51 @@ if (!parsedGuestUrl.searchParams.get('uid')) {
 if (parsedGuestUrl.searchParams.get('role') !== 'Guest') {
   throw new Error('Helpdesk guest role mismatch')
 }
-console.log('[PASS] 2.6 VPS Helpdesk SSO JIT Handoff Module (URL params & guest fallback verified)')
+
+// Complaint & Photo Attachment Schema Verification
+const testComplaint = 'Gagal memindai tag NFC lift apartemen lantai 12'
+const handoffWithComplaint = getHelpdeskHandoffUrl({
+  user: testUser,
+  profile: testProfile,
+  fromUrl: testFromUrl,
+  complaint: testComplaint
+})
+const parsedComplaintUrl = new URL(handoffWithComplaint)
+if (parsedComplaintUrl.searchParams.get('message') !== testComplaint) {
+  throw new Error('Helpdesk complaint message mismatch in handoff URL')
+}
+if (parsedComplaintUrl.searchParams.get('keluhan') !== testComplaint) {
+  throw new Error('Helpdesk complaint keluhan mismatch in handoff URL')
+}
+if (!parsedComplaintUrl.searchParams.get('subject').includes('Gagal memindai tag NFC')) {
+  throw new Error('Helpdesk complaint subject generation failed')
+}
+
+// Direct ticket submission without photo (not mandatory)
+const submitResultNoPhoto = submitHelpdeskTicket({
+  user: testUser,
+  profile: testProfile,
+  fromUrl: testFromUrl,
+  complaint: testComplaint
+})
+if (!submitResultNoPhoto.ok || submitResultNoPhoto.hasPhoto !== false) {
+  throw new Error('submitHelpdeskTicket without photo failed')
+}
+
+// Direct ticket submission with simulated photo file (optional photo attached)
+const dummyPhotoBuffer = new Uint8Array([137, 80, 78, 71, 13, 10, 26, 10]) // PNG magic bytes
+const dummyPhotoFile = new Blob([dummyPhotoBuffer], { type: 'image/png' })
+const submitResultWithPhoto = submitHelpdeskTicket({
+  user: testUser,
+  profile: testProfile,
+  fromUrl: testFromUrl,
+  complaint: testComplaint,
+  photoFile: dummyPhotoFile
+})
+if (!submitResultWithPhoto.ok || submitResultWithPhoto.hasPhoto !== true) {
+  throw new Error('submitHelpdeskTicket with photo attachment failed')
+}
+console.log('[PASS] 2.6 VPS Helpdesk SSO JIT Handoff Module (complaint, optional photo attachment & URL params verified)')
 
 // -----------------------------------------------------------------------------
 // Level 3: Integration Testing (docs/18-testing-standard.md:83)

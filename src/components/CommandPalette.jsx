@@ -27,6 +27,7 @@ export default function CommandPalette({
   profile,
   onOpenItem,
   onShareSecret,
+  onOpenHelpdesk,
   showToast,
   lang = 'id'
 }) {
@@ -100,7 +101,11 @@ export default function CommandPalette({
         isAction: true,
         action: () => {
           onClose()
-          openHelpdeskTicket({ user, profile })
+          if (onOpenHelpdesk) {
+            onOpenHelpdesk()
+          } else {
+            openHelpdeskTicket({ user, profile })
+          }
         }
       })
     }

@@ -127,6 +127,7 @@ export default function App() {
   const [searchOpen, setSearchOpen] = useState(false)
   const [exportModalOpen, setExportModalOpen] = useState(false)
   const [importKeptEnvelope, setImportKeptEnvelope] = useState(null)
+  const [helpdeskModalOpen, setHelpdeskModalOpen] = useState(false)
 
   const bootstrappedUserRef = useRef(null)
 
@@ -1227,6 +1228,7 @@ Jangan pernah membagikan kode ini kepada siapapun!
         currentRoute={route}
         onNavigate={setRoute}
         onOpenSearch={() => setSearchOpen(true)}
+        onOpenHelpdesk={() => setHelpdeskModalOpen(true)}
         lang={lang}
       />
 
@@ -1388,6 +1390,8 @@ Jangan pernah membagikan kode ini kepada siapapun!
         handleRestoreKeptItems={handleRestoreKeptItems}
         shareModalData={shareModalData}
         setShareModalData={setShareModalData}
+        helpdeskModalOpen={helpdeskModalOpen}
+        setHelpdeskModalOpen={setHelpdeskModalOpen}
       />
       {toast && <div className="toast">{toast}</div>}
       {error && (

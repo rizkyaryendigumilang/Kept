@@ -14,6 +14,7 @@ const ExportModal = safeLazy(() => import('./ExportModal'))
 const ImportKeptModal = safeLazy(() => import('./ImportKeptModal'))
 const ShareSecretModal = safeLazy(() => import('./ShareSecretModal'))
 const SettingsDrawer = safeLazy(() => import('./SettingsDrawer'))
+const HelpdeskTicketModal = safeLazy(() => import('./HelpdeskTicketModal'))
 
 export default function VaultModalHost({
   // Modal states & handlers
@@ -98,7 +99,11 @@ export default function VaultModalHost({
   setImportKeptEnvelope,
   handleRestoreKeptItems,
   shareModalData,
-  setShareModalData
+  setShareModalData,
+
+  // Helpdesk Ticket Modal
+  helpdeskModalOpen,
+  setHelpdeskModalOpen
 }) {
   return (
     <Suspense fallback={null}>
@@ -242,6 +247,7 @@ export default function VaultModalHost({
         onHamburgerStyle={updateHamburgerStyle}
         lang={lang}
         onLanguage={handleLanguageChange}
+        onOpenHelpdesk={() => setHelpdeskModalOpen(true)}
       />
       <CommandPalette
         isOpen={searchOpen}
@@ -253,6 +259,7 @@ export default function VaultModalHost({
         profile={profile}
         onOpenItem={openItem}
         onShareSecret={handleOpenShareSecret}
+        onOpenHelpdesk={() => setHelpdeskModalOpen(true)}
         showToast={showToast}
         lang={lang}
       />
@@ -284,6 +291,16 @@ export default function VaultModalHost({
           initialTitle={shareModalData.initialTitle}
           initialContent={shareModalData.initialContent}
           user={session?.user}
+          lang={lang}
+          showToast={showToast}
+        />
+      )}
+      {helpdeskModalOpen && (
+        <HelpdeskTicketModal
+          isOpen={helpdeskModalOpen}
+          onClose={() => setHelpdeskModalOpen(false)}
+          user={session?.user}
+          profile={profile}
           lang={lang}
           showToast={showToast}
         />

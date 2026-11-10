@@ -31,7 +31,10 @@ import {
   Image,
   Flame,
   LifeBuoy,
-  ExternalLink
+  ExternalLink,
+  Send,
+  Paperclip,
+  AlertCircle
 } from './Icons'
 
 const AvatarCropModal = safeLazy(() => import('./AvatarCropModal'))
@@ -40,7 +43,7 @@ import PwaInstallCard from './PwaInstallCard'
 import TrashManager from './TrashManager'
 import { haptic } from '../lib/haptics'
 import { getTranslation } from '../lib/i18n'
-import { openHelpdeskTicket } from '../lib/helpdesk'
+import { openHelpdeskTicket, submitHelpdeskTicket } from '../lib/helpdesk'
 
 import {
   enrollBiometric,
@@ -91,7 +94,8 @@ export default function SettingsDrawer({
   hamburgerStyle = 'squash',
   onHamburgerStyle,
   lang = 'id',
-  onLanguage
+  onLanguage,
+  onOpenHelpdesk
 }) {
   const t = (k) => getTranslation(k, lang)
   const [internalActiveSubpage, setInternalActiveSubpage] = useState(null)
@@ -110,6 +114,22 @@ export default function SettingsDrawer({
   const [cropModalOpen, setCropModalOpen] = useState(false)
   const [selectedImageSrc, setSelectedImageSrc] = useState(null)
   const cameraInputRef = useRef(null)
+
+  // Helpdesk submission state
+  const [drawerComplaint, setDrawerComplaint] = useState('')
+  const [drawerPhotoFile, setDrawerPhotoFile] = useState(null)
+  const [drawerPhotoPreview, setDrawerPhotoPreview] = useState(null)
+  const [drawerHelpError, setDrawerHelpError] = useState('')
+  const [drawerHelpSubmitting, setDrawerHelpSubmitting] = useState(false)
+  const drawerFileInputRef = useRef(null)
+
+  useEffect(() => {
+    return () => {
+      if (drawerPhotoPreview) {
+        URL.revokeObjectURL(drawerPhotoPreview)
+      }
+    }
+  }, [drawerPhotoPreview])
   const galleryInputRef = useRef(null)
 
   // Biometric state
@@ -634,7 +654,7 @@ export default function SettingsDrawer({
                   className="drawer-helpdesk-btn"
                   onClick={() => {
                     haptic('light')
-                    openHelpdeskTicket({ user, profile })
+                    handleSetSubpage('help')
                   }}
                   title={t('helpdesk_btn_subtitle')}
                 >
@@ -1397,6 +1417,132 @@ export default function SettingsDrawer({
                   </div>
                 </div>
 
+                {drawerHelpError && (
+                  <div className="helpdesk-error-alert" role="alert">
+                    <AlertCircle size={15} />
+                    <span>{drawerHelpError}</span>
+                  </div>
+                )}
+
+                {/* Input Keluhan */}
+                <div className="helpdesk-field-group">
+                  <label htmlFor="drawer-helpdesk-complaint" className="helpdesk-field-label">
+                    <span>{t('helpdesk_complaint_label')}</span>
+                    <span className="required-star">*</span>
+                  </label>
+                  <textarea
+                    id="drawer-helpdesk-complaint"
+                    className="helpdesk-textarea"
+                    placeholder={t('helpdesk_complaint_placeholder')}
+                    value={drawerComplaint}
+                    onChange={(e) => {
+                      setDrawerComplaint(e.target.value)
+                      if (drawerHelpError) setDrawerHelpError('')
+                    }}
+                    rows={3}
+                    maxLength={2000}
+                    required
+                  />
+                  <div className="helpdesk-char-count">
+                    <span>{drawerComplaint.length} / 2000</span>
+                  </div>
+                </div>
+
+                {/* Input Foto Kendala (Tidak Mandatory) */}
+                <div className="helpdesk-field-group">
+                  <div className="flex items-center justify-between">
+                    <label className="helpdesk-field-label">
+                      <span>{t('helpdesk_photo_label')}</span>
+                    </label>
+                    <span className="helpdesk-optional-tag">{lang === 'id' ? 'Opsional' : 'Optional'}</span>
+                  </div>
+
+                  <input
+                    ref={drawerFileInputRef}
+                    type="file"
+                    accept="image/png,image/jpeg,image/webp"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0]
+                      if (!file) return
+                      if (!file.type.startsWith('image/')) {
+                        setDrawerHelpError(lang === 'id' ? 'File harus berupa gambar (PNG, JPG, WebP).' : 'File must be an image (PNG, JPG, WebP).')
+                        haptic('error')
+                        return
+                      }
+                      if (file.size > 10 * 1024 * 1024) {
+                        setDrawerHelpError(lang === 'id' ? 'Ukuran foto maksimal 10MB.' : 'Maximum photo size is 10MB.')
+                        haptic('error')
+                        return
+                      }
+                      setDrawerHelpError('')
+                      if (drawerPhotoPreview) URL.revokeObjectURL(drawerPhotoPreview)
+                      setDrawerPhotoFile(file)
+                      setDrawerPhotoPreview(URL.createObjectURL(file))
+                      haptic('light')
+                    }}
+                    style={{ display: 'none' }}
+                    id="drawer-photo-file-input"
+                  />
+
+                  {!drawerPhotoPreview ? (
+                    <button
+                      type="button"
+                      className="helpdesk-photo-dropzone"
+                      onClick={() => {
+                        haptic('light')
+                        drawerFileInputRef.current?.click()
+                      }}
+                    >
+                      <div className="dropzone-icon-circle">
+                        <Paperclip size={16} />
+                      </div>
+                      <div className="dropzone-text">
+                        <strong>{t('helpdesk_photo_upload_btn')}</strong>
+                        <span>{t('helpdesk_photo_hint')}</span>
+                      </div>
+                    </button>
+                  ) : (
+                    <div className="helpdesk-photo-preview-card">
+                      <div className="preview-thumbnail-wrap">
+                        <img src={drawerPhotoPreview} alt="Bukti kendala" className="preview-thumbnail" />
+                      </div>
+                      <div className="preview-meta">
+                        <div className="flex items-center gap-xs">
+                          <Check size={13} className="text-emerald" />
+                          <strong>{drawerPhotoFile?.name || t('helpdesk_photo_attached')}</strong>
+                        </div>
+                        <span className="text-xs text-muted">
+                          {drawerPhotoFile ? `${(drawerPhotoFile.size / 1024).toFixed(1)} KB` : ''}
+                        </span>
+                      </div>
+                      <div className="preview-actions">
+                        <button
+                          type="button"
+                          className="icon-button-subtle"
+                          onClick={() => drawerFileInputRef.current?.click()}
+                          title={t('helpdesk_photo_change_btn')}
+                        >
+                          <Paperclip size={14} />
+                        </button>
+                        <button
+                          type="button"
+                          className="icon-button-subtle text-danger"
+                          onClick={() => {
+                            if (drawerPhotoPreview) URL.revokeObjectURL(drawerPhotoPreview)
+                            setDrawerPhotoFile(null)
+                            setDrawerPhotoPreview(null)
+                            if (drawerFileInputRef.current) drawerFileInputRef.current.value = ''
+                            haptic('light')
+                          }}
+                          title={t('helpdesk_photo_remove_btn')}
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
                 <p className="helpdesk-hint-text">
                   {t('helpdesk_quick_tip')}
                 </p>
@@ -1405,13 +1551,35 @@ export default function SettingsDrawer({
                   <button
                     type="button"
                     className="primary-button helpdesk-open-btn"
+                    disabled={drawerHelpSubmitting}
                     onClick={() => {
+                      if (!drawerComplaint.trim()) {
+                        setDrawerHelpError(t('helpdesk_complaint_required'))
+                        haptic('error')
+                        return
+                      }
+                      setDrawerHelpSubmitting(true)
                       haptic('medium')
-                      openHelpdeskTicket({ user, profile })
+                      try {
+                        submitHelpdeskTicket({
+                          user,
+                          profile,
+                          complaint: drawerComplaint.trim(),
+                          photoFile: drawerPhotoFile
+                        })
+                        showToast?.(t('helpdesk_success_toast'))
+                        setTimeout(() => {
+                          setDrawerHelpSubmitting(false)
+                        }, 500)
+                      } catch (err) {
+                        setDrawerHelpSubmitting(false)
+                        setDrawerHelpError(err.message || 'Gagal meneruskan tiket ke Helpdesk.')
+                        haptic('error')
+                      }
                     }}
                   >
-                    <LifeBuoy size={16} />
-                    <span>{t('helpdesk_action_open')}</span>
+                    <Send size={15} />
+                    <span>{drawerHelpSubmitting ? t('helpdesk_submitting') : t('helpdesk_submit_btn')}</span>
                     <ExternalLink size={14} className="ml-auto opacity-70" />
                   </button>
                 </div>
