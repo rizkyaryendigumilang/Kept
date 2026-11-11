@@ -1441,9 +1441,10 @@ export default function SettingsDrawer({
                     }}
                     rows={3}
                     maxLength={2000}
+                    aria-describedby="drawer-helpdesk-char-count"
                     required
                   />
-                  <div className="helpdesk-char-count">
+                  <div id="drawer-helpdesk-char-count" className="helpdesk-char-count">
                     <span>{drawerComplaint.length} / 2000</span>
                   </div>
                 </div>

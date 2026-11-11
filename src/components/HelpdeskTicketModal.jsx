@@ -45,6 +45,18 @@ export default function HelpdeskTicketModal({
     }
   }, [photoPreview])
 
+  // Support Escape key to close modal
+  useEffect(() => {
+    if (!isOpen) return
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') {
+        onClose?.()
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [isOpen, onClose])
+
   if (!isOpen) return null
 
   const handlePhotoSelect = (e) => {
@@ -129,6 +141,8 @@ export default function HelpdeskTicketModal({
         aria-modal="true"
         aria-label={t('helpdesk_card_title')}
       >
+        <div className="sheet-drag-handle" aria-hidden="true" />
+
         {/* Header */}
         <div className="helpdesk-dialog-header">
           <div className="helpdesk-dialog-title-wrap">
@@ -194,9 +208,10 @@ export default function HelpdeskTicketModal({
               }}
               rows={4}
               maxLength={2000}
+              aria-describedby="helpdesk-char-count"
               required
             />
-            <div className="helpdesk-char-count">
+            <div id="helpdesk-char-count" className="helpdesk-char-count">
               <span>{complaint.length} / 2000</span>
             </div>
           </div>

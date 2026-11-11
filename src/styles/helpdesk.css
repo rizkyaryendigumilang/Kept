@@ -510,3 +510,134 @@
   color: var(--brand, #38bdf8);
   background: var(--bg-surface-subtle, rgba(255, 255, 255, 0.05));
 }
+
+/* ==========================================================================
+   Mobile Bottom-Sheet Adaptation (< 700px)
+   ========================================================================== */
+.sheet-drag-handle {
+  display: none;
+}
+
+@media (max-width: 700px) {
+  .helpdesk-modal-backdrop {
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    align-items: center;
+    padding: 0;
+  }
+
+  .sheet-drag-handle {
+    display: block;
+    width: 38px;
+    height: 4.5px;
+    border-radius: 999px;
+    background: var(--border-strong, rgba(255, 255, 255, 0.25));
+    margin: 0 auto 8px auto;
+    opacity: 0.85;
+  }
+
+  .helpdesk-dialog {
+    width: 100%;
+    max-width: 100%;
+    margin: 0;
+    border-radius: 24px 24px 0 0 !important;
+    border-bottom: none !important;
+    border-left: none !important;
+    border-right: none !important;
+    max-height: min(88dvh, 720px);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+    padding: 16px 18px max(24px, env(safe-area-inset-bottom, 24px)) 18px;
+  }
+
+  .helpdesk-dialog-actions {
+    margin-top: 10px;
+    gap: 8px;
+  }
+
+  .helpdesk-dialog-actions button {
+    flex: 1;
+    justify-content: center;
+  }
+}
+
+/* ==========================================================================
+   Light Mode Theme Adaptation (:root[data-theme="light"])
+   ========================================================================== */
+:root[data-theme="light"] .helpdesk-hero-card {
+  background: linear-gradient(145deg, #f8fafc 0%, #ffffff 100%) !important;
+  border: 1px solid var(--border) !important;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.05), inset 0 1px 0 rgba(255, 255, 255, 0.8) !important;
+}
+
+:root[data-theme="light"] .helpdesk-hero-titles strong {
+  color: var(--text-primary, #0c0e10);
+}
+
+:root[data-theme="light"] .helpdesk-dialog {
+  background: rgba(255, 255, 255, 0.95);
+  border: 1px solid var(--border);
+  border-top: 1px solid #ffffff;
+  box-shadow: 0 24px 50px rgba(0, 0, 0, 0.12), 0 0 0 1px rgba(0, 0, 0, 0.04);
+}
+
+:root[data-theme="light"] .sheet-drag-handle {
+  background: rgba(0, 0, 0, 0.2);
+}
+
+:root[data-theme="light"] .helpdesk-meta-strip {
+  background: var(--surface, #f5f5f5);
+  border-color: var(--border-subtle, #e8e8e8);
+}
+
+:root[data-theme="light"] .meta-pill strong {
+  color: var(--text-primary, #0c0e10);
+}
+
+:root[data-theme="light"] .helpdesk-meta-row .meta-val {
+  color: var(--text-primary, #0c0e10);
+}
+
+:root[data-theme="light"] .helpdesk-textarea {
+  background: var(--surface, #f5f5f5);
+  border-color: var(--border, #d0d7de);
+  color: var(--text-primary, #0c0e10);
+}
+
+:root[data-theme="light"] .helpdesk-textarea:focus {
+  background: #ffffff;
+  border-color: #0284c7;
+  box-shadow: 0 0 0 2px rgba(2, 132, 199, 0.2);
+}
+
+:root[data-theme="light"] .helpdesk-photo-dropzone {
+  background: var(--surface, #f5f5f5);
+  border: 1px dashed var(--border-strong, #afb8c1);
+}
+
+:root[data-theme="light"] .helpdesk-photo-dropzone:hover {
+  background: #f1f5f9;
+  border-color: #0284c7;
+}
+
+:root[data-theme="light"] .dropzone-icon-circle {
+  background: rgba(2, 132, 199, 0.1);
+  color: #0284c7;
+}
+
+:root[data-theme="light"] .dropzone-text strong {
+  color: var(--text-primary, #0c0e10);
+}
+
+:root[data-theme="light"] .preview-thumbnail-wrap {
+  background: var(--surface, #f5f5f5);
+  border: 1px solid var(--border, #d0d7de);
+}
+
+:root[data-theme="light"] .helpdesk-optional-tag {
+  background: var(--surface-hover, #ebebeb);
+  color: var(--text-secondary, #383838);
+}
+

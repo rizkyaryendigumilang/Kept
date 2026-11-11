@@ -272,20 +272,36 @@ for (const file of [
   'package.json',
   'supabase/001_schema.sql',
   'src/App.jsx',
+  'AGENTS.md',
+  'GLOSSARY.md',
+  'docs/agents/issue-tracker.md',
+  'docs/agents/domain.md',
+  'docs/adr/0001-zero-knowledge-encryption-and-offline-sync.md',
+  'docs/adr/0002-vps-helpdesk-sso-jit-handoff.md',
   '.env.example',
   '.env.production.example',
   'capacitor.config.json',
   'vite.config.js',
   'src/components/CardNfcWriterModal.jsx',
   'src/components/CardWalletPassModal.jsx',
+  'src/components/HelpdeskTicketModal.jsx',
   'src/lib/walletPass.js',
   'src/lib/hce.js',
+  'src/lib/helpdesk.js',
+  'src/styles/helpdesk.css',
   'android/app/src/main/res/xml/apduservice.xml',
   'android/app/src/main/java/com/kept/app/KeptCardEmulationService.java',
   'android/app/src/main/java/com/kept/app/KeptHcePlugin.java'
 ]) {
   if (!existsSync(file)) throw new Error(`Missing required configuration file: ${file}`)
 }
+
+// 5.3 Verify Helpdesk CSS Theme & Responsive Sheet Standards
+const helpdeskCssContent = readFileSync('src/styles/helpdesk.css', 'utf8')
+if (!helpdeskCssContent.includes(':root[data-theme="light"]') || !helpdeskCssContent.includes('sheet-drag-handle')) {
+  throw new Error('src/styles/helpdesk.css missing light mode or mobile drag handle styles')
+}
+console.log('[PASS] 5.3 Helpdesk CSS Responsive Bottom-Sheet & Light Mode Integrity')
 const pkg = JSON.parse(readFileSync('package.json', 'utf8'))
 console.log(`[PASS] 5.2 Configuration & Repository Layout Integrity (${pkg.name} v${pkg.version})`)
 
