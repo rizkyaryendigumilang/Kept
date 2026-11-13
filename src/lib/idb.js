@@ -130,22 +130,47 @@ export async function idbGetUserItems(userId) {
 }
 
 export async function idbClearUser(userId) {
-  const items = await idbGetUserItems(userId)
   return withDb((db) => new Promise((resolve, reject) => {
     const tx = db.transaction([STORE_ITEMS, STORE_QUEUE], 'readwrite')
-    const store = tx.objectStore(STORE_ITEMS)
-    items.forEach((item) => store.delete(item.id))
-    
-    // Also clear pending queue for user
+    const itemStore = tx.objectStore(STORE_ITEMS)
+    const itemIndex = itemStore.index('user_id')
+
+    // Use openKeyCursor to avoid loading bulky encrypted payloads/PDFs/images into JS heap
+    const itemReq = itemIndex.openKeyCursor(IDBKeyRange.only(userId))
+    itemReq.onsuccess = (e) => {
+      const cursor = e.target.result
+      if (cursor) {
+        itemStore.delete(cursor.primaryKey)
+        cursor.continue()
+      }
+    }
+    itemReq.onerror = () => reject(itemReq.error)
+
+    // Clear pending queue for user using key cursor
     const qStore = tx.objectStore(STORE_QUEUE)
     const qIndex = qStore.index('user_id')
-    const qReq = qIndex.getAll(IDBKeyRange.only(userId))
-    qReq.onsuccess = () => {
-      ;(qReq.result || []).forEach((q) => qStore.delete(q.queue_id))
+    const qReq = qIndex.openKeyCursor(IDBKeyRange.only(userId))
+    qReq.onsuccess = (e) => {
+      const cursor = e.target.result
+      if (cursor) {
+        qStore.delete(cursor.primaryKey)
+        cursor.continue()
+      }
     }
-    tx.oncomplete = resolve
+    qReq.onerror = () => reject(qReq.error)
+
+    tx.oncomplete = () => resolve()
     tx.onerror = () => reject(tx.error)
   }))
+}
+
+export async function idbHasPendingQueueForItem(userId, itemId) {
+  if (!userId || !itemId) return false
+  const pending = await idbGetPendingQueue(userId)
+  return pending.some((entry) => {
+    if (!entry?.data) return false
+    return entry.data.id === itemId || entry.data === itemId
+  })
 }
 
 // --- Sync Queue Helpers ---

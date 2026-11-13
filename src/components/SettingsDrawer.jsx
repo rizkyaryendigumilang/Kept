@@ -32,8 +32,6 @@ import {
   Flame,
   LifeBuoy,
   ExternalLink,
-  Send,
-  Paperclip,
   AlertCircle
 } from './Icons'
 
@@ -41,6 +39,10 @@ const AvatarCropModal = safeLazy(() => import('./AvatarCropModal'))
 import AnimatedHamburger, { HAMBURGER_STYLES } from './AnimatedHamburger'
 import PwaInstallCard from './PwaInstallCard'
 import TrashManager from './TrashManager'
+import HelpdeskSubpage from './settings/HelpdeskSubpage'
+import BackupSubpage from './settings/BackupSubpage'
+import StorageSubpage from './settings/StorageSubpage'
+import NotificationsSubpage from './settings/NotificationsSubpage'
 import { haptic } from '../lib/haptics'
 import { getTranslation } from '../lib/i18n'
 import { openHelpdeskTicket, submitHelpdeskTicket } from '../lib/helpdesk'
@@ -114,22 +116,6 @@ export default function SettingsDrawer({
   const [cropModalOpen, setCropModalOpen] = useState(false)
   const [selectedImageSrc, setSelectedImageSrc] = useState(null)
   const cameraInputRef = useRef(null)
-
-  // Helpdesk submission state
-  const [drawerComplaint, setDrawerComplaint] = useState('')
-  const [drawerPhotoFile, setDrawerPhotoFile] = useState(null)
-  const [drawerPhotoPreview, setDrawerPhotoPreview] = useState(null)
-  const [drawerHelpError, setDrawerHelpError] = useState('')
-  const [drawerHelpSubmitting, setDrawerHelpSubmitting] = useState(false)
-  const drawerFileInputRef = useRef(null)
-
-  useEffect(() => {
-    return () => {
-      if (drawerPhotoPreview) {
-        URL.revokeObjectURL(drawerPhotoPreview)
-      }
-    }
-  }, [drawerPhotoPreview])
   const galleryInputRef = useRef(null)
 
   // Biometric state
@@ -315,11 +301,11 @@ export default function SettingsDrawer({
     const file = e.target.files?.[0]
     if (!file) return
     if (!file.type.startsWith('image/')) {
-      alert('Pilih file gambar valid (JPG, PNG, atau WebP).')
+      if (showToast) showToast(lang === 'id' ? 'Pilih file gambar valid (JPG, PNG, atau WebP).' : 'Please select a valid image (JPG, PNG, or WebP).')
       return
     }
     if (file.size > 10 * 1024 * 1024) {
-      alert('Ukuran foto awal maksimal 10 MB.')
+      if (showToast) showToast(lang === 'id' ? 'Ukuran foto awal maksimal 10 MB.' : 'Image size must be under 10 MB.')
       return
     }
     const reader = new FileReader()
@@ -341,7 +327,7 @@ export default function SettingsDrawer({
         setAvatarPreview(displayUrl)
       }
     } catch (err) {
-      alert('Gagal mengunggah foto profil: ' + err.message)
+      if (showToast) showToast((lang === 'id' ? 'Gagal mengunggah foto profil: ' : 'Failed to upload avatar: ') + err.message)
       setAvatarPreview(profile?.avatar_url || '')
     } finally {
       setUploadingAvatar(false)
@@ -350,13 +336,13 @@ export default function SettingsDrawer({
 
   async function handleResetDefaultAvatar() {
     if (!profile?.avatar_url && !avatarPreview) return
-    if (!confirm('Kembalikan foto profil ke avatar default?')) return
     setUploadingAvatar(true)
     try {
       if (onRemoveAvatar) await onRemoveAvatar()
       setAvatarPreview('')
+      if (showToast) showToast(lang === 'id' ? 'Foto profil telah dikembalikan ke default.' : 'Profile picture reset to default.')
     } catch (err) {
-      alert('Gagal menghapus avatar: ' + err.message)
+      if (showToast) showToast((lang === 'id' ? 'Gagal menghapus avatar: ' : 'Failed to remove avatar: ') + err.message)
     } finally {
       setUploadingAvatar(false)
     }
@@ -1113,254 +1099,38 @@ export default function SettingsDrawer({
 
           {/* SUBPAGE 3: BACKUP & SYNC */}
           {activeSubpage === 'backup' && (
-            <div className="drawer-subpage-view">
-              <p className="subpage-lead-desc">
-                {t('backup_lead')}
-              </p>
-
-              {/* Backup Status */}
-              <div className="subpage-card">
-                <div className="subpage-card-heading">
-                  <strong>{t('backup_status_title')}</strong>
-                  <span>{t('backup_status_desc')}</span>
-                </div>
-
-                <div className="stat-cards-grid">
-                  <div className="stat-mini-card">
-                    <span className="stat-mini-num">{items.length}</span>
-                    <span className="stat-mini-label">{t('backup_vault_creds')}</span>
-                  </div>
-                  <div className="stat-mini-card">
-                    <span className="stat-mini-num">{documents.length}</span>
-                    <span className="stat-mini-label">{t('backup_stored_docs')}</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Export Backup Card */}
-              <div className="subpage-card">
-                <div className="subpage-card-heading">
-                  <strong>{t('backup_export_card_title')}</strong>
-                  <span>{t('backup_export_card_desc')}</span>
-                </div>
-
-                <button
-                  type="button"
-                  className="primary-button pill-button"
-                  onClick={() => {
-                    onClose()
-                    onExport()
-                  }}
-                >
-                  <Download size={14} /> {t('backup_export_btn')}
-                </button>
-              </div>
-
-              {/* Restore */}
-              <div className="subpage-card">
-                <div className="subpage-card-heading">
-                  <strong>{t('backup_restore_title')}</strong>
-                  <span>{t('backup_restore_desc')}</span>
-                </div>
-
-                <button
-                  type="button"
-                  className="secondary-button pill-button"
-                  onClick={() => {
-                    onClose()
-                    onImport()
-                  }}
-                >
-                  <Upload size={14} /> {t('backup_restore_btn')}
-                </button>
-              </div>
-            </div>
+            <BackupSubpage
+              items={items}
+              documents={documents}
+              onExport={onExport}
+              onImport={onImport}
+              onClose={onClose}
+              lang={lang}
+            />
           )}
 
           {/* SUBPAGE 4: STORAGE & DATA */}
           {activeSubpage === 'storage' && (
-            <div className="drawer-subpage-view">
-              <p className="subpage-lead-desc">
-                {t('storage_lead')}
-              </p>
-
-              {/* Storage Capacity */}
-              <div className="subpage-card">
-                <div className="subpage-card-heading">
-                  <strong>{t('storage_capacity_title')}</strong>
-                  <span>{t('storage_capacity_desc')}</span>
-                </div>
-
-                <div className="storage-meter-box">
-                  <div className="storage-meter-bar">
-                    <div className="storage-meter-fill" style={{ width: '28%' }} />
-                  </div>
-                  <div className="storage-meta-row">
-                    <span>{t('storage_db_active')}</span>
-                    <span>{t('storage_total_entries')} {items.length + documents.length}</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Export & Import */}
-              <div className="subpage-card">
-                <div className="subpage-card-heading">
-                  <strong>{t('storage_export_import_title')}</strong>
-                  <span>{t('storage_export_import_desc')}</span>
-                </div>
-
-                <div className="button-col-stack">
-                  <button
-                    type="button"
-                    className="secondary-button pill-button"
-                    onClick={onExport}
-                  >
-                    <Download size={14} /> {t('storage_export_btn')}
-                  </button>
-
-                  <button
-                    type="button"
-                    className="secondary-button pill-button"
-                    onClick={() => {
-                      onClose()
-                      onImport()
-                    }}
-                  >
-                    <Upload size={14} /> {t('storage_import_btn')}
-                  </button>
-                </div>
-              </div>
-            </div>
+            <StorageSubpage
+              items={items}
+              documents={documents}
+              onExport={onExport}
+              onImport={onImport}
+              onClose={onClose}
+              lang={lang}
+            />
           )}
 
           {/* SUBPAGE 5: NOTIFICATIONS */}
           {activeSubpage === 'notifications' && (
-            <div className="drawer-subpage-view">
-              <p className="subpage-lead-desc">
-                {t('notif_lead')}
-              </p>
-
-              {/* Expiry Reminders Config */}
-              <div className="subpage-card">
-                <div className="subpage-card-heading">
-                  <strong>{t('notif_expiry_title')}</strong>
-                  <span>{t('notif_expiry_desc')}</span>
-                </div>
-
-                <div className="toggle-list">
-                  <label className="toggle-row">
-                    <div>
-                      <strong>{t('notif_d90_label')}</strong>
-                      <span>{t('notif_d90_desc')}</span>
-                    </div>
-                    <input
-                      type="checkbox"
-                      checked={notifyPrefs.d90}
-                      onChange={() => toggleNotifyPref('d90')}
-                    />
-                  </label>
-
-                  <label className="toggle-row">
-                    <div>
-                      <strong>{t('notif_d30_label')}</strong>
-                      <span>{t('notif_d30_desc')}</span>
-                    </div>
-                    <input
-                      type="checkbox"
-                      checked={notifyPrefs.d30}
-                      onChange={() => toggleNotifyPref('d30')}
-                    />
-                  </label>
-
-                  <label className="toggle-row">
-                    <div>
-                      <strong>{t('notif_d7_label')}</strong>
-                      <span>{t('notif_d7_desc')}</span>
-                    </div>
-                    <input
-                      type="checkbox"
-                      checked={notifyPrefs.d7}
-                      onChange={() => toggleNotifyPref('d7')}
-                    />
-                  </label>
-
-                  <label className="toggle-row">
-                    <div>
-                      <strong>{t('notif_expired_label')}</strong>
-                      <span>{t('notif_expired_desc')}</span>
-                    </div>
-                    <input
-                      type="checkbox"
-                      checked={notifyPrefs.expired}
-                      onChange={() => toggleNotifyPref('expired')}
-                    />
-                  </label>
-                </div>
-              </div>
-
-              {/* Browser Push Permission */}
-              <div className="subpage-card">
-                <div className="subpage-card-heading">
-                  <strong>{t('notif_browser_title')}</strong>
-                  <span>{t('notif_browser_desc')}</span>
-                </div>
-
-                <div className="notification-permission-box">
-                  <div className="permission-status">
-                    <span>
-                      {t('notif_status_label')}{' '}
-                      <strong>
-                        {browserPermission === 'granted'
-                          ? t('notif_status_granted')
-                          : browserPermission === 'denied'
-                          ? t('notif_status_denied')
-                          : t('notif_status_default')}
-                      </strong>
-                    </span>
-                  </div>
-
-                  {browserPermission !== 'granted' && (
-                    <button
-                      type="button"
-                      className="secondary-button pill-button"
-                      onClick={requestNotificationPermission}
-                    >
-                      <Bell size={14} /> {t('notif_req_btn')}
-                    </button>
-                  )}
-                </div>
-              </div>
-
-              {/* Monitored Documents List */}
-              <div className="subpage-card">
-                <div className="subpage-card-heading">
-                  <strong>{t('notif_monitored_title')} ({expiringDocs.length})</strong>
-                  <span>{t('notif_monitored_desc')}</span>
-                </div>
-
-                {expiringDocs.length === 0 ? (
-                  <div className="field-hint">
-                    {t('notif_monitored_empty')}
-                  </div>
-                ) : (
-                  <div className="monitored-docs-list">
-                    {expiringDocs.map((doc) => (
-                      <div key={doc.id} className="monitored-doc-row">
-                        <div>
-                          <strong>{doc.name}</strong>
-                          <span className="doc-owner-caption">
-                            {doc.owner_name || (lang === 'id' ? 'Dokumen Resmi' : 'Official Document')} · {doc.expiry_date}
-                          </span>
-                        </div>
-                        <span className={`doc-expiry-chip ${doc.audit?.status}`}>
-                          {doc.audit?.label}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
+            <NotificationsSubpage
+              notifyPrefs={notifyPrefs}
+              toggleNotifyPref={toggleNotifyPref}
+              browserPermission={browserPermission}
+              requestNotificationPermission={requestNotificationPermission}
+              expiringDocs={expiringDocs}
+              lang={lang}
+            />
           )}
 
           {/* SUBPAGE: TRASH & RECYCLE BIN */}
@@ -1378,255 +1148,12 @@ export default function SettingsDrawer({
 
           {/* SUBPAGE 7: HELP & ABOUT */}
           {activeSubpage === 'help' && (
-            <div className="drawer-subpage-view">
-              <p className="subpage-lead-desc">
-                {t('help_lead')}
-              </p>
-
-              {/* VPS Helpdesk Direct Ticket Card */}
-              <div className="subpage-card helpdesk-hero-card">
-                <div className="helpdesk-hero-header">
-                  <div className="helpdesk-badge-chip">
-                    <LifeBuoy size={22} />
-                  </div>
-                  <div className="helpdesk-hero-titles">
-                    <div className="flex items-center gap-xs">
-                      <strong>{t('helpdesk_card_title')}</strong>
-                      <span className="helpdesk-sso-badge">
-                        <Check size={11} strokeWidth={2.5} /> {t('helpdesk_badge_sso')}
-                      </span>
-                    </div>
-                    <span>{t('helpdesk_card_desc')}</span>
-                  </div>
-                </div>
-
-                <div className="helpdesk-session-preview">
-                  <div className="helpdesk-meta-row">
-                    <span className="meta-label">Aplikasi Target:</span>
-                    <span className="meta-val font-mono">Kept</span>
-                  </div>
-                  <div className="helpdesk-meta-row">
-                    <span className="meta-label">Sesi Pengguna:</span>
-                    <span className="meta-val font-mono">
-                      {user?.id ? user.id.slice(0, 16) + '...' : user?.email || 'Tamu / Guest'}
-                    </span>
-                  </div>
-                  <div className="helpdesk-meta-row">
-                    <span className="meta-label">Peran (Role):</span>
-                    <span className="meta-val">{profile?.role || (user ? 'Member' : 'Guest')}</span>
-                  </div>
-                </div>
-
-                {drawerHelpError && (
-                  <div className="helpdesk-error-alert" role="alert">
-                    <AlertCircle size={15} />
-                    <span>{drawerHelpError}</span>
-                  </div>
-                )}
-
-                {/* Input Keluhan */}
-                <div className="helpdesk-field-group">
-                  <label htmlFor="drawer-helpdesk-complaint" className="helpdesk-field-label">
-                    <span>{t('helpdesk_complaint_label')}</span>
-                    <span className="required-star">*</span>
-                  </label>
-                  <textarea
-                    id="drawer-helpdesk-complaint"
-                    className="helpdesk-textarea"
-                    placeholder={t('helpdesk_complaint_placeholder')}
-                    value={drawerComplaint}
-                    onChange={(e) => {
-                      setDrawerComplaint(e.target.value)
-                      if (drawerHelpError) setDrawerHelpError('')
-                    }}
-                    rows={3}
-                    maxLength={2000}
-                    aria-describedby="drawer-helpdesk-char-count"
-                    required
-                  />
-                  <div id="drawer-helpdesk-char-count" className="helpdesk-char-count">
-                    <span>{drawerComplaint.length} / 2000</span>
-                  </div>
-                </div>
-
-                {/* Input Foto Kendala (Tidak Mandatory) */}
-                <div className="helpdesk-field-group">
-                  <div className="flex items-center justify-between">
-                    <label className="helpdesk-field-label">
-                      <span>{t('helpdesk_photo_label')}</span>
-                    </label>
-                    <span className="helpdesk-optional-tag">{lang === 'id' ? 'Opsional' : 'Optional'}</span>
-                  </div>
-
-                  <input
-                    ref={drawerFileInputRef}
-                    type="file"
-                    accept="image/png,image/jpeg,image/webp"
-                    onChange={(e) => {
-                      const file = e.target.files?.[0]
-                      if (!file) return
-                      if (!file.type.startsWith('image/')) {
-                        setDrawerHelpError(lang === 'id' ? 'File harus berupa gambar (PNG, JPG, WebP).' : 'File must be an image (PNG, JPG, WebP).')
-                        haptic('error')
-                        return
-                      }
-                      if (file.size > 10 * 1024 * 1024) {
-                        setDrawerHelpError(lang === 'id' ? 'Ukuran foto maksimal 10MB.' : 'Maximum photo size is 10MB.')
-                        haptic('error')
-                        return
-                      }
-                      setDrawerHelpError('')
-                      if (drawerPhotoPreview) URL.revokeObjectURL(drawerPhotoPreview)
-                      setDrawerPhotoFile(file)
-                      setDrawerPhotoPreview(URL.createObjectURL(file))
-                      haptic('light')
-                    }}
-                    style={{ display: 'none' }}
-                    id="drawer-photo-file-input"
-                  />
-
-                  {!drawerPhotoPreview ? (
-                    <button
-                      type="button"
-                      className="helpdesk-photo-dropzone"
-                      onClick={() => {
-                        haptic('light')
-                        drawerFileInputRef.current?.click()
-                      }}
-                    >
-                      <div className="dropzone-icon-circle">
-                        <Paperclip size={16} />
-                      </div>
-                      <div className="dropzone-text">
-                        <strong>{t('helpdesk_photo_upload_btn')}</strong>
-                        <span>{t('helpdesk_photo_hint')}</span>
-                      </div>
-                    </button>
-                  ) : (
-                    <div className="helpdesk-photo-preview-card">
-                      <div className="preview-thumbnail-wrap">
-                        <img src={drawerPhotoPreview} alt="Bukti kendala" className="preview-thumbnail" />
-                      </div>
-                      <div className="preview-meta">
-                        <div className="flex items-center gap-xs">
-                          <Check size={13} className="text-emerald" />
-                          <strong>{drawerPhotoFile?.name || t('helpdesk_photo_attached')}</strong>
-                        </div>
-                        <span className="text-xs text-muted">
-                          {drawerPhotoFile ? `${(drawerPhotoFile.size / 1024).toFixed(1)} KB` : ''}
-                        </span>
-                      </div>
-                      <div className="preview-actions">
-                        <button
-                          type="button"
-                          className="icon-button-subtle"
-                          onClick={() => drawerFileInputRef.current?.click()}
-                          title={t('helpdesk_photo_change_btn')}
-                        >
-                          <Paperclip size={14} />
-                        </button>
-                        <button
-                          type="button"
-                          className="icon-button-subtle text-danger"
-                          onClick={() => {
-                            if (drawerPhotoPreview) URL.revokeObjectURL(drawerPhotoPreview)
-                            setDrawerPhotoFile(null)
-                            setDrawerPhotoPreview(null)
-                            if (drawerFileInputRef.current) drawerFileInputRef.current.value = ''
-                            haptic('light')
-                          }}
-                          title={t('helpdesk_photo_remove_btn')}
-                        >
-                          <Trash2 size={14} />
-                        </button>
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                <p className="helpdesk-hint-text">
-                  {t('helpdesk_quick_tip')}
-                </p>
-
-                <div className="helpdesk-action-wrap">
-                  <button
-                    type="button"
-                    className="primary-button helpdesk-open-btn"
-                    disabled={drawerHelpSubmitting}
-                    onClick={() => {
-                      if (!drawerComplaint.trim()) {
-                        setDrawerHelpError(t('helpdesk_complaint_required'))
-                        haptic('error')
-                        return
-                      }
-                      setDrawerHelpSubmitting(true)
-                      haptic('medium')
-                      try {
-                        submitHelpdeskTicket({
-                          user,
-                          profile,
-                          complaint: drawerComplaint.trim(),
-                          photoFile: drawerPhotoFile
-                        })
-                        showToast?.(t('helpdesk_success_toast'))
-                        setTimeout(() => {
-                          setDrawerHelpSubmitting(false)
-                        }, 500)
-                      } catch (err) {
-                        setDrawerHelpSubmitting(false)
-                        setDrawerHelpError(err.message || 'Gagal meneruskan tiket ke Helpdesk.')
-                        haptic('error')
-                      }
-                    }}
-                  >
-                    <Send size={15} />
-                    <span>{drawerHelpSubmitting ? t('helpdesk_submitting') : t('helpdesk_submit_btn')}</span>
-                    <ExternalLink size={14} className="ml-auto opacity-70" />
-                  </button>
-                </div>
-              </div>
-
-              <div className="subpage-card">
-                <div className="subpage-card-heading">
-                  <strong>{t('help_about_title')}</strong>
-                  <span>{t('help_about_desc')}</span>
-                </div>
-                <div className="about-info-stack">
-                  <div className="about-info-item">
-                    <span>{t('help_version_label')}</span>
-                    <strong>v0.1.0 (Production Ready)</strong>
-                  </div>
-                  <div className="about-info-item">
-                    <span>Design System:</span>
-                    <strong>Omarchy (Light-first minimalis)</strong>
-                  </div>
-                  <div className="about-info-item">
-                    <span>{lang === 'id' ? 'Tipografi:' : 'Typography:'}</span>
-                    <strong>Geist Variable & JetBrains Mono</strong>
-                  </div>
-                  <div className="about-info-item">
-                    <span>{lang === 'id' ? 'Standar Kriptografi:' : 'Cryptography Standard:'}</span>
-                    <strong>AES-256-GCM + PBKDF2 (100k rounds)</strong>
-                  </div>
-                </div>
-              </div>
-
-              <div className="subpage-card">
-                <div className="subpage-card-heading">
-                  <strong>{t('help_zk_title')}</strong>
-                  <span>{t('help_zk_how')}</span>
-                </div>
-                <p className="about-text-body">
-                  {t('help_zk_step1')}
-                </p>
-                <p className="about-text-body">
-                  {t('help_zk_step2')}
-                </p>
-                <p className="about-text-body">
-                  {t('help_zk_step3')}
-                </p>
-              </div>
-            </div>
+            <HelpdeskSubpage
+              user={user}
+              profile={profile}
+              lang={lang}
+              showToast={showToast}
+            />
           )}
         </div>
 

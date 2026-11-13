@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Fingerprint, Lock, ShieldCheck, AlertTriangle, X, Check, KeyRound, Mail } from './Icons'
 import PinKeypad from './PinKeypad'
-import { deriveVaultKey, deriveVaultKeyAsync } from '../lib/crypto'
+import { deriveVaultKey, deriveVaultKeyAsync, zeroKey } from '../lib/crypto'
 import { verifyMasterKey, recoverMasterKey } from '../lib/vault'
 import { supabase } from '../lib/supabase'
 import {
@@ -104,11 +104,16 @@ export default function UnlockScreen({
     setBusy(true)
     setError('')
 
+    let key = null
     try {
-      const key = await deriveVaultKeyAsync(enteredPin, profile.vault_salt)
+      key = await deriveVaultKeyAsync(enteredPin, profile.vault_salt)
       const valid = await verifyMasterKey(profile, key)
 
       if (!valid) {
+        if (key) {
+          zeroKey(key)
+          key = null
+        }
         throw new Error('PIN tidak sesuai.')
       }
 
@@ -127,6 +132,10 @@ export default function UnlockScreen({
 
       onUnlocked(key)
     } catch (err) {
+      if (key) {
+        zeroKey(key)
+        key = null
+      }
       const nextAttempts = failedAttempts + 1
       setFailedAttempts(nextAttempts)
       localStorage.setItem('kept_pin_failed_attempts', String(nextAttempts))
@@ -420,7 +429,7 @@ export default function UnlockScreen({
         level: 'success'
       })
 
-      setShowRecovery(false)
+      closeRecoveryModal()
     } catch (err) {
       setRecoveryError(err.message || 'Gagal menyetel Security PIN baru.')
     } finally {
@@ -441,7 +450,7 @@ export default function UnlockScreen({
       await onResetVault()
       localStorage.removeItem('kept_pin_failed_attempts')
       localStorage.removeItem('kept_pin_lockout_until')
-      setShowRecovery(false)
+      closeRecoveryModal()
     } catch (err) {
       setRecoveryError(err.message || 'Gagal me-reset vault.')
     } finally {
@@ -449,11 +458,22 @@ export default function UnlockScreen({
     }
   }
 
+  function closeRecoveryModal() {
+    setRecoveredMasterKey((prev) => {
+      if (prev) zeroKey(prev)
+      return null
+    })
+    setShowRecovery(false)
+  }
+
   function openRecovery() {
     setShowRecovery(true)
     setRecoveryStep('choose_method')
     setRecoveryKey('')
-    setRecoveredMasterKey(null)
+    setRecoveredMasterKey((prev) => {
+      if (prev) zeroKey(prev)
+      return null
+    })
     setNewPin('')
     setConfirmPin('')
     setOtpCode('')
@@ -524,14 +544,14 @@ export default function UnlockScreen({
 
       {/* Recovery Modal with 3 Clear Scenarios */}
       {showRecovery && (
-        <div className="popover-backdrop" onMouseDown={() => setShowRecovery(false)}>
+        <div className="popover-backdrop" onMouseDown={() => closeRecoveryModal()}>
           <div className="recovery-modal" onMouseDown={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <div>
                 <div className="eyebrow">{t('recovery_modal_eyebrow')}</div>
                 <h2>{t('recovery_modal_title')}</h2>
               </div>
-              <button className="icon-button" onClick={() => setShowRecovery(false)}>
+              <button className="icon-button" onClick={() => closeRecoveryModal()}>
                 <X size={18} />
               </button>
             </div>

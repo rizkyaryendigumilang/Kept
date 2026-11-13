@@ -215,7 +215,10 @@ export default function App() {
     setCardAddModalOpen(false)
     setSearchOpen(false)
     setMenuOpen(false)
+    setMenuSubpage(null)
     setAlertsOpen(false)
+    setRecovery(false)
+    setHelpdeskModalOpen(false)
   }, [])
 
   const { installPrompt, promptInstall: handlePromptInstall } = usePwaInstall({
@@ -832,41 +835,50 @@ export default function App() {
       throw new Error('Recovery Key tidak valid. Vault tidak diubah.')
     }
 
-    // 1. Decrypt all items using recoveredKey
-    let rows = []
     try {
-      rows = await fetchEncryptedItems(session.user.id)
-    } catch {
-      rows = await loadCachedItems(session.user.id)
-    }
+      // 1. Decrypt all items using recoveredKey
+      let rows = []
+      try {
+        rows = await fetchEncryptedItems(session.user.id)
+      } catch {
+        rows = await loadCachedItems(session.user.id)
+      }
 
-    const decryptedResults = await Promise.all(
-      rows.map(async (row) => {
-        try {
-          const payload = await decryptItemRow(row, recoveredKey)
-          return { ...row, ...payload }
-        } catch {
-          return null
-        }
+      const decryptedResults = await Promise.all(
+        rows.map(async (row) => {
+          try {
+            const payload = await decryptItemRow(row, recoveredKey)
+            return { ...row, ...payload }
+          } catch {
+            return null
+          }
+        })
+      )
+      const decrypted = decryptedResults.filter(Boolean)
+
+      // 2. Re-encrypt all items with newMasterPassword
+      const result = await changeMasterPassword({
+        userId: session.user.id,
+        newMasterPassword,
+        decryptedItems: decrypted,
+        expectedItemCount: rows.length,
+        recoveryKey: usedRecoveryKey || activeRecoveryKey || generateRecoveryKey(),
+        theme: profile.theme,
+        cardStyle: profile.card_style
       })
-    )
-    const decrypted = decryptedResults.filter(Boolean)
 
-    // 2. Re-encrypt all items with newMasterPassword
-    const result = await changeMasterPassword({
-      userId: session.user.id,
-      newMasterPassword,
-      decryptedItems: decrypted,
-      expectedItemCount: rows.length,
-      recoveryKey: usedRecoveryKey || activeRecoveryKey || generateRecoveryKey(),
-      theme: profile.theme,
-      cardStyle: profile.card_style
-    })
-
-    setProfile(result.updatedProfile)
-    setVaultKey(result.newMasterKey)
-    setItems(decrypted)
-    showToast('Vault berhasil dipulihkan & master password baru telah aktif!', 3000)
+      setProfile(result.updatedProfile)
+      setVaultKey((prev) => {
+        if (prev) zeroKey(prev)
+        return result.newMasterKey
+      })
+      setItems(decrypted)
+      showToast('Vault berhasil dipulihkan & master password baru telah aktif!', 3000)
+    } finally {
+      if (recoveredKey) {
+        zeroKey(recoveredKey)
+      }
+    }
   }
 
   // Emergency reset vault
@@ -887,10 +899,15 @@ export default function App() {
 
   // Change Vault Master Password (Re-encrypts all items)
   async function handleChangeMasterPassword(currentMasterPassword, newMasterPassword) {
-    const testKey = await deriveVaultKeyAsync(currentMasterPassword, profile.vault_salt)
-    const valid = await verifyMasterKey(profile, testKey)
-    if (!valid) {
-      throw new Error('Master password saat ini tidak sesuai.')
+    let testKey = null
+    try {
+      testKey = await deriveVaultKeyAsync(currentMasterPassword, profile.vault_salt)
+      const valid = await verifyMasterKey(profile, testKey)
+      if (!valid) {
+        throw new Error('Master password saat ini tidak sesuai.')
+      }
+    } finally {
+      if (testKey) zeroKey(testKey)
     }
 
     const recoveryKeyToUse = activeRecoveryKey || generateRecoveryKey()
@@ -906,7 +923,10 @@ export default function App() {
     })
 
     setProfile(result.updatedProfile)
-    setVaultKey(result.newMasterKey)
+    setVaultKey((prev) => {
+      if (prev) zeroKey(prev)
+      return result.newMasterKey
+    })
     setActiveRecoveryKey(recoveryKeyToUse)
     showToast('Security PIN berhasil diperbarui!', 3000)
   }

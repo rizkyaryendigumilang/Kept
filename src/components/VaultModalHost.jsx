@@ -120,6 +120,7 @@ export default function VaultModalHost({
           onClose={() => setDocAddModalOpen(false)}
           onSubmit={(docPayload) => saveItem({ ...docPayload, item_type: 'document' })}
           lang={lang}
+          showToast={showToast}
         />
       )}
       {cardAddModalOpen && vaultKey && (

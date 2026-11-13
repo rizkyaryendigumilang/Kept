@@ -316,7 +316,8 @@ export default function ExportModal({
       // Spreadsheet formula injection (M-5): Excel / Google Sheets execute any
       // cell that starts with = + - @ (and the tab/CR leakers). Prefix with a
       // single quote so the value is treated as literal text.
-      if (/^[=+\-@\t\r]/.test(str)) {
+      // Must check str.trimStart() because Excel strips leading whitespace before executing formulas.
+      if (/^[=+\-@\t\r]/.test(str.trimStart())) {
         str = `'${str}`
       }
       return `"${str.replace(/"/g, '""')}"`

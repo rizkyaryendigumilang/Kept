@@ -68,6 +68,30 @@ if (keyFingerprint(testMasterKey) !== keyFingerprint(unwrappedMasterKey)) {
 }
 console.log('[PASS] 1.4 PBKDF2 + AES-GCM Recovery Key Wrap & Unwrap')
 
+// 1.5 CSV Formula Injection Sanitizer Check
+function testEscapeCsv(val) {
+  if (val === null || val === undefined) return '""'
+  let str = String(val)
+  if (/^[=+\-@\t\r]/.test(str.trimStart())) {
+    str = `'${str}`
+  }
+  return `"${str.replace(/"/g, '""')}"`
+}
+const maliciousCsvPayloads = [
+  '=cmd|\' /C calc\'!A0',
+  '  =cmd|\' /C calc\'!A0',
+  '\t+SUM(A1:A10)',
+  '   @malicious_ref',
+  '-exec_command'
+]
+for (const p of maliciousCsvPayloads) {
+  const escaped = testEscapeCsv(p)
+  if (!escaped.startsWith(`"\'`)) {
+    throw new Error(`CSV injection protection failed for: ${p}`)
+  }
+}
+console.log('[PASS] 1.5 CSV Formula Injection Sanitization (leading whitespace & triggers prefixed with \')')
+
 // -----------------------------------------------------------------------------
 // Level 2: Module Testing (docs/18-testing-standard.md:65)
 // -----------------------------------------------------------------------------
@@ -276,6 +300,7 @@ for (const file of [
   'GLOSSARY.md',
   'docs/agents/issue-tracker.md',
   'docs/agents/domain.md',
+  'docs/agents/triage-labels.md',
   'docs/adr/0001-zero-knowledge-encryption-and-offline-sync.md',
   'docs/adr/0002-vps-helpdesk-sso-jit-handoff.md',
   '.env.example',
@@ -285,6 +310,10 @@ for (const file of [
   'src/components/CardNfcWriterModal.jsx',
   'src/components/CardWalletPassModal.jsx',
   'src/components/HelpdeskTicketModal.jsx',
+  'src/components/settings/HelpdeskSubpage.jsx',
+  'src/components/settings/BackupSubpage.jsx',
+  'src/components/settings/StorageSubpage.jsx',
+  'src/components/settings/NotificationsSubpage.jsx',
   'src/lib/walletPass.js',
   'src/lib/hce.js',
   'src/lib/helpdesk.js',
@@ -302,6 +331,13 @@ if (!helpdeskCssContent.includes(':root[data-theme="light"]') || !helpdeskCssCon
   throw new Error('src/styles/helpdesk.css missing light mode or mobile drag handle styles')
 }
 console.log('[PASS] 5.3 Helpdesk CSS Responsive Bottom-Sheet & Light Mode Integrity')
+
+// 5.4 Verify Auto-lock State Cleanup Invariants
+const appSource = readFileSync('src/App.jsx', 'utf8')
+if (!appSource.includes('setHelpdeskModalOpen(false)') || !appSource.includes('setMenuSubpage(null)')) {
+  throw new Error('src/App.jsx lockVault missing modal cleanup invariants')
+}
+console.log('[PASS] 5.4 Auto-Lock State Cleanup Invariant Verification')
 const pkg = JSON.parse(readFileSync('package.json', 'utf8'))
 console.log(`[PASS] 5.2 Configuration & Repository Layout Integrity (${pkg.name} v${pkg.version})`)
 

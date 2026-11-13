@@ -17,7 +17,7 @@ Kept is a zero-knowledge personal vault web application and cross-platform mobil
 
 ### Issue tracker
 
-GitHub issues tracked under `rizkyaryendigumilang/Kept` using the `gh` CLI. See `docs/agents/issue-tracker.md`.
+GitHub issues tracked under `rizkyaryendigumilang/Kept` using the `gh` CLI. See `docs/agents/issue-tracker.md`. Standard label taxonomy codified in `docs/agents/triage-labels.md`.
 
 ### Domain docs
 

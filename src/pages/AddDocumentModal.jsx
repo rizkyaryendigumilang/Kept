@@ -20,9 +20,10 @@ import {
 import { getTranslation } from '../lib/i18n'
 import { validateAttachmentFile } from '../lib/safeUrl'
 
-export default function AddDocumentModal({ onClose, onSubmit, lang = 'id' }) {
+export default function AddDocumentModal({ onClose, onSubmit, lang = 'id', showToast }) {
   const t = (k) => getTranslation(k, lang)
   const [selectedTemplateId, setSelectedTemplateId] = useState('ktp')
+  const [uploadError, setUploadError] = useState('')
   const template = useMemo(() => getTemplateById(selectedTemplateId), [selectedTemplateId])
 
   const categoryInfo = useMemo(() => {
@@ -73,12 +74,13 @@ export default function AddDocumentModal({ onClose, onSubmit, lang = 'id' }) {
     const isImage = file.type?.startsWith('image/')
     const maxAllowedSize = isImage ? 15 * 1024 * 1024 : 8 * 1024 * 1024
 
+    setUploadError('')
     if (file.size > maxAllowedSize) {
-      alert(
-        isImage
-          ? (lang === 'id' ? 'Ukuran foto maksimal 15MB.' : 'Maximum photo size is 15MB.')
-          : (lang === 'id' ? 'Ukuran file PDF maksimal 8MB demi performa enkripsi.' : 'Maximum PDF size is 8MB for encryption performance.')
-      )
+      const msg = isImage
+        ? (lang === 'id' ? 'Ukuran foto maksimal 15MB.' : 'Maximum photo size is 15MB.')
+        : (lang === 'id' ? 'Ukuran file PDF maksimal 8MB demi performa enkripsi.' : 'Maximum PDF size is 8MB for encryption performance.')
+      if (showToast) showToast(msg)
+      setUploadError(msg)
       return
     }
 
@@ -111,11 +113,11 @@ export default function AddDocumentModal({ onClose, onSubmit, lang = 'id' }) {
     // later rendered in an <img>/<iframe> inside the unlocked vault.
     validateAttachmentFile(file, { allowPdf: true }).then((result) => {
       if (!result.ok) {
-        alert(
-          lang === 'id'
-            ? 'Berkas ditolak: isi berkas tidak cocok dengan tipe yang diklaim. Gunakan JPG, PNG, WEBP, atau PDF asli.'
-            : 'File rejected: its contents do not match the declared type. Use a real JPG, PNG, WEBP or PDF.'
-        )
+        const msg = lang === 'id'
+          ? 'Berkas ditolak: isi berkas tidak cocok dengan tipe yang diklaim. Gunakan JPG, PNG, WEBP, atau PDF asli.'
+          : 'File rejected: its contents do not match the declared type. Use a real JPG, PNG, WEBP or PDF.'
+        if (showToast) showToast(msg)
+        setUploadError(msg)
         return
       }
 
@@ -180,6 +182,11 @@ export default function AddDocumentModal({ onClose, onSubmit, lang = 'id' }) {
       onClose={onClose}
     >
       <form onSubmit={handleSubmit} className="form-stack">
+        {uploadError && (
+          <div className="alert-box alert-box-warning" style={{ margin: '0 0 12px 0' }}>
+            <p style={{ margin: 0 }}>{uploadError}</p>
+          </div>
+        )}
         {/* Template Selector */}
         <label className="field">
           <span>{t('doc_modal_type')}</span>

@@ -1,6 +1,6 @@
 import { supabase } from './supabase'
 import { decryptJson } from './crypto'
-import { idbPut, idbDelete } from './idb'
+import { idbPut, idbDelete, idbHasPendingQueueForItem } from './idb'
 
 /**
  * Subscribes to Supabase Realtime changes for the current user's vault items.
@@ -30,6 +30,11 @@ export function subscribeVaultRealtime({ userId, getVaultKey, onEvent }) {
           const { eventType, new: newRow, old: oldRow } = payload
 
           if (eventType === 'DELETE' && oldRow?.id) {
+            const hasPending = await idbHasPendingQueueForItem(userId, oldRow.id)
+            if (hasPending) {
+              console.log(`[Realtime] Skipping incoming DELETE for ${oldRow.id} because local mutation is pending in queue.`)
+              return
+            }
             await idbDelete(oldRow.id)
             if (onEvent) {
               onEvent({ action: 'delete', id: oldRow.id })
@@ -38,6 +43,12 @@ export function subscribeVaultRealtime({ userId, getVaultKey, onEvent }) {
           }
 
           if ((eventType === 'INSERT' || eventType === 'UPDATE') && newRow?.id) {
+            const hasPending = await idbHasPendingQueueForItem(userId, newRow.id)
+            if (hasPending) {
+              console.log(`[Realtime] Skipping incoming ${eventType} for ${newRow.id} because local mutation is pending in queue.`)
+              return
+            }
+
             // Save raw encrypted row to IndexedDB cache
             const syncedRow = {
               ...newRow,
