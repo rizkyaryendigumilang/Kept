@@ -12,9 +12,11 @@ This document formalizes the **8 Modern Website Characteristics** adopted by Kep
 ---
 
 ## 2. Bento Grid & Modular Proportion
-- **Rhythm over Monotony**: Varied modular compositions (e.g. Hero cards, Mini stat metrics, Feature tiles, Action drawers, Format selector grids) replace uniform card repeats.
-- **Hairline Borders**: Subdued 1px borders (`var(--border-subtle)`) establish clear structural compartments without visual clutter.
-- **Fluid Layout**: Bento sections gracefully stack on mobile viewports (`grid-template-columns: 1fr`) and expand into 2- or 3-column compositions on desktop (`min-width: 580px`).
+- **Rhythm over Monotony**: Varied modular compositions (`.bento-grid`, `.bento-hero`, `.bento-stat-card`) replace uniform card repeats.
+- **Large Feature Hero Card (`.bento-hero`)**: Anchor tile spanning full grid width on desktop, encapsulating dynamic time-based greeting, Zero-Knowledge verification pill, and quick action.
+- **Modular Stat Bento Tiles (`.bento-stat-card`)**: High-density metric tiles pairing dedicated icon containers (`KeyRound`, `FileText`, `CreditCard`) with tabular-num counts and micro-labels.
+- **Hairline Borders**: Subdued 1px borders (`var(--border-subtle)`) with inner glass highlight (`var(--glass-highlight)`) establish clear structural compartments without visual clutter.
+- **Fluid Responsive Stacking**: Bento sections gracefully stack on mobile viewports (`max-width: 700px` to `grid-template-columns: 1fr`) with single-column hero expansion, transitioning into 3-column compositions on desktop.
 
 ---
 

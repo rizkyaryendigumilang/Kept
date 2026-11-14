@@ -375,6 +375,17 @@ if (!appSource.includes('setHelpdeskModalOpen(false)') || !appSource.includes('s
   throw new Error('src/App.jsx lockVault missing modal cleanup invariants')
 }
 console.log('[PASS] 5.4 Auto-Lock State Cleanup Invariant Verification')
+
+// 5.5 Verify Bento Grid & Modern Typography Invariants
+const stylesContent = readFileSync('src/styles.css', 'utf8')
+if (!stylesContent.includes('.bento-grid') || !stylesContent.includes('.bento-hero') || !stylesContent.includes('.bento-stat-card')) {
+  throw new Error('src/styles.css missing required Bento Grid modern layout classes')
+}
+const tokensContent = readFileSync('src/styles/tokens.css', 'utf8')
+if (!tokensContent.includes('--tracking-tighter') || !tokensContent.includes('--glass-surface')) {
+  throw new Error('src/styles/tokens.css missing modern typography or glassmorphism tokens')
+}
+console.log('[PASS] 5.5 Modern Design System Invariant: Bento Grid & Swiss Typography Tokens')
 const pkg = JSON.parse(readFileSync('package.json', 'utf8'))
 console.log(`[PASS] 5.2 Configuration & Repository Layout Integrity (${pkg.name} v${pkg.version})`)
 

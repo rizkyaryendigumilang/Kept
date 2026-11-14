@@ -32,22 +32,73 @@ export default function HomePage({
 
   return (
     <div className="page-shell">
-      {/* Hero Overview */}
-      <section className="hero-row">
-        <div>
-          <div className="eyebrow">{t('overview')}</div>
-          <h1>{greeting}, {displayName || 'there'}.</h1>
-          <p>{t('private_space_ready')}</p>
+      {/* Bento Grid Modular Overview (Modern 2026 Swiss / Apple Standard) */}
+      <section className="bento-grid" aria-label="Bento Grid Overview">
+        {/* Bento Tile 1: Large Feature Hero Card */}
+        <div className="bento-card bento-hero">
+          <div className="bento-hero-top">
+            <div className="bento-status-pill">
+              <span className="bento-pulse-dot" />
+              <span>Zero-Knowledge • AES-256-GCM</span>
+            </div>
+            <button
+              type="button"
+              className="quick-add pill-button"
+              onClick={() => {
+                haptic('light')
+                onAdd()
+              }}
+            >
+              <span>+</span> {t('add_item')}
+            </button>
+          </div>
+
+          <div className="bento-hero-content">
+            <div className="eyebrow">{t('overview')}</div>
+            <h1>{greeting}, {displayName || 'there'}.</h1>
+            <p>{t('private_space_ready')}</p>
+          </div>
+
+          <div className="bento-hero-footer">
+            <span>Argon2id Key Derivation</span>
+            <span aria-hidden="true">•</span>
+            <span>Zero Memory Residue</span>
+            <span aria-hidden="true">•</span>
+            <span>Client Encrypted</span>
+          </div>
         </div>
-        <button
-          className="quick-add pill-button"
+
+        {/* Bento Tiles 2, 3, 4: Modular Stat Cards with Icon Badges */}
+        <StatCard
+          label={t('stat_passwords')}
+          value={stats.passwords}
+          hint={t('stat_passwords_hint')}
+          icon={KeyRound}
           onClick={() => {
             haptic('light')
-            onAdd()
+            onNavigate('vault')
           }}
-        >
-          <span>+</span> {t('add_item')}
-        </button>
+        />
+        <StatCard
+          label={t('stat_documents')}
+          value={stats.documents || 0}
+          hint={t('stat_documents_hint')}
+          icon={FileText}
+          onClick={() => {
+            haptic('light')
+            onNavigate('documents')
+          }}
+        />
+        <StatCard
+          label={t('stat_accounts')}
+          value={stats.banks}
+          hint={t('stat_accounts_hint')}
+          icon={CreditCard}
+          onClick={() => {
+            haptic('light')
+            onNavigate('banking')
+          }}
+        />
       </section>
 
       {/* Compact Expiry Attention Widget in Overview */}
@@ -109,37 +160,6 @@ export default function HomePage({
           </div>
         </section>
       )}
-
-      {/* Stats Grid */}
-      <section className="stats-grid three">
-        <StatCard
-          label={t('stat_passwords')}
-          value={stats.passwords}
-          hint={t('stat_passwords_hint')}
-          onClick={() => {
-            haptic('light')
-            onNavigate('vault')
-          }}
-        />
-        <StatCard
-          label={t('stat_documents')}
-          value={stats.documents || 0}
-          hint={t('stat_documents_hint')}
-          onClick={() => {
-            haptic('light')
-            onNavigate('documents')
-          }}
-        />
-        <StatCard
-          label={t('stat_accounts')}
-          value={stats.banks}
-          hint={t('stat_accounts_hint')}
-          onClick={() => {
-            haptic('light')
-            onNavigate('banking')
-          }}
-        />
-      </section>
 
       {/* Smart Favorite Suggestion Banner based on frequent access */}
       {suggestedFavorite && (
