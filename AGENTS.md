@@ -11,7 +11,7 @@ Kept is a zero-knowledge personal vault web application and cross-platform mobil
 ## Invariants
 1. **Zero-Knowledge Privacy**: Never transmit unencrypted credentials, plaintexts, master passwords, or encryption keys outside client memory.
 2. **Memory Sanitization**: Clear raw keys with `zeroKey()` upon lock or session expiration.
-3. **Apple Design Language**: Maintain fluid motion, 1:1 direct tracking, springs, and system materials.
+3. **Apple Design Language**: Maintain fluid motion, 1:1 direct tracking, springs, and system materials. Follow 2026 Modern Quality Standards in `docs/design-system-standards.md`.
 
 ## Agent skills
 
@@ -21,4 +21,4 @@ GitHub issues tracked under `rizkyaryendigumilang/Kept` using the `gh` CLI. See 
 
 ### Domain docs
 
-Single-context repository layout (`GLOSSARY.md` + `docs/adr/`). See `docs/agents/domain.md`.
+Single-context repository layout (`GLOSSARY.md` + `docs/adr/` + `docs/design-system-standards.md`). See `docs/agents/domain.md`.

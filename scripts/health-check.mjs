@@ -337,6 +337,7 @@ for (const file of [
   'docs/agents/issue-tracker.md',
   'docs/agents/domain.md',
   'docs/agents/triage-labels.md',
+  'docs/design-system-standards.md',
   'docs/adr/0001-zero-knowledge-encryption-and-offline-sync.md',
   'docs/adr/0002-vps-helpdesk-sso-jit-handoff.md',
   '.env.example',
