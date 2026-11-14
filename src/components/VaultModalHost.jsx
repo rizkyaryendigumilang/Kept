@@ -1,5 +1,6 @@
 import { Suspense } from 'react'
 import { safeLazy } from '../lib/safeLazy'
+import { useVaultModalContext } from '../context/VaultModalContext'
 
 const AlertsPanel = safeLazy(() => import('../pages/AlertsPanel'))
 const ItemModal = safeLazy(() => import('../pages/ItemModal'))
@@ -16,95 +17,99 @@ const ShareSecretModal = safeLazy(() => import('./ShareSecretModal'))
 const SettingsDrawer = safeLazy(() => import('./SettingsDrawer'))
 const HelpdeskTicketModal = safeLazy(() => import('./HelpdeskTicketModal'))
 
-export default function VaultModalHost({
-  // Modal states & handlers
-  addMode,
-  setAddMode,
-  docAddModalOpen,
-  setDocAddModalOpen,
-  cardAddModalOpen,
-  setCardAddModalOpen,
-  cardEditModalItem,
-  setCardEditModalItem,
-  cardBarcodeModalItem,
-  setCardBarcodeModalItem,
-  selectedItem,
-  setSelectedItem,
+export default function VaultModalHost(rawProps) {
+  const ctx = useVaultModalContext() || {}
+  const props = { ...ctx, ...rawProps }
 
-  // CRUD & Item handlers
-  saveItem,
-  updateItem,
-  removeItem,
-  toggleFavorite,
-  openItem,
-  handleOpenShareSecret,
+  const {
+    // Modal states & handlers
+    addMode,
+    setAddMode,
+    docAddModalOpen,
+    setDocAddModalOpen,
+    cardAddModalOpen,
+    setCardAddModalOpen,
+    cardEditModalItem,
+    setCardEditModalItem,
+    cardBarcodeModalItem,
+    setCardBarcodeModalItem,
+    selectedItem,
+    setSelectedItem,
 
-  // Alerts
-  alertsOpen,
-  setAlertsOpen,
-  alerts,
-  dismissedAlerts,
-  handleDismissAlert,
-  handleDismissAllAlerts,
-  handleResetDismissedAlerts,
+    // CRUD & Item handlers
+    saveItem,
+    updateItem,
+    removeItem,
+    toggleFavorite,
+    openItem,
+    handleOpenShareSecret,
 
-  // Settings Drawer
-  menuOpen,
-  setMenuOpen,
-  menuSubpage,
-  setMenuSubpage,
-  profile,
-  session,
-  vaultKey,
-  hydratedItems,
-  documents,
-  trashedItems,
-  restoreItem,
-  permanentDeleteItem,
-  emptyTrash,
-  privacyMaskEnabled,
-  handleTogglePrivacyMask,
-  installPrompt,
-  handlePromptInstall,
-  isOnline,
-  pendingSyncCount,
-  updateTheme,
-  updateCardStyle,
-  saveProfile,
-  uploadProfileAvatar,
-  handleRemoveAvatar,
-  signOut,
-  openExportModal,
-  handleChangeAccountPassword,
-  handleChangeMasterPassword,
-  activeRecoveryKey,
-  handleDownloadEmergencySheet,
-  lockVault,
-  showToast,
-  hamburgerStyle,
-  updateHamburgerStyle,
-  lang,
-  handleLanguageChange,
+    // Alerts
+    alertsOpen,
+    setAlertsOpen,
+    alerts,
+    dismissedAlerts,
+    handleDismissAlert,
+    handleDismissAllAlerts,
+    handleResetDismissedAlerts,
 
-  // Command palette & Search
-  searchOpen,
-  setSearchOpen,
-  banks,
+    // Settings Drawer
+    menuOpen,
+    setMenuOpen,
+    menuSubpage,
+    setMenuSubpage,
+    profile,
+    session,
+    vaultKey,
+    hydratedItems,
+    documents,
+    trashedItems,
+    restoreItem,
+    permanentDeleteItem,
+    emptyTrash,
+    privacyMaskEnabled,
+    handleTogglePrivacyMask,
+    installPrompt,
+    handlePromptInstall,
+    isOnline,
+    pendingSyncCount,
+    updateTheme,
+    updateCardStyle,
+    saveProfile,
+    uploadProfileAvatar,
+    handleRemoveAvatar,
+    signOut,
+    openExportModal,
+    handleChangeAccountPassword,
+    handleChangeMasterPassword,
+    activeRecoveryKey,
+    handleDownloadEmergencySheet,
+    lockVault,
+    showToast,
+    hamburgerStyle,
+    updateHamburgerStyle,
+    lang,
+    handleLanguageChange,
 
-  // Export / Import / Share
-  exportModalOpen,
-  setExportModalOpen,
-  recordSecurityActivity,
-  importKeptEnvelope,
-  setImportKeptEnvelope,
-  handleRestoreKeptItems,
-  shareModalData,
-  setShareModalData,
+    // Command palette & Search
+    searchOpen,
+    setSearchOpen,
+    banks,
 
-  // Helpdesk Ticket Modal
-  helpdeskModalOpen,
-  setHelpdeskModalOpen
-}) {
+    // Export / Import / Share
+    exportModalOpen,
+    setExportModalOpen,
+    recordSecurityActivity,
+    importKeptEnvelope,
+    setImportKeptEnvelope,
+    handleRestoreKeptItems,
+    shareModalData,
+    setShareModalData,
+
+    // Helpdesk Ticket Modal
+    helpdeskModalOpen,
+    setHelpdeskModalOpen
+  } = props
   return (
     <Suspense fallback={null}>
       {addMode && vaultKey && (

@@ -18,6 +18,7 @@ import { sha1Hex } from '../src/lib/pwned.js'
 import { generateApplePassJson, buildPkpassBundle, hexToRgbString } from '../src/lib/walletPass.js'
 import { checkHceSupport, activateHceCard, deactivateHceCard } from '../src/lib/hce.js'
 import { getHelpdeskHandoffUrl, submitHelpdeskTicket, HELPDESK_BASE, APP_SLUG } from '../src/lib/helpdesk.js'
+import { buildWatchtowerReport } from '../src/lib/watchtower.js'
 
 console.log('======================================================================')
 console.log('AI ENGINEERING TEAM SPECIFICATION: 5-LEVEL TESTING STANDARD VERIFICATION')
@@ -274,6 +275,22 @@ if (!testCsvRow.startsWith('\uFEFF') || !testCsvRow.includes(sampleItem.password
 }
 console.log('[PASS] 2.7 Multi-Format Backup Schema Verification (Schema 1: .kept, Schema 2: .json, Schema 3: .csv)')
 
+// 2.8 Watchtower Security Health & Audit Module
+const testVaultItems = [
+  { id: '1', item_type: 'password', name: 'Google', password: 'password123' },
+  { id: '2', item_type: 'password', name: 'Github', password: 'password123' }, // reused
+  { id: '3', item_type: 'password', name: 'Bank BCA', password: 'P@ssw0rdSuperSecure2026!' },
+  { id: '4', item_type: 'bank_card', bank_name: 'Mandiri', expiry: '01/20' } // expired
+]
+const watchtower = buildWatchtowerReport(testVaultItems)
+if (!watchtower.stats || watchtower.stats.reusedCount !== 2 || watchtower.stats.weakCount < 1) {
+  throw new Error('Watchtower report failed to detect reused or weak passwords correctly')
+}
+if (watchtower.stats.score >= 100) {
+  throw new Error('Watchtower score did not penalize insecure credentials')
+}
+console.log(`[PASS] 2.8 Watchtower Security Health & Audit Module (Score: ${watchtower.stats.score}/100, Reused: ${watchtower.stats.reusedCount}, Weak: ${watchtower.stats.weakCount})`)
+
 // -----------------------------------------------------------------------------
 // Level 3: Integration Testing (docs/18-testing-standard.md:83)
 // -----------------------------------------------------------------------------
@@ -354,6 +371,8 @@ for (const file of [
   'src/lib/walletPass.js',
   'src/lib/hce.js',
   'src/lib/helpdesk.js',
+  'src/lib/watchtower.js',
+  'src/context/VaultModalContext.jsx',
   'src/styles/helpdesk.css',
   'android/app/src/main/res/xml/apduservice.xml',
   'android/app/src/main/java/com/kept/app/KeptCardEmulationService.java',

@@ -3,13 +3,31 @@ import { haptic } from './haptics'
 let activeClearTimer = null
 
 /**
+ * Immediately clears the system clipboard and cancels any pending timers.
+ * Recommended to invoke on vault lock or session expiration.
+ */
+export async function clearClipboardNow() {
+  if (activeClearTimer) {
+    clearTimeout(activeClearTimer)
+    activeClearTimer = null
+  }
+  try {
+    if (typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText('')
+    }
+  } catch {
+    // Ignore permissions issues during teardown
+  }
+}
+
+/**
  * Copies sensitive text (passwords, card numbers, recovery keys) to clipboard,
  * triggers tactile haptic feedback, displays an informative toast, and automatically
- * schedules a clipboard wipe after `timeoutSec` (default 45s).
+ * schedules a clipboard wipe after `timeoutSec` (default 30s).
  *
  * @param {string} text - The sensitive string to copy
  * @param {object} [options]
- * @param {number} [options.timeoutSec=45] - Seconds before wiping clipboard
+ * @param {number} [options.timeoutSec=30] - Seconds before wiping clipboard
  * @param {function} [options.onNotify] - Toast callback (msg) => void
  * @param {string} [options.label='Password'] - Label for toast display
  * @param {string} [options.lang='id'] - Language code ('id' | 'en')
@@ -17,7 +35,7 @@ let activeClearTimer = null
  */
 export async function copyToClipboardSecure(text, options = {}) {
   const {
-    timeoutSec = 45,
+    timeoutSec = 30,
     onNotify,
     label = 'Password',
     lang = 'id'
@@ -69,6 +87,8 @@ export async function copyToClipboardSecure(text, options = {}) {
         } catch {
           // Ignore if permission blocked in background
         }
+      } finally {
+        activeClearTimer = null
       }
     }, timeoutSec * 1000)
 
@@ -78,3 +98,4 @@ export async function copyToClipboardSecure(text, options = {}) {
     return false
   }
 }
+

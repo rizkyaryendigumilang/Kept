@@ -18,6 +18,7 @@ const ViewSharedSecretScreen = safeLazy(() => import('./components/ViewSharedSec
 import VaultModalHost from './components/VaultModalHost'
 import { parseShareHash } from './lib/secureShare'
 import { checkDocumentExpiry } from './lib/documents'
+import { buildWatchtowerReport } from './lib/watchtower'
 import { downloadAttachmentSafely } from './lib/safeUrl'
 import { useAutoLock } from './hooks/useAutoLock'
 import { usePwaInstall } from './hooks/usePwaInstall'
@@ -53,7 +54,7 @@ import {
   verifyMasterKey
 } from './lib/vault'
 import { idbClearUser, idbGetPendingQueue } from './lib/idb'
-import { copyToClipboardSecure } from './lib/clipboard'
+import { copyToClipboardSecure, clearClipboardNow } from './lib/clipboard'
 import { Copy, Check, Download, ShieldCheck, Lock } from './components/Icons'
 import { isWeakPin, MIN_PIN_LENGTH, recordSecurityActivity, registerCurrentDevice } from './lib/securityAudit'
 import { KEPT_ICON, KEPT_LOGO } from './lib/brand'
@@ -195,6 +196,7 @@ export default function App() {
 
   const lockVault = useCallback(() => {
     clearAesKeyCache()
+    clearClipboardNow()
     setVaultKey((prevKey) => {
       if (prevKey) {
         zeroKey(prevKey)
@@ -485,7 +487,11 @@ export default function App() {
     }
   })
 
-  const rawAlerts = useMemo(() => buildAlerts(hydratedItems), [hydratedItems])
+  const watchtowerReport = useMemo(
+    () => buildWatchtowerReport(hydratedItems, null, { lang }),
+    [hydratedItems, lang]
+  )
+  const rawAlerts = watchtowerReport.alerts
   const alerts = useMemo(
     () => rawAlerts.filter((a) => !dismissedAlerts.has(a.id)),
     [rawAlerts, dismissedAlerts]
@@ -1605,143 +1611,6 @@ Simpan dokumen ini dengan aman dan jangan berikan ke siapapun!
       </div>
     </main>
   )
-}
-
-function checkCardExpiry(expiryStr) {
-  if (!expiryStr) return null
-  const clean = expiryStr.trim()
-  const match = clean.match(/^(\d{1,2})[\/\-](\d{2,4})$/)
-  if (!match) return null
-  let month = parseInt(match[1], 10)
-  let year = parseInt(match[2], 10)
-  if (year < 100) year += 2000
-  if (month < 1 || month > 12) return null
-
-  const expiryDate = new Date(year, month, 0, 23, 59, 59)
-  const now = new Date()
-
-  if (expiryDate < now) {
-    return 'expired'
-  }
-  const diffDays = Math.ceil((expiryDate - now) / (1000 * 60 * 60 * 24))
-  if (diffDays <= 60) {
-    return { status: 'expiring_soon', days: diffDays }
-  }
-  return null
-}
-
-function buildAlerts(items) {
-  const alerts = []
-
-  // 1. Reused passwords detection (critical risk)
-  const passwordMap = new Map()
-  for (const item of items) {
-    if (item.item_type === 'password' && item.password) {
-      const list = passwordMap.get(item.password) || []
-      list.push(item)
-      passwordMap.set(item.password, list)
-    }
-  }
-
-  for (const [pass, duplicates] of passwordMap.entries()) {
-    if (duplicates.length > 1) {
-      const names = duplicates.map((d) => d.name).join(', ')
-      alerts.push({
-        id: `reuse-${duplicates[0].id}`,
-        type: 'reused_password',
-        level: 'danger',
-        title: `Password dipakai di ${duplicates.length} akun berbeda`,
-        body: `Akun: ${names}. Kebocoran satu akun membahayakan seluruh akun lainnya.`,
-        item: duplicates[0],
-        count: duplicates.length
-      })
-    }
-  }
-
-  // 2. Weak & short passwords detection
-  for (const item of items) {
-    if (item.item_type === 'password' && item.password) {
-      const p = item.password
-      const isShort = p.length < 10
-      const hasNumber = /\d/.test(p)
-      const hasSpecial = /[^A-Za-z0-9]/.test(p)
-      const hasUpper = /[A-Z]/.test(p)
-
-      if (isShort) {
-        alerts.push({
-          id: `weak-len-${item.id}`,
-          type: 'weak_password',
-          level: 'danger',
-          title: `Password terlalu pendek: ${item.name}`,
-          body: `Hanya ${p.length} karakter. Password di bawah 10 karakter rentan diserang brute-force.`,
-          item
-        })
-      } else if (!hasNumber || !hasSpecial || !hasUpper) {
-        alerts.push({
-          id: `weak-comp-${item.id}`,
-          type: 'weak_password',
-          level: 'warning',
-          title: `Password kurang variatif: ${item.name}`,
-          body: 'Belum memadukan huruf kapital, angka, dan karakter simbol.',
-          item
-        })
-      }
-    }
-  }
-
-  // 3. Card Expiry audit
-  for (const item of items) {
-    if (item.item_type === 'bank_card' && item.expiry) {
-      const check = checkCardExpiry(item.expiry)
-      if (check === 'expired') {
-        alerts.push({
-          id: `card-exp-${item.id}`,
-          type: 'card_expired',
-          level: 'danger',
-          title: `Kartu kedaluwarsa: ${item.bank_name || item.name}`,
-          body: `Masa berlaku kartu (${item.expiry}) telah berakhir. Perbarui data atau hubungi pihak bank.`,
-          item
-        })
-      } else if (check?.status === 'expiring_soon') {
-        alerts.push({
-          id: `card-soon-${item.id}`,
-          type: 'card_expiring_soon',
-          level: 'warning',
-          title: `Kartu segera kedaluwarsa: ${item.bank_name || item.name}`,
-          body: `Masa berlaku habis dalam ${check.days} hari (${item.expiry}). Siapkan aktivasi kartu baru.`,
-          item
-        })
-      }
-    }
-  }
-
-  // 4. Document Expiry audit (Paspor, SIM, dll - 90, 30, 7 days reminder)
-  for (const item of items) {
-    if (item.item_type === 'document' && item.expiry_date) {
-      const check = checkDocumentExpiry(item.expiry_date)
-      if (check?.status === 'expired') {
-        alerts.push({
-          id: `doc-exp-${item.id}`,
-          type: 'doc_expired',
-          level: 'danger',
-          title: `Dokumen kedaluwarsa: ${item.name}`,
-          body: `Masa berlaku (${item.expiry_date}) telah berakhir. Segera lakukan perpanjangan dokumen.`,
-          item
-        })
-      } else if (check?.status === 'urgent' || check?.status === 'warning_30' || check?.status === 'warning_90') {
-        alerts.push({
-          id: `doc-soon-${item.id}`,
-          type: 'doc_expiring_soon',
-          level: check.status === 'urgent' ? 'danger' : 'warning',
-          title: `Dokumen segera kedaluwarsa: ${item.name}`,
-          body: `Masa berlaku tersisa ${check.daysRemaining} hari (${item.expiry_date}). Persiapkan berkas perpanjangan.`,
-          item
-        })
-      }
-    }
-  }
-
-  return alerts
 }
 
 function guessCategory(row) {
