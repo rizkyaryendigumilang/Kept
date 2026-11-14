@@ -63,6 +63,7 @@ export {
   Paperclip,
   ExternalLink,
   FileSpreadsheet,
+  FileJson,
   RotateCcw,
   Share2,
   Send,

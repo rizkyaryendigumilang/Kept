@@ -1055,7 +1055,7 @@ Jangan pernah membagikan kode ini kepada siapapun!
     try {
       const text = await file.text()
 
-      // Check if .kept or encrypted JSON backup
+      // 1. Check if .kept or encrypted JSON backup
       if (file.name.endsWith('.kept') || text.includes('KEPT_ENCRYPTED_BACKUP')) {
         try {
           const envelope = JSON.parse(text)
@@ -1068,15 +1068,22 @@ Jangan pernah membagikan kode ini kepada siapapun!
         }
       }
 
-      // Check if unencrypted Kept JSON backup
-      if (file.name.endsWith('.json')) {
+      // 2. Check if unencrypted Kept JSON backup (.json or KEPT_JSON_EXPORT)
+      if (file.name.endsWith('.json') || text.includes('KEPT_JSON_EXPORT')) {
         try {
           const parsed = JSON.parse(text)
-          if (Array.isArray(parsed.items)) {
-            for (const row of parsed.items) {
+          if (parsed.format === 'KEPT_ENCRYPTED_BACKUP' && parsed.salt && parsed.iv && parsed.ciphertext) {
+            setImportKeptEnvelope(parsed)
+            return
+          }
+          const rawItems = Array.isArray(parsed.items)
+            ? parsed.items
+            : (Array.isArray(parsed) ? parsed : (Array.isArray(parsed.vault_items) ? parsed.vault_items : null))
+          if (rawItems && rawItems.length > 0) {
+            for (const row of rawItems) {
               await saveItem(row)
             }
-            showToast(lang === 'id' ? `Berhasil mengimpor ${parsed.items.length} item` : `Successfully imported ${parsed.items.length} items`, 1600)
+            showToast(lang === 'id' ? `Berhasil mengimpor ${rawItems.length} item dari file JSON!` : `Successfully imported ${rawItems.length} items from JSON file!`, 2000)
             return
           }
         } catch {
@@ -1084,7 +1091,7 @@ Jangan pernah membagikan kode ini kepada siapapun!
         }
       }
 
-      // Regular CSV fallback
+      // 3. Regular CSV fallback
       const rows = parseCsv(text)
       const imported = rows.map((r) => ({
         item_type: r.item_type || 'password',

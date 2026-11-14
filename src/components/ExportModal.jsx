@@ -10,6 +10,7 @@ import {
   Eye,
   EyeOff,
   FileSpreadsheet,
+  FileJson,
   Check,
   AlertTriangle,
   Clock,
@@ -400,8 +401,38 @@ export default function ExportModal({
           desc: `Cadangan terproteksi sandi kustom diekspor (${items.length} item) setelah otorisasi keamanan.`,
           level: 'warning'
         })
+      } else if (format === 'json') {
+        // Option B: Standard JSON Vault Export (Unencrypted / Portable)
+        const exportPayload = items.map((i) => {
+          const { payload, ...rest } = i
+          return rest
+        })
+
+        const jsonEnvelope = {
+          app: 'kept',
+          format: 'KEPT_JSON_EXPORT',
+          version: 1,
+          exported_at: new Date().toISOString(),
+          item_count: exportPayload.length,
+          items: exportPayload
+        }
+
+        const blob = new Blob([JSON.stringify(jsonEnvelope, null, 2)], { type: 'application/json;charset=utf-8;' })
+        const url = URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = url
+        a.download = `kept-vault-export-${dateStr}.json`
+        a.click()
+        URL.revokeObjectURL(url)
+
+        recordSecurityActivity?.({
+          type: 'export_sensitive',
+          title: 'Ekspor Cadangan JSON Standar',
+          desc: `Cadangan format JSON terbuka diekspor (${items.length} item) setelah otorisasi keamanan.`,
+          level: 'warning'
+        })
       } else {
-        // Excel / CSV Export with UTF-8 BOM
+        // Option C: Excel / CSV Export with UTF-8 BOM
         const csvContent = formatVaultCsv(items)
         const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
         const url = URL.createObjectURL(blob)
@@ -592,9 +623,9 @@ export default function ExportModal({
               <strong>{t('export_format_heading')}</strong>
             </div>
 
-            {/* Format Cards */}
+            {/* Format Cards (3 Schemas) */}
             <div className="export-format-grid mt-xs">
-              {/* Option A: .kept Encrypted Backup */}
+              {/* Option 1: .kept Encrypted Backup */}
               <div
                 className={`export-format-card ${format === 'kept' ? 'active' : ''}`}
                 onClick={() => setFormat('kept')}
@@ -613,7 +644,26 @@ export default function ExportModal({
                 <p className="export-format-desc">{t('export_format_kept_desc')}</p>
               </div>
 
-              {/* Option B: Excel / CSV Spreadsheet */}
+              {/* Option 2: Standard JSON Backup (.json) */}
+              <div
+                className={`export-format-card ${format === 'json' ? 'active' : ''}`}
+                onClick={() => setFormat('json')}
+                role="button"
+                tabIndex={0}
+              >
+                <div className="export-format-card-header">
+                  <div className="export-format-icon json-icon">
+                    <FileJson size={20} />
+                  </div>
+                  <div className="export-format-title-group">
+                    <strong>{t('export_format_json_title')}</strong>
+                    <span className="export-badge-warning">{t('export_format_json_tag')}</span>
+                  </div>
+                </div>
+                <p className="export-format-desc">{t('export_format_json_desc')}</p>
+              </div>
+
+              {/* Option 3: Excel / CSV Spreadsheet (.csv) */}
               <div
                 className={`export-format-card ${format === 'excel' ? 'active' : ''}`}
                 onClick={() => setFormat('excel')}
@@ -682,6 +732,14 @@ export default function ExportModal({
                   <small>{t('export_pass_hint')}</small>
                 </div>
               </div>
+            ) : format === 'json' ? (
+              <div className="export-excel-warning mt-md">
+                <div className="export-warning-header">
+                  <AlertTriangle size={16} className="text-warning-accent" />
+                  <strong>{t('export_json_warning_title')}</strong>
+                </div>
+                <p>{t('export_json_warning_desc')}</p>
+              </div>
             ) : (
               <div className="export-excel-warning mt-md">
                 <div className="export-warning-header">
@@ -716,6 +774,8 @@ export default function ExportModal({
                   ? t('export_preparing')
                   : format === 'kept'
                   ? t('export_download_kept_btn')
+                  : format === 'json'
+                  ? t('export_download_json_btn')
                   : t('export_download_excel_btn')}
               </button>
             </div>

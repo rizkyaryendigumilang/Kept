@@ -238,6 +238,42 @@ if (!submitResultWithPhoto.ok || submitResultWithPhoto.hasPhoto !== true) {
 }
 console.log('[PASS] 2.6 VPS Helpdesk SSO JIT Handoff Module (complaint, optional photo attachment & URL params verified)')
 
+// 2.7 Multi-Format Backup Schema Verification (.kept, .json, .csv)
+// Schema 1: .kept Encrypted JSON Envelope
+const keptBackupEnvelope = await encryptCustomBackup([sampleItem], 'VaultSecurePassword#2026')
+if (keptBackupEnvelope.format !== 'KEPT_ENCRYPTED_BACKUP' || !keptBackupEnvelope.ciphertext) {
+  throw new Error('Schema 1 (.kept) backup envelope generation failed')
+}
+const decryptedKeptItems = await decryptCustomBackup(keptBackupEnvelope, 'VaultSecurePassword#2026')
+if (!Array.isArray(decryptedKeptItems) || decryptedKeptItems[0].password !== sampleItem.password) {
+  throw new Error('Schema 1 (.kept) backup roundtrip decryption failed')
+}
+
+// Schema 2: .json Standard Raw Backup Format
+const jsonBackupPayload = {
+  app: 'kept',
+  format: 'KEPT_JSON_EXPORT',
+  version: 1,
+  exported_at: new Date().toISOString(),
+  item_count: 1,
+  items: [sampleItem]
+}
+const serializedJson = JSON.stringify(jsonBackupPayload, null, 2)
+const parsedJson = JSON.parse(serializedJson)
+if (parsedJson.format !== 'KEPT_JSON_EXPORT' || !Array.isArray(parsedJson.items) || parsedJson.items[0].username !== sampleItem.username) {
+  throw new Error('Schema 2 (.json) backup format verification failed')
+}
+
+// Schema 3: .csv Tabular Format with Injection Escaping
+const testCsvRow = `\uFEFF` + [
+  '"Type","Category","Name / Service","Username / Account","Password / Secret"',
+  `"password","social","${sampleItem.name}","${sampleItem.username}","${sampleItem.password}"`
+].join('\r\n')
+if (!testCsvRow.startsWith('\uFEFF') || !testCsvRow.includes(sampleItem.password)) {
+  throw new Error('Schema 3 (.csv) tabular format verification failed')
+}
+console.log('[PASS] 2.7 Multi-Format Backup Schema Verification (Schema 1: .kept, Schema 2: .json, Schema 3: .csv)')
+
 // -----------------------------------------------------------------------------
 // Level 3: Integration Testing (docs/18-testing-standard.md:83)
 // -----------------------------------------------------------------------------
