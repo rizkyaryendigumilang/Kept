@@ -51,12 +51,25 @@ try {
   process.exit(1)
 }
 
-// Step 2: Update package.json version if changed
+// Step 2: Update package.json and android/app/build.gradle if changed
 if (newVersion !== currentVersion) {
-  console.log(`\n📝 Step 2: Memperbarui versi package.json ke ${newVersion}...`)
+  console.log(`\n📝 Step 2: Memperbarui versi ke ${newVersion}...`)
   pkg.version = newVersion
   fs.writeFileSync(pkgPath, JSON.stringify(pkg, null, 2) + '\n', 'utf8')
-  execSync('git add package.json', { stdio: 'inherit', cwd: rootDir })
+
+  // Update android/app/build.gradle
+  const gradlePath = path.join(rootDir, 'android', 'app', 'build.gradle')
+  if (fs.existsSync(gradlePath)) {
+    let gradle = fs.readFileSync(gradlePath, 'utf8')
+    gradle = gradle.replace(/versionCode\s+(\d+)/, (m, code) => `versionCode ${parseInt(code, 10) + 1}`)
+    gradle = gradle.replace(/versionName\s+"[^"]+"/, `versionName "${newVersion}"`)
+    fs.writeFileSync(gradlePath, gradle, 'utf8')
+    console.log(`✓ Versi Android diperbarui di android/app/build.gradle`)
+    execSync('git add package.json android/app/build.gradle', { stdio: 'inherit', cwd: rootDir })
+  } else {
+    execSync('git add package.json', { stdio: 'inherit', cwd: rootDir })
+  }
+
   execSync(`git commit -m "chore(release): bump version to ${tag}"`, { stdio: 'inherit', cwd: rootDir })
 } else {
   console.log(`\n📝 Step 2: Menggunakan versi saat ini (${tag})...`)
