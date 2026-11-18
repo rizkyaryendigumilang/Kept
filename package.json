@@ -13,6 +13,7 @@
     "showcase:live-tour": "node scripts/record-live-browser-tour.mjs",
     "remotion:studio": "remotion studio src/remotion/index.js",
     "remotion:render-all": "node scripts/render-remotion-showcase.mjs",
+    "showcase:fable": "node scripts/render-fable-promo.mjs",
     "concat:build": "node scripts/build-concat-projects.mjs"
   },
   "dependencies": {
