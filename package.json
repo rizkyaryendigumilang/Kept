@@ -8,6 +8,7 @@
     "build": "vite build",
     "preview": "vite preview",
     "test": "node scripts/health-check.mjs",
+    "release": "node scripts/release.mjs",
     "cap:sync": "cap sync",
     "cap:build": "vite build && cap sync",
     "showcase:live-tour": "node scripts/record-live-browser-tour.mjs",

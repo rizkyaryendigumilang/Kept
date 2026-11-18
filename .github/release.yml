@@ -1,0 +1,38 @@
+changelog:
+  categories:
+    - title: "🚀 Fitur Baru (New Features)"
+      labels:
+        - "feature"
+        - "enhancement"
+      prefixes:
+        - "feat:"
+        - "feat("
+    - title: "🐛 Perbaikan Bug & Stabilitas (Bug Fixes)"
+      labels:
+        - "bug"
+        - "fix"
+      prefixes:
+        - "fix:"
+        - "fix("
+    - title: "🔒 Keamanan & Zero-Knowledge (Security & Privacy)"
+      labels:
+        - "security"
+      prefixes:
+        - "security:"
+        - "sec:"
+    - title: "🎨 Desain UI/UX & Motion (Design System)"
+      prefixes:
+        - "style:"
+        - "ui:"
+        - "motion:"
+    - title: "🧹 Pemeliharaan & Performa (Chores & Performance)"
+      labels:
+        - "chore"
+        - "refactor"
+        - "perf"
+        - "ci"
+      prefixes:
+        - "chore:"
+        - "refactor:"
+        - "perf:"
+        - "ci:"
